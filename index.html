@@ -986,7 +986,11 @@ const fmtMins = m => {
   return h + ':' + String(mm).padStart(2,'0') + ' ' + ap;
 };
 const dayName = iso => new Date(iso + 'T12:00:00').toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
-function esc(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function cssColor(v){
+  const s = String(v || '').trim();
+  return /^#[0-9A-Fa-f]{3,8}$/.test(s) ? s : '';
+}
 
 // ---------- location chips ----------
 function renderChips(){
@@ -2047,7 +2051,9 @@ function renderOutlookDiscussionHtml(disc, dayLabel, open){
 function renderStormPanel(box, loc, risks, mcds, discussions){
   const riskHtml = risks.map(r => {
     const name = r.day === 'day1' ? 'Day 1' : r.day === 'day2' ? 'Day 2' : 'Day 3';
-    const style = r.fill ? 'background:' + r.fill + ';color:#1a1a1a;border-color:' + (r.stroke || r.fill) : '';
+    const fill = cssColor(r.fill);
+    const stroke = cssColor(r.stroke);
+    const style = fill ? 'background:' + fill + ';color:#1a1a1a;border-color:' + (stroke || fill) : '';
     return '<div class="storm-risk"><span class="day">' + name + '</span>'
       + '<span class="storm-badge" style="' + style + '">' + esc(r.label2 || r.label || 'None') + '</span></div>';
   }).join('');

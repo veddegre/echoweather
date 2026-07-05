@@ -64,7 +64,7 @@ if [[ "$airnow_code" == "200" ]]; then
   fi
   check "GET /api/airnow" "$airnow_ok" "$airnow_detail"
 elif [[ "$airnow_code" == "503" ]]; then
-  check "GET /api/airnow" "0" "HTTP 503 — key missing or invalid: $airnow_body"
+  check "GET /api/airnow" "0" "HTTP 503 — AirNow not configured or unavailable: $airnow_body"
 else
   check "GET /api/airnow" "0" "HTTP $airnow_code — $airnow_body"
 fi

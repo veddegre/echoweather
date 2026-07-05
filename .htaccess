@@ -3,8 +3,21 @@
     Require all denied
 </Files>
 
-# App shell should always revalidate so deploys take effect immediately.
+# Dev-only router and server-side paths — not for production HTTP.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^lib/ - [F,L]
+    RewriteRule ^cache/ - [F,L]
+    RewriteRule ^router\.php$ - [F,L]
+</IfModule>
+
 <IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(self)"
+
+    # App shell should always revalidate so deploys take effect immediately.
     <FilesMatch "^(index\.html|sw\.js)$">
         Header set Cache-Control "no-cache, must-revalidate"
     </FilesMatch>

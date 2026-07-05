@@ -7,9 +7,9 @@
  *   sudo cp config.example.php config.local.php
  *   sudo nano /var/www/echoweather/config.local.php
  *
- * Never commit or rsync config.local.php — it holds API keys and may differ
+ * Never commit config.local.php — it holds API keys and may differ
  * per machine. When new keys are added here, merge them into the server's
- * existing config.local.php by hand.
+ * existing config.local.php by hand (git pull does not touch it).
  *
  * All keys are optional. Without them the app still works — it falls back to
  * Open-Meteo modeled air quality and skips Google Pollen for US locations.
@@ -62,6 +62,18 @@ return [
     //
     // When the limit is hit: serve stale cache if available; otherwise 502.
     'pollen_daily_limit' => 7500,
+
+    // -------------------------------------------------------------------------
+    // Per-IP rate limits — reduce open-proxy abuse (requests per hour, per IP)
+    // -------------------------------------------------------------------------
+    // CORS only limits browser cross-origin calls; curl and bots can still hit
+    // /api/* directly. Set 0 to disable a limit.
+    //
+    //   120  default for AirNow and buoy
+    //   60   default for Pollen (billable)
+    'rate_limit_airnow' => 120,
+    'rate_limit_pollen' => 60,
+    'rate_limit_buoy' => 120,
 
     // -------------------------------------------------------------------------
     // CORS — browser access to /api/*

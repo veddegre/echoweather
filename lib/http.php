@@ -10,6 +10,7 @@ function http_get(string $url, int $timeout = 25): string
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 5,
             CURLOPT_TIMEOUT => $timeout,
             CURLOPT_USERAGENT => ECHO_USER_AGENT,
             CURLOPT_HTTPHEADER => ['Accept: */*'],
@@ -36,6 +37,17 @@ function http_get(string $url, int $timeout = 25): string
     $body = @file_get_contents($url, false, $ctx);
     if ($body === false) {
         throw new RuntimeException('request failed');
+    }
+    if (function_exists('http_get_last_response_headers')) {
+        $headers = http_get_last_response_headers();
+    } else {
+        $headers = $http_response_header ?? [];
+    }
+    if (isset($headers[0]) && preg_match('/\s(\d{3})\s/', $headers[0], $m)) {
+        $code = (int) $m[1];
+        if ($code >= 400) {
+            throw new RuntimeException('HTTP ' . $code);
+        }
     }
     return $body;
 }
@@ -64,6 +76,7 @@ function fetch_airnow(float $lat, float $lon, int $distance, string $apiKey): ar
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 5,
         CURLOPT_TIMEOUT => 15,
         CURLOPT_USERAGENT => ECHO_USER_AGENT,
         CURLOPT_HTTPHEADER => ['Accept: application/json'],
@@ -71,8 +84,6 @@ function fetch_airnow(float $lat, float $lon, int $distance, string $apiKey): ar
     $body = curl_exec($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $err = curl_error($ch);
-    curl_close($ch);
-
     if ($body === false) {
         throw new RuntimeException($err !== '' ? $err : 'AirNow request failed');
     }

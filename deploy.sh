@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Echo Weather — rsync deploy to production (never syncs config.local.php).
+# Echo Weather — rsync deploy for servers WITHOUT a git clone in the web root.
+#
+# If the repo is cloned into /var/www/echoweather (recommended), use update.sh instead.
 #
 # Usage:
-#   ./deploy.sh
-#   DEPLOY_HOST=user@host ./deploy.sh
-#   ./deploy.sh --smoke          # deploy then run smoke tests on server
-#   ./deploy.sh --smoke-only     # smoke tests on server only (no rsync)
+#   DEPLOY_HOST=user@your-server ./deploy.sh
+#   DEPLOY_HOST=user@your-server ./deploy.sh --smoke
+#   DEPLOY_HOST=user@your-server ./deploy.sh --smoke-only
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-DEPLOY_HOST="${DEPLOY_HOST:-veddegre@192.168.30.10}"
 REMOTE_STAGING="${REMOTE_STAGING:-~/echoweather-deploy}"
 REMOTE_WWW="${REMOTE_WWW:-/var/www/echoweather}"
 
@@ -20,14 +20,22 @@ for arg in "$@"; do
     --smoke) DO_SMOKE=1 ;;
     --smoke-only) SMOKE_ONLY=1; DO_SMOKE=1 ;;
     -h|--help)
-      echo "Usage: ./deploy.sh [--smoke] [--smoke-only]"
-      echo "  DEPLOY_HOST     default: veddegre@192.168.30.10"
+      echo "Usage: DEPLOY_HOST=user@host ./deploy.sh [--smoke] [--smoke-only]"
+      echo "  DEPLOY_HOST     SSH target (required), e.g. user@your-server"
       echo "  REMOTE_STAGING  default: ~/echoweather-deploy"
+      echo "  REMOTE_WWW      default: /var/www/echoweather"
+      echo ""
+      echo "For git-clone installs in REMOTE_WWW, use update.sh instead."
       exit 0
       ;;
     *) echo "Unknown option: $arg" >&2; exit 1 ;;
   esac
 done
+
+if [[ -z "${DEPLOY_HOST:-}" ]]; then
+  echo "DEPLOY_HOST is required (e.g. DEPLOY_HOST=user@your-server ./deploy.sh)" >&2
+  exit 1
+fi
 
 RSYNC_FILES=(
   index.html
@@ -44,6 +52,8 @@ RSYNC_FILES=(
   router.php
   config.example.php
   config.example.js
+  deploy.sh
+  update.sh
   scripts
 )
 

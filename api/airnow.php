@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/lib/bootstrap.php';
 require_once dirname(__DIR__) . '/lib/http.php';
+require_once dirname(__DIR__) . '/lib/ratelimit.php';
+
+handle_cors_preflight();
 
 $lat = filter_input(INPUT_GET, 'latitude', FILTER_VALIDATE_FLOAT);
 $lon = filter_input(INPUT_GET, 'longitude', FILTER_VALIDATE_FLOAT);
@@ -22,21 +25,24 @@ $distance = max(1, min($distance, 100));
 try {
     $cfg = load_config();
 } catch (Throwable $e) {
-    send_json(500, ['error' => $e->getMessage()], cors: true);
+    send_api_error(500, 'Service unavailable', $e, 'airnow/config', cors: true);
 }
 
 $apiKey = trim((string) ($cfg['airnow_api_key'] ?? ''));
 if ($apiKey === '') {
-    send_json(503, ['error' => 'airnow_api_key not configured in config.local.php'], cors: true);
+    send_json(503, ['error' => 'AirNow integration not configured'], cors: true);
 }
 
 try {
+    enforce_rate_limit('airnow', rate_limit_for($cfg, 'rate_limit_airnow'));
     $data = fetch_airnow((float) $lat, (float) $lon, $distance, $apiKey);
     send_json(200, $data, cors: true);
+} catch (RateLimitExceeded $e) {
+    send_api_error(429, 'Too many requests', $e, 'airnow/rate-limit', cors: true);
 } catch (Throwable $e) {
     $msg = $e->getMessage();
     if (str_contains($msg, 'API key invalid')) {
-        send_json(503, ['error' => $msg], cors: true);
+        send_api_error(503, 'AirNow integration unavailable', $e, 'airnow/auth', cors: true);
     }
-    send_json(502, ['error' => $msg], cors: true);
+    send_api_error(502, 'Upstream service unavailable', $e, 'airnow', cors: true);
 }

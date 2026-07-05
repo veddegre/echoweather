@@ -3,7 +3,7 @@
 Personal weather PWA with a small PHP integration layer for server-side
 secrets and CORS relief. No API keys required for core features.
 
-Home: **echoweather.com**
+**Home:** [echoweather.com](https://echoweather.com) · **Source:** [github.com/veddegre/echoweather](https://github.com/veddegre/echoweather)
 
 ```
   browser ──────────────▶  Apache (or php -S locally)
@@ -28,217 +28,69 @@ and more, mostly fetched client-side from public APIs.
 | `index.html` | The weather app |
 | `manifest.json` | PWA install manifest |
 | `sw.js` | Service worker |
+| `config.js` | Optional client overrides via `window.ECHO_WEATHER` (no secrets; see `config.example.js`) |
 | `logo.svg`, `icon.svg`, `og-image.png` | Branding |
 | `api/` | Integration endpoints (`status`, `airnow`, `pollen`, `buoy`) |
-| `lib/` | Shared PHP helpers |
-| `router.php` | URL router for `php -S` local dev |
-| `config.example.php` | Config template — sync this; copy to `config.local.php` on the server |
-| `config.local.php` | Server secrets (gitignored — **never rsync from laptop**) |
-| `cache/pollen/` | Pollen API response cache (gitignored, auto-created) |
-| `config.example.js` | Optional client overrides (no secrets) |
+| `lib/` | Shared PHP helpers (not web-accessible in production) |
+| `router.php` | URL router for `php -S` local dev only |
+| `update.sh` | **Primary update path** — `git pull` on the server |
+| `deploy.sh` | Optional rsync deploy when the server is not a git clone |
+| `scripts/update-server.sh` | Server-side update logic (called by `update.sh`) |
+| `scripts/smoke.sh` | Post-deploy health checks |
+| `config.example.php` | Config template — merge new keys into `config.local.php` on the server |
+| `config.local.php` | Server secrets (gitignored — lives only on the server) |
+| `cache/` | Server-side pollen cache and rate-limit counters (gitignored, auto-created) |
 
 ## Requirements
 
 - **Production:** Apache 2.4 + PHP 8.1+ with `curl` (recommended) or `allow_url_fopen`
 - **Local dev:** PHP 8.1+ CLI (`php -S`)
+- **Production deploy:** `git` on the server (repo cloned into the Apache document root)
 - Outbound HTTPS from the server to AirNow, Google Pollen, and NDBC when using integrations
 
 ---
 
-## Fresh start — remove the old Python daemon
+## Install (first time)
 
-If you previously ran `echo_weather_server.py` or `echo_weather_alerts.py` under
-systemd, remove it before deploying PHP.
+Production uses a **git clone directly in the web root** (e.g. `/var/www/echoweather`).
+`config.local.php` and `cache/` are gitignored and stay on the server across updates.
 
-**On the server (as root or with sudo):**
-
-```bash
-# Stop and disable the old service (name may be echo-weather-server or echo-weather-alerts)
-sudo systemctl stop echo-weather-server 2>/dev/null || true
-sudo systemctl stop echo-weather-alerts 2>/dev/null || true
-sudo systemctl disable echo-weather-server 2>/dev/null || true
-sudo systemctl disable echo-weather-alerts 2>/dev/null || true
-
-# Remove unit files
-sudo rm -f /etc/systemd/system/echo-weather-server.service
-sudo rm -f /etc/systemd/system/echo-weather-alerts.service
-sudo systemctl daemon-reload
-
-# Remove old Python install (optional — keeps /opt clean)
-sudo rm -rf /opt/echoweather
-
-# Remove Apache proxy rules to :8093 from your vhost if present, e.g.:
-#   ProxyPass /api/status http://127.0.0.1:8093/...
-#   ProxyPass /api/airnow ...
-#   ProxyPass /api/buoy/ ...
-# PHP handles /api/* directly — no reverse proxy needed.
-```
-
-After editing the vhost, reload Apache:
-
-```bash
-sudo apachectl configtest && sudo systemctl reload apache2
-```
-
----
-
-## Install PHP on the server
-
-### Debian / Ubuntu
+### 1. Install Apache + PHP (Debian / Ubuntu)
 
 ```bash
 sudo apt update
-sudo apt install -y apache2 libapache2-mod-php php php-curl php-json
+sudo apt install -y apache2 libapache2-mod-php php php-curl php-json git
 sudo a2enmod rewrite headers
 sudo systemctl restart apache2
 php -v   # should show 8.1+
 ```
 
-`php-curl` is recommended for reliable outbound HTTPS. Without it, PHP falls
-back to `file_get_contents` (requires `allow_url_fopen = On` in `php.ini`).
-
-### Verify
-
-```bash
-echo '<?php phpinfo();' | sudo tee /var/www/html/info.php
-curl -s http://127.0.0.1/info.php | head
-sudo rm /var/www/html/info.php
-```
-
----
-
-## Deploy from scratch
-
-**Important:** Never rsync `config.local.php` from your laptop to the server.
-The server has its own copy with production keys. Only sync `config.example.php`
-as a reference template — then edit `config.local.php` directly on the server.
-
-### 1. Copy files to the server
-
-From your dev machine (recommended):
-
-```bash
-./deploy.sh --smoke
-```
-
-Or manually:
-
-```bash
-cd /Users/veddegre/echoweather
-rsync -avz \
-  index.html manifest.json sw.js logo.svg icon.svg og-image.png \
-  api lib router.php .htaccess config.example.php \
-  veddegre@192.168.30.10:~/echoweather-deploy/
-```
-
-Do **not** include `config.local.php` in rsync.
+### 2. Clone into the document root
 
 On the server:
 
 ```bash
-sudo mkdir -p /var/www/echoweather/cache/pollen
-sudo rsync -a ~/echoweather-deploy/ /var/www/echoweather/
+sudo mkdir -p /var/www/echoweather
+sudo chown $USER:www-data /var/www/echoweather
+git clone https://github.com/veddegre/echoweather.git /var/www/echoweather
+cd /var/www/echoweather
 
-# First-time only — create config from template:
-sudo cp /var/www/echoweather/config.example.php /var/www/echoweather/config.local.php
+cp config.example.php config.local.php
+nano config.local.php   # add API keys
 
-sudo chown -R www-data:www-data /var/www/echoweather
-sudo chmod 640 /var/www/echoweather/config.local.php
+mkdir -p cache/pollen cache/ratelimit
+sudo chown -R www-data:www-data cache
+sudo chown root:www-data config.local.php
+sudo chmod 640 config.local.php
+chmod +x update.sh scripts/*.sh
 ```
 
-If `config.local.php` already exists on the server, **do not overwrite it**.
-Instead, compare against the updated `config.example.php` and add any new keys
-by hand (see below).
-
-### 2. Configure secrets (on the server only)
-
-```bash
-sudo nano /var/www/echoweather/config.local.php
-```
-
-Full example — adjust keys and limits to taste:
-
-```php
-<?php
-return [
-    'airnow_api_key' => 'YOUR_AIRNOW_KEY',
-    'google_pollen_api_key' => 'YOUR_GOOGLE_MAPS_API_KEY',
-    'pollen_cache_ttl' => 10800,
-    'pollen_cache_grid' => 1,
-    'pollen_daily_limit' => 7500,
-    'cors_origins' => [
-        'https://echoweather.com',
-    ],
-];
-```
-
-#### Merging new settings into an existing server config
-
-If your server's `config.local.php` predates pollen support, add the missing
-keys without touching your existing API keys:
-
-```php
-    'google_pollen_api_key' => 'YOUR_GOOGLE_MAPS_API_KEY',
-    'pollen_cache_ttl' => 10800,
-    'pollen_cache_grid' => 1,
-    'pollen_daily_limit' => 7500,
-```
-
-See `config.example.php` in the repo for comments on each key.
-
-#### AirNow (optional)
-
-- Free key: [docs.airnow.gov](https://docs.airnow.gov/)
-- Enables real EPA monitor observations for US locations (replaces modeled AQI when a monitor is within ~50 mi)
-- Proxied at `/api/airnow`
-
-#### Google Pollen API (optional)
-
-- [Pollen API overview](https://developers.google.com/maps/documentation/pollen/overview) — part of Google Maps Platform (billing required)
-- Enables 5-day **tree / grass / weed** pollen forecast for the US and 65+ other countries
-- Species vary by region (e.g. oak, birch, ragweed, grasses for Michigan)
-- Use the same Cloud project and API key as other Maps services (e.g. digital signage)
-- Proxied at `/api/pollen`
-
-**Key placement** — either set `google_pollen_api_key` in `config.local.php`, or export the environment variable on the server:
-
-```bash
-# Option A: in config.local.php (recommended)
-'google_pollen_api_key' => 'AIza...',
-
-# Option B: environment variable (used when config key is empty)
-export GOOGLE_POLLEN_API_KEY='AIza...'
-```
-
-Enable the Pollen API in [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Library → search "Pollen API".
-
-#### Pollen caching
-
-To limit API cost, pollen responses are cached on disk under `cache/pollen/`:
-
-| Setting | Default | Effect |
-|---|---|---|
-| `pollen_cache_grid` | `1` | Round lat/lon to 1 decimal → **~10 mi grid cells**. Nearby towns share one cache entry |
-| `pollen_cache_ttl` | `10800` | Cache lifetime in seconds (**3 hours**). One Google request per cell per TTL |
-| `pollen_daily_limit` | `7500` | Max Google API calls per calendar day. `0` = unlimited. Serves stale cache when hit |
-
-Tune for your traffic:
-
-- **Personal site / low traffic:** defaults are fine
-- **Fewer API calls:** raise `pollen_cache_ttl` to `21600` (6h) or `pollen_cache_grid` to `0` (~70 mi cells)
-- **Finer resolution:** set `pollen_cache_grid` to `2` (~1 mi) — more cache files and more Google requests
-- **Daily cap:** `pollen_daily_limit` defaults to `7500` (headroom under Google's 10,000/day free tier). Set `5000` for more margin, or `0` to disable the cap. Counter resets at midnight server time; tracked in `cache/pollen/_quota.json`
-
-The `cache/pollen/` directory must be writable by the web server:
-
-```bash
-sudo mkdir -p /var/www/echoweather/cache/pollen
-sudo chown -R www-data:www-data /var/www/echoweather/cache
-sudo chown root:www-data /var/www/echoweather/config.local.php
-sudo chmod 640 /var/www/echoweather/config.local.php
-```
+Your SSH user owns the clone (for `git pull`). `cache/` is owned by `www-data`.
+`config.local.php` is root-owned, group-readable by the web server.
 
 ### 3. Apache vhost
+
+Create `/etc/apache2/sites-available/echoweather.conf`:
 
 ```apache
 <VirtualHost *:80>
@@ -262,35 +114,31 @@ sudo chmod 640 /var/www/echoweather/config.local.php
 </VirtualHost>
 ```
 
+Root `.htaccess` also sets `X-Frame-Options`, `Referrer-Policy`, and blocks
+direct web access to `lib/`, `cache/`, and `router.php`.
+
 ```bash
 sudo a2enmod rewrite headers
 sudo a2ensite echoweather.conf
 sudo apachectl configtest && sudo systemctl reload apache2
 ```
 
-**No `ProxyPass` to port 8093.** PHP serves `/api/*` in-process.
-
 ### 4. Smoke test
 
-```bash
-./deploy.sh --smoke-only
-# or locally: php -S 127.0.0.1:8080 router.php  then  BASE_URL=http://127.0.0.1:8080 ./scripts/smoke.sh
-```
-
-Checks `/api/status`, `/api/airnow`, `/api/pollen`, `/api/buoy/45029`, and static assets including `og-image.png`.
+On the server:
 
 ```bash
-curl -s http://127.0.0.1/api/status
-# {"airnow":true,"buoy":true,"pollen":true}
-
-curl -s "http://127.0.0.1/api/pollen?latitude=43.06&longitude=-86.23" | head -c 300
-# first request: "cached":false
-# repeat within TTL: "cached":true, "cacheAgeSec":...
-
-curl -s "http://127.0.0.1/api/buoy/45029" | head -c 100
+cd /var/www/echoweather
+./scripts/smoke.sh
 ```
 
-### 5. Cloudflare Tunnel
+Or from your laptop after install:
+
+```bash
+BASE_URL=https://echoweather.com ./scripts/smoke.sh
+```
+
+### Cloudflare Tunnel
 
 Point the public hostname at Apache on port 80:
 
@@ -301,46 +149,171 @@ ingress:
   - service: http_status:404
 ```
 
-Visitors' browsers call open-meteo, api.weather.gov, etc. directly. Only
-`/api/*` hits your PHP layer.
+Add this to your Cloudflare Tunnel config (e.g. `/etc/cloudflared/config.yml`
+or the Zero Trust dashboard).
+
+---
+
+## Updating the app
+
+After pushing to GitHub:
+
+```bash
+git push origin main
+```
+
+**On the server** (recommended — repo is already there):
+
+```bash
+cd /var/www/echoweather
+./update.sh --smoke
+```
+
+**From your laptop** (SSH in and update remotely):
+
+```bash
+DEPLOY_HOST=user@your-server ./update.sh --smoke
+```
+
+`update.sh` runs `git pull`, ensures `cache/` exists with correct permissions,
+reminds you to merge any new keys from `config.example.php`, and optionally
+runs smoke tests. It never touches `config.local.php`.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DEPLOY_HOST` | *(unset)* | Set when running `update.sh` from your laptop |
+| `APP_DIR` | `/var/www/echoweather` | Git clone / Apache document root |
+| `GIT_BRANCH` | `main` | Branch to pull |
+
+Smoke test only (no pull):
+
+```bash
+./update.sh --smoke-only
+# or: DEPLOY_HOST=user@your-server ./update.sh --smoke-only
+```
+
+After updates with new config keys, merge additions from `config.example.php`
+into `config.local.php` by hand.
+
+### PWA version bump
+
+When you change `index.html` or `sw.js`, bump **both**:
+
+- `APP_VERSION` in `index.html`
+- `CACHE` name in `sw.js` (e.g. `echo-weather-v34` → `echo-weather-v35`)
+
+Deploy them together. Users can hard-refresh or use the in-app **Update app** link.
+
+---
+
+## Alternative: rsync deploy (`deploy.sh`)
+
+Use this only if the server is **not** a git clone — e.g. a staging directory
+and manual file copy workflow.
+
+```bash
+DEPLOY_HOST=user@your-server ./deploy.sh --smoke
+```
+
+`deploy.sh` rsyncs from your laptop to `~/echoweather-deploy/` on the server,
+then copies into `/var/www/echoweather/`. It never syncs `config.local.php`
+or `cache/`.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DEPLOY_HOST` | *(required)* | SSH target |
+| `REMOTE_STAGING` | `~/echoweather-deploy` | Staging directory on the server |
+| `REMOTE_WWW` | `/var/www/echoweather` | Apache document root |
+
+If you start with `deploy.sh` and later switch to git, clone into `REMOTE_WWW`
+and use `update.sh` going forward.
 
 ---
 
 ## Local development
 
-One command — static files and API routes:
-
 ```bash
-cd /path/to/echoweather
+git clone https://github.com/veddegre/echoweather.git
+cd echoweather
 cp config.example.php config.local.php
 # Edit config.local.php — add airnow_api_key and/or google_pollen_api_key
-mkdir -p cache/pollen
+mkdir -p cache/pollen cache/ratelimit
 php -S 127.0.0.1:8080 router.php
 ```
 
 Open **http://127.0.0.1:8080**
 
-`router.php` maps `/api/*` the same way Apache + `.htaccess` do in
-production.
+`router.php` maps `/api/*` the same way Apache + `.htaccess` do in production.
+It is blocked from direct web access in production.
 
 ---
 
 ## Configuration reference
 
 `config.example.php` is the source of truth for available keys and defaults.
-On the server: `sudo cp config.example.php config.local.php` (first time) or merge
-new keys into the existing file. **Do not rsync `config.local.php` from your dev machine.**
+On the server: `cp config.example.php config.local.php` (first time) or merge
+new keys into the existing file. **`config.local.php` is gitignored and never
+comes from git pull.**
 
 Every key is optional.
 
 | Key | Default | Meaning |
 |---|---|---|
 | `airnow_api_key` | `""` | EPA AirNow API key. Enables `/api/airnow` for US monitor observations. |
-| `google_pollen_api_key` | `""` | Google Maps Pollen API key. Enables `/api/pollen` for 5-day tree/grass/weed forecast. Falls back to env `GOOGLE_POLLEN_API_KEY` when empty. |
-| `pollen_cache_ttl` | `10800` | Seconds to cache pollen per grid cell (3h). Raise to reduce API calls. Min 300, max 86400. |
+| `google_pollen_api_key` | `""` | Google Maps Pollen API key. Enables `/api/pollen`. Falls back to env `GOOGLE_POLLEN_API_KEY` when empty. |
+| `pollen_cache_ttl` | `10800` | Seconds to cache pollen per grid cell (3h). Min 300, max 86400. |
 | `pollen_cache_grid` | `1` | Decimal places for lat/lon rounding: `0` ≈ 70 mi, `1` ≈ 10 mi, `2` ≈ 1 mi. |
-| `pollen_daily_limit` | `7500` | Max Google Pollen API calls per day (server calendar day). `0` = unlimited. When reached, serves stale cache only. |
+| `pollen_daily_limit` | `7500` | Max Google Pollen API calls per day. `0` = unlimited. Serves stale cache when hit. |
+| `rate_limit_airnow` | `120` | Max `/api/airnow` requests per IP per hour. `0` = disabled. |
+| `rate_limit_pollen` | `60` | Max `/api/pollen` requests per IP per hour. `0` = disabled. |
+| `rate_limit_buoy` | `120` | Max `/api/buoy` requests per IP per hour. `0` = disabled. |
 | `cors_origins` | see example | Browser origins allowed to call `/api/*`. Include your dev URL for `php -S`. |
+
+### API keys
+
+#### AirNow (optional)
+
+- Free key: [docs.airnow.gov](https://docs.airnow.gov/)
+- Enables real EPA monitor observations for US locations
+- Proxied at `/api/airnow`
+
+#### Google Pollen API (optional)
+
+- [Pollen API overview](https://developers.google.com/maps/documentation/pollen/overview)
+- Enables 5-day **tree / grass / weed** pollen forecast
+- Proxied at `/api/pollen`
+- Enable in [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Library → "Pollen API"
+
+Key placement — either in `config.local.php` or via environment variable:
+
+```php
+'google_pollen_api_key' => 'AIza...',
+// or: export GOOGLE_POLLEN_API_KEY='AIza...'
+```
+
+### Pollen caching
+
+Responses are cached on disk under `cache/pollen/`:
+
+| Setting | Default | Effect |
+|---|---|---|
+| `pollen_cache_grid` | `1` | Round lat/lon to 1 decimal → **~10 mi grid cells** |
+| `pollen_cache_ttl` | `10800` | Cache lifetime in seconds (**3 hours**) |
+| `pollen_daily_limit` | `7500` | Max Google API calls per calendar day |
+
+The `cache/` directory must be writable by the web server:
+
+```bash
+sudo mkdir -p /var/www/echoweather/cache/pollen /var/www/echoweather/cache/ratelimit
+sudo chown -R www-data:www-data /var/www/echoweather/cache
+```
+
+### Security note
+
+`/api/*` endpoints are **public** — anyone who can reach your server can call
+them with `curl`, not just browsers on allowed CORS origins. Billable keys stay
+server-side, but abuse can burn AirNow or Google quota. Defaults include
+per-IP rate limits and `pollen_daily_limit`; tune both for public traffic.
 
 ### API endpoints
 
@@ -348,48 +321,12 @@ Every key is optional.
 |---|---|---|
 | `GET /api/status` | none | Reports which integrations are configured (`airnow`, `pollen`, `buoy`) |
 | `GET /api/airnow?latitude=&longitude=&distance=` | none | AirNow lat/long proxy (distance 1–100 mi, default 50) |
-| `GET /api/pollen?latitude=&longitude=` | none | Google Pollen 5-day forecast (server-cached) |
+| `GET /api/pollen?latitude=&longitude=&days=` | none | Google Pollen forecast (days 1–5, default 3; server-cached) |
 | `GET /api/buoy/{id}` | none | NDBC buoy text proxy |
 
----
-
-## Updating the app
-
-**Never rsync `config.local.php`.** Edit it on the server only.
-
-Full app + PHP update:
-
-```bash
-cd /Users/veddegre/echoweather
-rsync -avz \
-  index.html manifest.json sw.js logo.svg icon.svg og-image.png \
-  api lib router.php .htaccess config.example.php \
-  veddegre@192.168.30.10:~/echoweather-deploy/
-
-ssh veddegre@192.168.30.10 'sudo rsync -a ~/echoweather-deploy/ /var/www/echoweather/ && sudo chown -R www-data:www-data /var/www/echoweather'
-```
-
-Static files only:
-
-```bash
-rsync -avz index.html sw.js manifest.json og-image.png \
-  veddegre@192.168.30.10:~/echoweather-deploy/
-ssh veddegre@192.168.30.10 'sudo rsync -a ~/echoweather-deploy/ /var/www/echoweather/ && sudo chown -R www-data:www-data /var/www/echoweather'
-```
-
-PHP only:
-
-```bash
-rsync -avz api lib router.php config.example.php \
-  veddegre@192.168.30.10:~/echoweather-deploy/
-ssh veddegre@192.168.30.10 'sudo rsync -a ~/echoweather-deploy/ /var/www/echoweather/ && sudo chown -R www-data:www-data /var/www/echoweather'
-```
-
-After deploying code with new config keys, merge any additions from
-`config.example.php` into the server's `config.local.php` by hand.
-
-Deploy `index.html` and `sw.js` together (bump `APP_VERSION` in `index.html` and
-the `CACHE` name in `sw.js`). Hard-refresh or use the in-app **Update app** link.
+Validation errors return `400` with a short message. Misconfiguration returns
+`503`. Upstream failures return `502`. Rate limits return `429`. Internal
+details are logged server-side only.
 
 ---
 
@@ -398,22 +335,48 @@ the `CACHE` name in `sw.js`). Hard-refresh or use the in-app **Update app** link
 **`/api/status` returns 404.** Enable `mod_rewrite`, set `AllowOverride All` on
 `/var/www/echoweather/api`, confirm `api/.htaccess` is deployed.
 
+**`git pull` fails with permission errors.** The clone should be owned by your
+SSH user, not `www-data`. Only `cache/` and `config.local.php` need special
+ownership — see the install steps above.
+
 **Air Quality hint still shows.** Set `airnow_api_key` in `config.local.php`.
 Verify `curl http://127.0.0.1/api/status` shows `"airnow":true`.
 
-**Pollen panel empty.** Set `google_pollen_api_key` in `config.local.php` (or export `GOOGLE_POLLEN_API_KEY`). Enable Pollen API in Google Cloud Console. Verify `curl http://127.0.0.1/api/status` shows `"pollen":true`. Ensure `cache/pollen/` exists and is writable: `sudo chown www-data:www-data /var/www/echoweather/cache/pollen`.
+**Pollen panel empty.** Set `google_pollen_api_key` in `config.local.php`.
+Enable Pollen API in Google Cloud Console. Verify `curl http://127.0.0.1/api/status`
+shows `"pollen":true`. Ensure `cache/pollen/` is writable.
 
-**Pollen always shows `"cached":false`.** Check that `cache/pollen/` is writable and not on a read-only filesystem.
+**503 on `/api/pollen`.** Key not set — configure `google_pollen_api_key`.
 
-**502 on `/api/pollen` after heavy use.** Daily limit (`pollen_daily_limit`) may be reached with no stale cache for that grid cell. Lower `pollen_cache_grid`, raise TTL, or wait until midnight server time. Check `cache/pollen/_quota.json`.
+**502 on `/api/pollen` after heavy use.** Daily limit (`pollen_daily_limit`) may
+be reached with no stale cache for that grid cell. Check Apache error log and
+`cache/pollen/_quota.json`.
 
-**502 on `/api/pollen`.** Invalid key, Pollen API not enabled in Cloud Console, or outbound HTTPS blocked. Check `sudo tail -f /var/log/apache2/error.log`.
+**429 on `/api/*`.** Per-IP rate limit hit. Raise `rate_limit_*` in
+`config.local.php` or wait until the next hour.
 
 **Buoy panel unavailable.** Confirm `curl http://127.0.0.1/api/buoy/45029`
 returns JSON. Check PHP can reach ndbc.noaa.gov (`php-curl` installed).
 
-**500 on `/api/airnow`.** Key missing, invalid coordinates, or AirNow upstream
-error — check Apache error log: `sudo tail -f /var/log/apache2/error.log`
+**500 / 502 with generic message.** Check Apache error log for details:
+`sudo tail -f /var/log/apache2/error.log`
+
+---
+
+## Migrating from the old Python daemon
+
+If you previously ran `echo_weather_server.py` under systemd on port 8093,
+remove it before deploying PHP:
+
+```bash
+sudo systemctl stop echo-weather-server 2>/dev/null || true
+sudo systemctl disable echo-weather-server 2>/dev/null || true
+sudo rm -f /etc/systemd/system/echo-weather-server.service
+sudo systemctl daemon-reload
+```
+
+Remove any Apache `ProxyPass` rules to `:8093` from your vhost — PHP serves
+`/api/*` in-process.
 
 ---
 
@@ -427,7 +390,7 @@ error — check Apache error log: `sudo tail -f /var/log/apache2/error.log`
 | **Detailed Forecast** | NWS zone text (US) |
 | **Radar** | RainViewer + IEM NEXRAD |
 | **Obs / Discussion** | METAR vs NWS; AFD text |
-| **Air / Moon** | AirNow or modeled AQI; Google Pollen forecast (tree/grass/weed); moon phase |
+| **Air / Moon** | AirNow or modeled AQI; Google Pollen forecast; moon phase |
 | **Advanced** | HRRR metrics |
 | **Great Lakes** | GLF text, waves, buoy — basin only |
 | **Convective outlook** | SPC Day 1–3 |

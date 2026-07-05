@@ -11,6 +11,9 @@ function default_config(): array
         'pollen_cache_ttl' => 10800,
         'pollen_cache_grid' => 1,
         'pollen_daily_limit' => 7500,
+        'rate_limit_airnow' => 120,
+        'rate_limit_pollen' => 60,
+        'rate_limit_buoy' => 120,
         'cors_origins' => [
             'https://echoweather.com',
             'http://127.0.0.1:8080',
@@ -37,6 +40,15 @@ function load_config(): array
     return array_merge(default_config(), $cfg);
 }
 
+function cors_origins_list(): array
+{
+    try {
+        return load_config()['cors_origins'];
+    } catch (Throwable) {
+        return default_config()['cors_origins'];
+    }
+}
+
 function match_cors_origin(?string $origin, array $allowed): ?string
 {
     if ($origin === null || $origin === '') {
@@ -51,6 +63,39 @@ function match_cors_origin(?string $origin, array $allowed): ?string
     return null;
 }
 
+function handle_cors_preflight(): void
+{
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'OPTIONS') {
+        return;
+    }
+
+    $origin = match_cors_origin($_SERVER['HTTP_ORIGIN'] ?? null, cors_origins_list());
+    if ($origin !== null) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Vary: Origin');
+        header('Access-Control-Allow-Methods: GET, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type');
+        header('Access-Control-Max-Age: 86400');
+        http_response_code(204);
+    } else {
+        http_response_code(405);
+    }
+    exit;
+}
+
+function log_api_error(string $context, Throwable $e): void
+{
+    error_log('[echo-weather] ' . $context . ': ' . $e->getMessage());
+}
+
+function send_api_error(int $code, string $publicMessage, ?Throwable $e = null, string $context = '', bool $cors = false): void
+{
+    if ($e !== null) {
+        log_api_error($context !== '' ? $context : 'api', $e);
+    }
+    send_json($code, ['error' => $publicMessage], $cors);
+}
+
 function send_json(int $code, mixed $data, bool $cors = false): void
 {
     http_response_code($code);
@@ -58,12 +103,7 @@ function send_json(int $code, mixed $data, bool $cors = false): void
     header('X-Content-Type-Options: nosniff');
 
     if ($cors) {
-        try {
-            $cfg = load_config();
-            $origin = match_cors_origin($_SERVER['HTTP_ORIGIN'] ?? null, $cfg['cors_origins']);
-        } catch (Throwable) {
-            $origin = match_cors_origin($_SERVER['HTTP_ORIGIN'] ?? null, default_config()['cors_origins']);
-        }
+        $origin = match_cors_origin($_SERVER['HTTP_ORIGIN'] ?? null, cors_origins_list());
         if ($origin !== null) {
             header('Access-Control-Allow-Origin: ' . $origin);
             header('Vary: Origin');
