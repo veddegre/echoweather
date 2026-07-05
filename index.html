@@ -804,7 +804,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '100';
+const APP_VERSION = '101';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -3361,14 +3361,10 @@ function renderPollenForecast(pollen, meteoDaily){
 }
 function renderPollenMeta(pollen){
   if(!pollen) return '';
-  const age = pollen.cacheAgeSec ? Math.round(pollen.cacheAgeSec / 60) : 0;
-  const cache = pollen.cached
-    ? (age < 1 ? 'cached just now' : 'cached ' + age + ' min ago')
-    : 'just updated';
-  let note = 'Google Pollen \u00B7 ' + cache + ' \u00B7 ~10 mi grid';
-  if(pollen.quotaPaused) note += ' \u00B7 daily API limit reached, showing last cached forecast';
-  else if(pollen.quotaLimit > 0) note += ' \u00B7 ' + pollen.quotaCount + '/' + pollen.quotaLimit + ' API calls today';
-  return note;
+  if(pollen.quotaPaused){
+    return 'Showing last available forecast \u2014 daily pollen data limit reached.';
+  }
+  return '';
 }
 let airLoadGen = 0;
 function renderAirnowKey(){
@@ -3434,11 +3430,11 @@ async function loadAir(loc){
         }
         renderPollenForecast(null, meteoDaily);
         $('pollenNote').textContent = meteoPollen.length
-          ? 'Pollen: Open-Meteo modeled'
-          : 'Pollen forecast shown year-round \u2014 levels are low or off-season.';
+          ? 'Modeled pollen forecast'
+          : 'Levels are low or off-season.';
       } else {
         renderPollenForecast(null, meteoDaily);
-        $('pollenNote').textContent = 'Pollen forecast shown year-round \u2014 levels are low or off-season.';
+        $('pollenNote').textContent = 'Levels are low or off-season.';
       }
       if(airLoadGen !== gen) return;
       const cat = AQI_CATS.find(x => aqi <= x[0]) || AQI_CATS[AQI_CATS.length - 1];
