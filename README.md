@@ -36,6 +36,7 @@ and more, mostly fetched client-side from public APIs.
 | `update.sh` | **Primary update path** — `git pull` on the server |
 | `deploy.sh` | Optional rsync deploy when the server is not a git clone |
 | `scripts/update-server.sh` | Server-side update logic (called by `update.sh`) |
+| `scripts/fix-permissions.sh` | Repair `.git` / cache ownership after a bad `chown` |
 | `scripts/smoke.sh` | Post-deploy health checks |
 | `config.example.php` | Config template — merge new keys into `config.local.php` on the server |
 | `config.local.php` | Server secrets (gitignored — lives only on the server) |
@@ -79,14 +80,14 @@ cp config.example.php config.local.php
 nano config.local.php   # add API keys
 
 mkdir -p cache/pollen cache/ratelimit
-sudo chown -R www-data:www-data cache
-sudo chown root:www-data config.local.php
-sudo chmod 640 config.local.php
-chmod +x update.sh scripts/*.sh
+./scripts/fix-permissions.sh
 ```
 
-Your SSH user owns the clone (for `git pull`). `cache/` is owned by `www-data`.
-`config.local.php` is root-owned, group-readable by the web server.
+Your SSH user owns the clone and `.git` (for `git pull`). Apache reads app files via
+group/other permissions. Only `cache/` is owned by `www-data`.
+
+**Never run `sudo chown -R www-data:www-data /var/www/echoweather`** — that breaks
+`git pull` by making `.git` unreadable to your SSH user.
 
 ### 3. Apache vhost
 
@@ -335,7 +336,31 @@ details are logged server-side only.
 **`/api/status` returns 404.** Enable `mod_rewrite`, set `AllowOverride All` on
 `/var/www/echoweather/api`, confirm `api/.htaccess` is deployed.
 
-**`git pull` fails with permission errors.** The clone should be owned by your
+**`git pull` fails (dubious ownership / `.git/FETCH_HEAD` permission denied).**
+Usually caused by `chown -R www-data:www-data` on the whole repo. **Do not use
+`sudo git pull`** — fix ownership instead:
+
+```bash
+cd /var/www/echoweather
+./scripts/fix-permissions.sh
+git pull --ff-only
+```
+
+If `fix-permissions.sh` is not on the server yet, run manually:
+
+```bash
+sudo chown -R veddegre:veddegre /var/www/echoweather/.git
+sudo chown -R veddegre:www-data /var/www/echoweather
+sudo chown -R veddegre:veddegre /var/www/echoweather/.git
+sudo chown -R www-data:www-data /var/www/echoweather/cache
+sudo chown root:www-data /var/www/echoweather/config.local.php
+sudo chmod 640 /var/www/echoweather/config.local.php
+git config --global --add safe.directory /var/www/echoweather
+```
+
+Replace `veddegre` with your SSH username.
+
+**`git pull` fails with permission errors (general).** The clone should be owned by your
 SSH user, not `www-data`. Only `cache/` and `config.local.php` need special
 ownership — see the install steps above.
 

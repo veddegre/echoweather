@@ -9,6 +9,7 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/echoweather}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
+REPO_USER="${REPO_USER:-$(whoami)}"
 WEB_USER="${WEB_USER:-www-data}"
 WEB_GROUP="${WEB_GROUP:-www-data}"
 DO_SMOKE=0
@@ -20,6 +21,7 @@ for arg in "$@"; do
       echo "Usage: ./scripts/update-server.sh [--smoke]"
       echo "  APP_DIR      default: /var/www/echoweather"
       echo "  GIT_BRANCH   default: main"
+      echo "  REPO_USER    default: current user (must own .git for git pull)"
       echo "  WEB_USER     default: www-data"
       exit 0
       ;;
@@ -40,6 +42,15 @@ if [[ ! -d .git ]]; then
   exit 1
 fi
 
+# Ensure .git is owned by the SSH user before fetch/pull.
+if ! [[ -O .git ]] || ! [[ -w .git ]]; then
+  echo "Fixing repository permissions (.git not owned/writable by $REPO_USER)..."
+  APP_DIR="$APP_DIR" REPO_USER="$REPO_USER" WEB_USER="$WEB_USER" WEB_GROUP="$WEB_GROUP" \
+    bash "$APP_DIR/scripts/fix-permissions.sh"
+fi
+
+git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+
 echo "Updating Echo Weather in $APP_DIR (branch $GIT_BRANCH)..."
 git fetch origin
 git pull --ff-only origin "$GIT_BRANCH"
@@ -53,18 +64,9 @@ if [[ ! -f config.local.php ]]; then
   echo
 fi
 
-mkdir -p cache/pollen cache/ratelimit 2>/dev/null || true
-if command -v sudo >/dev/null 2>&1; then
-  sudo mkdir -p cache/pollen cache/ratelimit
-  sudo chown -R "$WEB_USER:$WEB_GROUP" cache
-  sudo chmod -R 750 cache
-  if [[ -f config.local.php ]]; then
-    sudo chown root:"$WEB_GROUP" config.local.php
-    sudo chmod 640 config.local.php
-  fi
-else
-  chmod -R 750 cache 2>/dev/null || true
-fi
+# Re-apply permissions after pull (new files may need group-read for Apache).
+APP_DIR="$APP_DIR" REPO_USER="$REPO_USER" WEB_USER="$WEB_USER" WEB_GROUP="$WEB_GROUP" \
+  bash "$APP_DIR/scripts/fix-permissions.sh"
 
 echo
 echo "Compare config.example.php with config.local.php and merge any new keys by hand."

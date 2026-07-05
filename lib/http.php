@@ -3,28 +3,52 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 
-function http_get(string $url, int $timeout = 25): string
+function http_status_from_header_line(string $statusLine): ?int
 {
-    if (function_exists('curl_init')) {
-        $ch = curl_init($url);
+    // RFC 7230: reason phrase is optional (e.g. "HTTP/1.1 404" with no text after).
+    if (preg_match('/HTTP\/[\d.]+\s+(\d{3})\b/', $statusLine, $m)) {
+        return (int) $m[1];
+    }
+    return null;
+}
+
+/**
+ * @return array{body: string|false, code: int, err: string}
+ */
+function curl_request(string $url, array $opts, int $timeout): array
+{
+    $ch = curl_init($url);
+    try {
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS => 5,
             CURLOPT_TIMEOUT => $timeout,
             CURLOPT_USERAGENT => ECHO_USER_AGENT,
+        ] + $opts);
+        return [
+            'body' => curl_exec($ch),
+            'code' => (int) curl_getinfo($ch, CURLINFO_HTTP_CODE),
+            'err' => curl_error($ch),
+        ];
+    } finally {
+        unset($ch);
+    }
+}
+
+function http_get(string $url, int $timeout = 25): string
+{
+    if (function_exists('curl_init')) {
+        $res = curl_request($url, [
             CURLOPT_HTTPHEADER => ['Accept: */*'],
-        ]);
-        $body = curl_exec($ch);
-        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err = curl_error($ch);
-        if ($body === false) {
-            throw new RuntimeException($err !== '' ? $err : 'request failed');
+        ], $timeout);
+        if ($res['body'] === false) {
+            throw new RuntimeException($res['err'] !== '' ? $res['err'] : 'request failed');
         }
-        if ($code >= 400) {
-            throw new RuntimeException('HTTP ' . $code);
+        if ($res['code'] >= 400) {
+            throw new RuntimeException('HTTP ' . $res['code']);
         }
-        return (string) $body;
+        return (string) $res['body'];
     }
 
     $ctx = stream_context_create([
@@ -43,11 +67,9 @@ function http_get(string $url, int $timeout = 25): string
     } else {
         $headers = $http_response_header ?? [];
     }
-    if (isset($headers[0]) && preg_match('/\s(\d{3})\s/', $headers[0], $m)) {
-        $code = (int) $m[1];
-        if ($code >= 400) {
-            throw new RuntimeException('HTTP ' . $code);
-        }
+    $code = isset($headers[0]) ? http_status_from_header_line($headers[0]) : null;
+    if ($code !== null && $code >= 400) {
+        throw new RuntimeException('HTTP ' . $code);
     }
     return $body;
 }
@@ -72,35 +94,26 @@ function fetch_airnow(float $lat, float $lon, int $distance, string $apiKey): ar
         return parse_airnow_body(http_get($url, 15));
     }
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 5,
-        CURLOPT_TIMEOUT => 15,
-        CURLOPT_USERAGENT => ECHO_USER_AGENT,
+    $res = curl_request($url, [
         CURLOPT_HTTPHEADER => ['Accept: application/json'],
-    ]);
-    $body = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err = curl_error($ch);
-    if ($body === false) {
-        throw new RuntimeException($err !== '' ? $err : 'AirNow request failed');
+    ], 15);
+    if ($res['body'] === false) {
+        throw new RuntimeException($res['err'] !== '' ? $res['err'] : 'AirNow request failed');
     }
-    if ($code === 404) {
+    if ($res['code'] === 404) {
         return [];
     }
-    if ($code === 401 || $code === 403) {
-        throw new RuntimeException('AirNow API key invalid or not activated (HTTP ' . $code . ')');
+    if ($res['code'] === 401 || $res['code'] === 403) {
+        throw new RuntimeException('AirNow API key invalid or not activated (HTTP ' . $res['code'] . ')');
     }
-    if ($code >= 500) {
+    if ($res['code'] >= 500) {
         return [];
     }
-    if ($code >= 400) {
-        throw new RuntimeException('AirNow upstream HTTP ' . $code);
+    if ($res['code'] >= 400) {
+        throw new RuntimeException('AirNow upstream HTTP ' . $res['code']);
     }
 
-    return parse_airnow_body((string) $body);
+    return parse_airnow_body((string) $res['body']);
 }
 
 function parse_airnow_body(string $body): array
