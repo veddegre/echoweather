@@ -119,24 +119,35 @@ Root `.htaccess` also sets `X-Frame-Options`, `Referrer-Policy`, and blocks
 direct web access to `lib/`, `cache/`, and `router.php`.
 
 ```bash
+sudo a2dissite 000-default.conf   # disable Apache's default /var/www/html site
 sudo a2enmod rewrite headers
 sudo a2ensite echoweather.conf
 sudo apachectl configtest && sudo systemctl reload apache2
 ```
 
+Disable the default site so `http://127.0.0.1` is not served from `/var/www/html`.
+Smoke tests still send `Host: echoweather.com` when using `127.0.0.1`, but removing
+the default site avoids confusion and matches production (only your vhost on port 80).
+
 ### 4. Smoke test
 
-On the server:
+On the server (hits `127.0.0.1` with `Host: echoweather.com`):
 
 ```bash
 cd /var/www/echoweather
 ./scripts/smoke.sh
 ```
 
-Or from your laptop after install:
+Or against the public URL from any machine:
 
 ```bash
 BASE_URL=https://echoweather.com ./scripts/smoke.sh
+```
+
+Manual check:
+
+```bash
+curl -s -H "Host: echoweather.com" http://127.0.0.1/api/status
 ```
 
 ### Cloudflare Tunnel
@@ -192,6 +203,9 @@ Smoke test only (no pull):
 ./update.sh --smoke-only
 # or: DEPLOY_HOST=user@your-server ./update.sh --smoke-only
 ```
+
+Server-side smoke tests use `http://127.0.0.1` with `Host: echoweather.com` (override
+with `SMOKE_HOST` if your vhost uses a different `ServerName`).
 
 After updates with new config keys, merge additions from `config.example.php`
 into `config.local.php` by hand.
@@ -334,7 +348,15 @@ details are logged server-side only.
 ## Troubleshooting
 
 **`/api/status` returns 404.** Enable `mod_rewrite`, set `AllowOverride All` on
-`/var/www/echoweather/api`, confirm `api/.htaccess` is deployed.
+`/var/www/echoweather/api`, confirm `api/.htaccess` is deployed. When testing on
+the server with curl, include the vhost:
+`curl -H "Host: echoweather.com" http://127.0.0.1/api/status`.
+
+**Smoke tests fail on the server.** Apache's default site (`000-default`) may be
+answering `127.0.0.1` instead of Echo Weather. Disable it:
+`sudo a2dissite 000-default.conf && sudo systemctl reload apache2`. Smoke tests
+also send `Host: echoweather.com` automatically — verify your vhost `ServerName`
+matches (`SMOKE_HOST` env var overrides the default).
 
 **`git pull` fails (dubious ownership / `.git/FETCH_HEAD` permission denied).**
 Usually caused by `chown -R www-data:www-data` on the whole repo. **Do not use
@@ -355,7 +377,7 @@ sudo chown -R veddegre:veddegre /var/www/echoweather/.git
 sudo chown -R www-data:www-data /var/www/echoweather/cache
 sudo chown root:www-data /var/www/echoweather/config.local.php
 sudo chmod 640 /var/www/echoweather/config.local.php
-git config --global --add safe.directory /var/www/echoweather
+sudo -u veddegre -H git config --global --add safe.directory /var/www/echoweather
 ```
 
 Replace `veddegre` with your SSH username.
@@ -365,11 +387,11 @@ SSH user, not `www-data`. Only `cache/` and `config.local.php` need special
 ownership — see the install steps above.
 
 **Air Quality hint still shows.** Set `airnow_api_key` in `config.local.php`.
-Verify `curl http://127.0.0.1/api/status` shows `"airnow":true`.
+Verify `curl -H "Host: echoweather.com" http://127.0.0.1/api/status` shows `"airnow":true`.
 
 **Pollen panel empty.** Set `google_pollen_api_key` in `config.local.php`.
-Enable Pollen API in Google Cloud Console. Verify `curl http://127.0.0.1/api/status`
-shows `"pollen":true`. Ensure `cache/pollen/` is writable.
+Enable Pollen API in Google Cloud Console. Verify
+`curl -H "Host: echoweather.com" http://127.0.0.1/api/status` shows `"pollen":true`.
 
 **503 on `/api/pollen`.** Key not set — configure `google_pollen_api_key`.
 
@@ -380,8 +402,8 @@ be reached with no stale cache for that grid cell. Check Apache error log and
 **429 on `/api/*`.** Per-IP rate limit hit. Raise `rate_limit_*` in
 `config.local.php` or wait until the next hour.
 
-**Buoy panel unavailable.** Confirm `curl http://127.0.0.1/api/buoy/45029`
-returns JSON. Check PHP can reach ndbc.noaa.gov (`php-curl` installed).
+**Buoy panel unavailable.** Confirm
+`curl -H "Host: echoweather.com" http://127.0.0.1/api/buoy/45029` returns JSON.
 
 **500 / 502 with generic message.** Check Apache error log for details:
 `sudo tail -f /var/log/apache2/error.log`

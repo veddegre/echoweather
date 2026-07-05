@@ -1,14 +1,33 @@
 #!/usr/bin/env bash
 # Echo Weather — post-deploy smoke tests (run on server or locally).
+#
+# On the server, Apache may still have the default 000-default site on 127.0.0.1.
+# Smoke tests send Host: echoweather.com so requests hit the Echo Weather vhost.
+#
 # Usage:
-#   ./scripts/smoke.sh                    # http://127.0.0.1
+#   ./scripts/smoke.sh
+#   SMOKE_HOST=echoweather.com ./scripts/smoke.sh
 #   BASE_URL=https://echoweather.com ./scripts/smoke.sh
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1}"
 BASE_URL="${BASE_URL%/}"
+SMOKE_HOST="${SMOKE_HOST:-echoweather.com}"
 LAT="${SMOKE_LAT:-43.0631}"
 LON="${SMOKE_LON:--86.2284}"
+
+# Host header needed when curling 127.0.0.1 / localhost (default Apache site is not Echo Weather).
+base_host="${BASE_URL#*://}"
+base_host="${base_host%%/*}"
+base_host="${base_host%%:*}"
+CURL_HOST_ARGS=()
+if [[ "$base_host" == "127.0.0.1" || "$base_host" == "localhost" ]]; then
+  CURL_HOST_ARGS=(-H "Host: $SMOKE_HOST")
+fi
+
+curl_smoke() {
+  curl -sS "${CURL_HOST_ARGS[@]}" "$@"
+}
 
 pass=0
 fail=0
@@ -26,11 +45,15 @@ check() {
   fi
 }
 
-echo "Smoke tests: $BASE_URL"
+if [[ ${#CURL_HOST_ARGS[@]} -gt 0 ]]; then
+  echo "Smoke tests: $BASE_URL (Host: $SMOKE_HOST)"
+else
+  echo "Smoke tests: $BASE_URL"
+fi
 echo
 
 # --- /api/status ---
-status_code="$(curl -sS -o /tmp/echo-smoke-status.json -w '%{http_code}' "$BASE_URL/api/status" || echo 000)"
+status_code="$(curl_smoke -o /tmp/echo-smoke-status.json -w '%{http_code}' "$BASE_URL/api/status" || echo 000)"
 status_body="$(cat /tmp/echo-smoke-status.json 2>/dev/null || true)"
 check "GET /api/status" "$([[ "$status_code" == "200" ]] && echo 1 || echo 0)" "HTTP $status_code"
 
@@ -47,7 +70,7 @@ check "status.pollen configured" "1" "$([[ "$pollen_cfg" == "1" ]] && echo 'true
 check "status.buoy" "$buoy_cfg" "$([[ "$buoy_cfg" == "1" ]] && echo 'true' || echo 'false')"
 
 # --- /api/airnow ---
-airnow_code="$(curl -sS -o /tmp/echo-smoke-airnow.json -w '%{http_code}' \
+airnow_code="$(curl_smoke -o /tmp/echo-smoke-airnow.json -w '%{http_code}' \
   "$BASE_URL/api/airnow?latitude=$LAT&longitude=$LON&distance=50" || echo 000)"
 airnow_body="$(cat /tmp/echo-smoke-airnow.json 2>/dev/null || true)"
 if [[ "$airnow_code" == "200" ]]; then
@@ -70,7 +93,7 @@ else
 fi
 
 # --- /api/pollen (optional) ---
-pollen_code="$(curl -sS -o /tmp/echo-smoke-pollen.json -w '%{http_code}' \
+pollen_code="$(curl_smoke -o /tmp/echo-smoke-pollen.json -w '%{http_code}' \
   "$BASE_URL/api/pollen?latitude=$LAT&longitude=$LON&days=3" || echo 000)"
 if [[ "$pollen_code" == "200" ]]; then
   check "GET /api/pollen" "1" "HTTP 200"
@@ -81,14 +104,14 @@ else
 fi
 
 # --- /api/buoy ---
-buoy_code="$(curl -sS -o /tmp/echo-smoke-buoy.txt -w '%{http_code}' \
+buoy_code="$(curl_smoke -o /tmp/echo-smoke-buoy.txt -w '%{http_code}' \
   "$BASE_URL/api/buoy/45029" || echo 000)"
 buoy_head="$(head -c 80 /tmp/echo-smoke-buoy.txt 2>/dev/null | tr '\n' ' ' || true)"
 check "GET /api/buoy/45029" "$([[ "$buoy_code" == "200" ]] && echo 1 || echo 0)" "HTTP $buoy_code — $buoy_head"
 
 # --- static assets ---
 for path in index.html sw.js og-image.png manifest.json; do
-  code="$(curl -sS -o /dev/null -w '%{http_code}' "$BASE_URL/$path" || echo 000)"
+  code="$(curl_smoke -o /dev/null -w '%{http_code}' "$BASE_URL/$path" || echo 000)"
   check "GET /$path" "$([[ "$code" == "200" ]] && echo 1 || echo 0)" "HTTP $code"
 done
 

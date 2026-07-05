@@ -11,7 +11,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/echoweather}"
-REPO_USER="${REPO_USER:-$(whoami)}"
+REPO_USER="${REPO_USER:-${SUDO_USER:-$(whoami)}}"
 WEB_USER="${WEB_USER:-www-data}"
 WEB_GROUP="${WEB_GROUP:-www-data}"
 
@@ -27,6 +27,17 @@ run_root() {
     sudo "$@"
   else
     echo "Root privileges required to fix permissions. Re-run with sudo." >&2
+    exit 1
+  fi
+}
+
+run_as_repo_user() {
+  if [[ "$(id -un)" == "$REPO_USER" ]]; then
+    "$@"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo -u "$REPO_USER" -H "$@"
+  else
+    echo "Cannot run as $REPO_USER without sudo." >&2
     exit 1
   fi
 }
@@ -59,6 +70,7 @@ if [[ -f "$APP_DIR/config.local.php" ]]; then
 fi
 
 # Dubious-ownership guard when parent dirs are root-owned (common under /var/www).
-git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+# Must run as REPO_USER — not root — or git pull over SSH still fails.
+run_as_repo_user git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 
 echo "Done. Verify with: cd $APP_DIR && git pull --ff-only"

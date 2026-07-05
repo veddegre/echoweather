@@ -9,10 +9,18 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/echoweather}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
-REPO_USER="${REPO_USER:-$(whoami)}"
+REPO_USER="${REPO_USER:-${SUDO_USER:-$(whoami)}}"
 WEB_USER="${WEB_USER:-www-data}"
 WEB_GROUP="${WEB_GROUP:-www-data}"
 DO_SMOKE=0
+
+run_git_safe_directory() {
+  if [[ "$(id -un)" == "$REPO_USER" ]]; then
+    git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo -u "$REPO_USER" -H git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+  fi
+}
 
 for arg in "$@"; do
   case "$arg" in
@@ -49,7 +57,7 @@ if ! [[ -O .git ]] || ! [[ -w .git ]]; then
     bash "$APP_DIR/scripts/fix-permissions.sh"
 fi
 
-git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+run_git_safe_directory
 
 echo "Updating Echo Weather in $APP_DIR (branch $GIT_BRANCH)..."
 git fetch origin
@@ -74,6 +82,6 @@ echo "Update complete."
 
 if [[ "$DO_SMOKE" -eq 1 ]]; then
   echo
-  echo "Running smoke tests (127.0.0.1)..."
-  BASE_URL=http://127.0.0.1 bash "$APP_DIR/scripts/smoke.sh"
+  echo "Running smoke tests (127.0.0.1, Host: ${SMOKE_HOST:-echoweather.com})..."
+  SMOKE_HOST="${SMOKE_HOST:-echoweather.com}" BASE_URL=http://127.0.0.1 bash "$APP_DIR/scripts/smoke.sh"
 fi

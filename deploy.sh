@@ -73,6 +73,6 @@ fi
 
 if [[ "$DO_SMOKE" -eq 1 ]]; then
   echo
-  echo "Running smoke tests on server (127.0.0.1)..."
-  ssh "$DEPLOY_HOST" "BASE_URL=http://127.0.0.1 bash -s" < "$ROOT/scripts/smoke.sh"
+  echo "Running smoke tests on server (127.0.0.1, Host: ${SMOKE_HOST:-echoweather.com})..."
+  ssh "$DEPLOY_HOST" "SMOKE_HOST=${SMOKE_HOST:-echoweather.com} BASE_URL=http://127.0.0.1 bash -s" < "$ROOT/scripts/smoke.sh"
 fi
