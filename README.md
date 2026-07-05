@@ -220,7 +220,7 @@ into `config.local.php` by hand.
 When you change `index.html` or `sw.js`, bump **both**:
 
 - `APP_VERSION` in `index.html`
-- `CACHE` name in `sw.js` (e.g. `echo-weather-v34` → `echo-weather-v35`)
+- `CACHE` name in `sw.js` (e.g. `echo-weather-v36` → `echo-weather-v37`)
 
 Deploy them together. Users can hard-refresh or use the in-app **Update app** link.
 
@@ -419,9 +419,9 @@ be reached with no stale cache for that grid cell. Check Apache error log and
 | **Convective outlook** | SPC Day 1–3 |
 
 Active NWS warnings appear in the top banner. Location via geolocation or search;
-default fallback Grand Haven, MI. Light / Dark / System themes. Installable PWA.
+default fallback Allendale, MI. Light / Dark / System themes. Installable PWA.
 
-Shareable URLs: `?lat=43.06&lon=-86.23&name=Grand+Haven`
+Shareable URLs: `?lat=42.9721&lon=-85.9536&name=Allendale`
 
 ---
 

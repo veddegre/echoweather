@@ -636,7 +636,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '35';
+const APP_VERSION = '36';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -647,7 +647,7 @@ const store = {
 const $ = id => document.getElementById(id);
 
 // ---------- state ----------
-const DEFAULT_LOC = { name:'Grand Haven', admin1:'Michigan', country:'US', lat:43.0631, lon:-86.2284 };
+const DEFAULT_LOC = { name:'Allendale', admin1:'Michigan', country:'US', lat:42.9721, lon:-85.9536 };
 const savedLocs = store.get('st_locs');
 let state = {
   units: store.get('st_units') || 'F',
@@ -1064,7 +1064,7 @@ function searchNote(msg){
 async function geocode(q){
   const box = $('searchResults');
   box.innerHTML = '';
-  // direct coordinate entry: "43.06, -86.23" — works even if search is unreachable
+  // direct coordinate entry: "42.97, -85.95" — works even if search is unreachable
   const m = q.match(/^\s*(-?\d{1,2}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)\s*$/);
   if(m){
     const lat = parseFloat(m[1]), lon = parseFloat(m[2]);

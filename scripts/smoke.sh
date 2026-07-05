@@ -13,8 +13,8 @@ set -euo pipefail
 BASE_URL="${BASE_URL:-http://127.0.0.1}"
 BASE_URL="${BASE_URL%/}"
 SMOKE_HOST="${SMOKE_HOST:-echoweather.com}"
-LAT="${SMOKE_LAT:-43.0631}"
-LON="${SMOKE_LON:--86.2284}"
+LAT="${SMOKE_LAT:-42.9721}"
+LON="${SMOKE_LON:--85.9536}"
 
 # Host header needed when curling 127.0.0.1 / localhost (default Apache site is not Echo Weather).
 base_host="${BASE_URL#*://}"
@@ -77,7 +77,7 @@ if [[ "$airnow_code" == "200" ]]; then
   airnow_ok=1
   if command -v python3 >/dev/null 2>&1; then
     obs_count="$(python3 -c "import json; d=json.load(open('/tmp/echo-smoke-airnow.json')); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null || echo 0)"
-    airnow_detail="HTTP 200, ${obs_count} observation(s) near Grand Haven"
+    airnow_detail="HTTP 200, ${obs_count} observation(s) near Allendale"
     if [[ "$obs_count" == "0" ]]; then
       airnow_ok=1
       airnow_detail="HTTP 200, empty (no monitor within 50 mi — modeled AQI fallback in app)"
