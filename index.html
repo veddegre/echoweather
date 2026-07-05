@@ -31,7 +31,7 @@
 <style>
 :root, html[data-theme="light"] {
   color-scheme: light;
-  --chrome-h:168px;
+  --chrome-h:128px;
   /* Logo: navy #001845/#00225c · blue #3c91e6 · sky #5aa8f0/#8ec8ff · beam #7fffff · mist #eaf4ff/#dceeff */
   --bg:#EAF4FF;--panel:#FFFFFF;--panel-2:#DCEEFF;--line:#B8CFE8;
   --ink:#001845;--mut:#2A4E78;--dim:#5A7FA0;
@@ -145,21 +145,27 @@ body.scrolled .locbar{padding:10px 0}
 .sw-update-bottom{margin-top:12px}
 .sw-update button{background:var(--accent);color:var(--on-accent);border:none;border-radius:8px;padding:7px 14px;font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap}
 .sw-update button:hover{filter:brightness(1.08)}
-.page-nav{padding:8px 0 10px;border-top:1px solid var(--line);margin-top:4px}
-body.scrolled .page-nav{padding:6px 0 8px}
-.nav-groups{display:flex;gap:6px;flex-wrap:wrap}
-.nav-groups button{flex-shrink:0;background:var(--panel);border:1px solid var(--line);border-radius:999px;color:var(--mut);padding:7px 14px;font-size:.8125rem;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap}
-.nav-groups button:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
-.nav-groups button.on{color:var(--ink);background:var(--accent-soft);border-color:var(--accent);font-weight:600}
-.nav-sections{display:flex;gap:5px;overflow-x:auto;margin-top:7px;padding:1px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.nav-sections::-webkit-scrollbar{display:none}
-.nav-sections a{flex-shrink:0;text-decoration:none;font-size:.75rem;font-weight:500;color:var(--dim);padding:5px 11px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
-.nav-sections a:hover{color:var(--ink);background:var(--panel-2);border-color:var(--line)}
-.nav-sections a.on{color:var(--ink);background:var(--panel);border-color:var(--line);font-weight:600}
-.mobile-tab-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:950;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;box-sizing:border-box}
-.mobile-tab-bar button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;border-radius:10px;color:var(--mut);font-size:.5625rem;font-weight:600;padding:7px 2px;letter-spacing:.02em}
-.mobile-tab-bar button .tab-lbl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mobile-tab-bar button.on{color:var(--ink);background:var(--accent-soft)}
+.app-tab-bar{display:flex;gap:4px;border-top:1px solid var(--line);margin-top:4px;padding:8px 0 10px}
+body.scrolled .app-tab-bar{padding:6px 0 8px}
+.app-tab-bar button{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;background:transparent;border:1px solid transparent;border-radius:10px;color:var(--mut);font-size:.8125rem;font-weight:600;font-family:inherit;cursor:pointer;padding:8px 10px;letter-spacing:.02em}
+.app-tab-bar button .tab-lbl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-tab-bar button.on{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
+#content [data-tab]{display:none!important}
+body.mtab-now #content [data-tab="now"]{display:block!important}
+body.mtab-forecast #content [data-tab="forecast"]{display:block!important}
+body.mtab-radar #content [data-tab="radar"]{display:block!important}
+body.mtab-radar #stormLinks.visible{display:block!important}
+body.mtab-air #content [data-tab="air"]{display:block!important}
+body.mtab-air #airMarineGrid{display:grid!important}
+body.mtab-more #content [data-tab="more"]{display:block!important}
+body.mtab-more #moonAdvGrid{display:grid!important}
+body.mtab-more #afdPanelWrap{display:block!important}
+body.mtab-now #obsAfdGrid,body.mtab-now #airMarineGrid,body.mtab-now #moonAdvGrid,body.mtab-now #afdPanelWrap,
+body.mtab-radar #obsAfdGrid,body.mtab-radar #airMarineGrid,body.mtab-radar #moonAdvGrid,body.mtab-radar #afdPanelWrap,
+body.mtab-forecast #airMarineGrid,body.mtab-forecast #moonAdvGrid,body.mtab-forecast #afdPanelWrap,
+body.mtab-air #obsAfdGrid,body.mtab-air #moonAdvGrid,body.mtab-air #afdPanelWrap,
+body.mtab-more #obsAfdGrid,body.mtab-more #airMarineGrid{display:none!important}
+body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .nav-target,[id].panel{scroll-margin-top:calc(var(--chrome-h) + 10px)}
 .alert{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;background:var(--panel)}
 .alert summary{cursor:pointer;padding:12px 16px;list-style:none}
@@ -171,13 +177,6 @@ body.scrolled .page-nav{padding:6px 0 8px}
 .alert .desc{font-size:.8125rem;color:var(--mut);padding:0 16px 14px;white-space:pre-wrap;max-height:260px;overflow-y:auto;line-height:1.5}
 .alert.watch{border-left-color:var(--warm)}.alert.watch .ev{color:var(--warm)}
 .alert.adv{border-left-color:var(--sky)}.alert.adv .ev{color:var(--sky)}
-.panel-fold > .fold{border:none}
-.panel-fold > .fold > summary.fold-hd{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;margin:-4px 0 0;padding:0}
-.panel-fold > .fold > summary.fold-hd::-webkit-details-marker{display:none}
-.panel-fold > .fold > summary.fold-hd::after{content:'Show';margin-left:auto;font-size:.75rem;color:var(--sky);font-weight:600;flex-shrink:0}
-.panel-fold > .fold[open] > summary.fold-hd::after{content:'Hide'}
-.panel-fold > .fold > summary.fold-hd h2{margin:0;flex:1;min-width:0}
-.panel-fold .fold-bd{margin-top:14px}
 .buoy-card{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2);overflow:hidden}
 .buoy-card-main{padding:14px 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between}
 .buoy-card-main .lbl{font-size:.6875rem;color:var(--dim);font-weight:500;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;display:block}
@@ -200,8 +199,6 @@ body.scrolled .page-nav{padding:6px 0 8px}
 .buoy-card-metrics{padding:0 14px 10px}
 .buoy-picker-body .buoy-find{font-size:.75rem;color:var(--sky);text-decoration:none;font-weight:500;white-space:nowrap}
 .buoy-picker-body .buoy-find:hover{text-decoration:underline}
-.panel-fold:has(.fold:not([open])){padding-bottom:18px}
-.panel-fold > .fold > summary.fold-hd .panel-status{margin-left:0;margin-right:8px}
 .grid{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;margin-top:8px;min-width:0}
 .grid.adv-only{grid-template-columns:1fr}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:var(--card-shadow);transition:background .2s,border-color .2s;min-width:0;max-width:100%;overflow-wrap:break-word}
@@ -401,32 +398,19 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   .obs-row .obs-val:nth-of-type(2){grid-area:obs}
   .obs-row .obs-val:nth-of-type(3){grid-area:fc}
   .obs-badge{grid-area:badge;justify-self:end}
-  .page-nav{display:none}
-  .mobile-tab-bar{display:flex;gap:4px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+  .app-tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:950;margin-top:0;padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);border-bottom:none}
+  .app-tab-bar button{flex-direction:column;gap:2px;font-size:.5625rem;padding:7px 2px;border:none}
   html{scroll-padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   .wrap{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   footer{padding-bottom:8px}
-  #content [data-tab]{display:none!important}
-  body.mtab-now #content [data-tab="now"]{display:block!important}
-  body.mtab-forecast #content [data-tab="forecast"]{display:block!important}
-  body.mtab-radar #content [data-tab="radar"]{display:block!important}
-  body.mtab-radar #stormLinks.visible{display:block!important}
-  body.mtab-air #content [data-tab="air"]{display:block!important}
-  body.mtab-air #airMarineGrid{display:grid!important}
-  body.mtab-more #content [data-tab="more"]{display:block!important}
-  body.mtab-more #moonAdvGrid{display:grid!important}
-  body.mtab-more #afdPanelWrap{display:block!important}
-  body.mtab-now #obsAfdGrid,body.mtab-now #airMarineGrid,body.mtab-now #moonAdvGrid,body.mtab-now #afdPanelWrap,
-  body.mtab-radar #obsAfdGrid,body.mtab-radar #airMarineGrid,body.mtab-radar #moonAdvGrid,body.mtab-radar #afdPanelWrap,
-  body.mtab-forecast #airMarineGrid,body.mtab-forecast #moonAdvGrid,body.mtab-forecast #afdPanelWrap,
-  body.mtab-air #obsAfdGrid,body.mtab-air #moonAdvGrid,body.mtab-air #afdPanelWrap,
-  body.mtab-more #obsAfdGrid,body.mtab-more #airMarineGrid{display:none!important}
-  body:not(.mtab-now) #content>.grid:first-child{display:none!important}
+}
+@media (min-width:861px){
+  .wrap{padding-bottom:64px}
 }
 @media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(76px + env(safe-area-inset-bottom,0px))}.panel{padding:16px 14px}body.scrolled .brand-icon{width:40px;height:40px}body.scrolled .brand-name{font-size:1.35rem}.brand-icon{width:58px;height:58px}.brand-name{font-size:1.75rem}.search input{width:140px;max-width:calc(100vw - 120px)}.day-row{grid-template-columns:70px 28px 1fr 58px;gap:8px}.day-row .pp{display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
 </head>
-<body>
+<body class="mtab-now">
 <div class="wrap">
   <div class="site-top" id="siteTop">
   <header>
@@ -464,9 +448,12 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     <button class="geo-btn" id="geoBtn" title="Use my location" aria-label="Use my current location"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span></button>
   </div>
 
-  <nav class="page-nav" id="pageNav" aria-label="On this page">
-    <div class="nav-groups" id="navGroups" role="tablist" aria-label="Sections"></div>
-    <div class="nav-sections" id="navSections" aria-label="Subsections"></div>
+  <nav class="app-tab-bar" id="appTabBar" aria-label="Sections">
+    <button type="button" data-tab="now" aria-current="page"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="tab-lbl">Now</span></button>
+    <button type="button" data-tab="forecast"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tab-lbl">Forecast</span></button>
+    <button type="button" data-tab="radar"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M12 2a10 10 0 0 1 10 10M12 6a6 6 0 0 1 6 6"/><path d="M12 10a2 2 0 0 1 2 2"/></svg></span><span class="tab-lbl">Radar</span></button>
+    <button type="button" data-tab="air"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5 12 3l2.5 2.5"/><path d="M12 3v8"/><path d="M5 14h14"/><path d="M7 18h10"/></svg></span><span class="tab-lbl">Air</span></button>
+    <button type="button" data-tab="more"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></span><span class="tab-lbl">More</span></button>
   </nav>
   </div>
 
@@ -476,14 +463,6 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     <span data-sw-text>Update downloaded — refreshes when you return</span>
     <button type="button" data-sw-btn>Refresh now</button>
   </div>
-
-  <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Sections">
-    <button type="button" data-tab="now" aria-current="page"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="tab-lbl">Now</span></button>
-    <button type="button" data-tab="forecast"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tab-lbl">Forecast</span></button>
-    <button type="button" data-tab="radar"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M12 2a10 10 0 0 1 10 10M12 6a6 6 0 0 1 6 6"/><path d="M12 10a2 2 0 0 1 2 2"/></svg></span><span class="tab-lbl">Radar</span></button>
-    <button type="button" data-tab="air"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5 12 3l2.5 2.5"/><path d="M12 3v8"/><path d="M5 14h14"/><path d="M7 18h10"/></svg></span><span class="tab-lbl">Air</span></button>
-    <button type="button" data-tab="more"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></span><span class="tab-lbl">More</span></button>
-  </nav>
 
   <div id="content">
     <div class="grid">
@@ -670,26 +649,18 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div class="metrics" id="moonMetrics" style="grid-template-columns:repeat(2,1fr)"></div>
       </section>
 
-      <section class="panel nav-target panel-fold" id="advPanel" data-tab="more" aria-label="Advanced atmosphere">
-        <details class="fold">
-          <summary class="fold-hd"><h2>Advanced Atmosphere</h2></summary>
-          <div class="fold-bd">
-            <div class="metrics" id="advMetrics"></div>
-          </div>
-        </details>
+      <section class="panel nav-target" id="advPanel" data-tab="more" aria-label="Advanced atmosphere">
+        <h2>Advanced Atmosphere</h2>
+        <div class="metrics" id="advMetrics"></div>
       </section>
     </div>
 
     <div id="afdPanelWrap" style="margin-top:16px">
-      <section class="panel full nav-target panel-fold" id="afdPanel" data-tab="more" aria-label="Forecast discussion">
-        <details class="fold">
-          <summary class="fold-hd"><h2>NWS Forecast Discussion <span class="panel-status" id="afdStatus"></span></h2></summary>
-          <div class="fold-bd">
-            <div class="afd-meta" id="afdMeta"></div>
-            <div class="afd-text" id="afdText">Loading discussion&hellip;</div>
-            <a id="afdLink" target="_blank" rel="noopener" style="display:none;margin-top:8px;font-size:12px"></a>
-          </div>
-        </details>
+      <section class="panel full nav-target" id="afdPanel" data-tab="more" aria-label="Forecast discussion">
+        <h2>NWS Forecast Discussion <span class="panel-status" id="afdStatus"></span></h2>
+        <div class="afd-meta" id="afdMeta"></div>
+        <div class="afd-text" id="afdText">Loading discussion&hellip;</div>
+        <a id="afdLink" target="_blank" rel="noopener" style="display:none;margin-top:8px;font-size:12px"></a>
       </section>
     </div>
 
@@ -718,7 +689,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '51';
+const APP_VERSION = '53';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2195,7 +2166,6 @@ async function loadStormIntel(loc, d){
     if(!show){ box.classList.remove('visible'); return; }
     renderStormPanel(box, loc, risks, mcds, discussions);
     box.classList.add('visible');
-    if(!isMobileTabLayout() && desktopNavGroup === 'radar') renderDesktopSubNav('radar');
   }catch(e){
     console.error('storm intel', e);
     box.classList.remove('visible');
@@ -2236,7 +2206,7 @@ function applyRadarZoomLimits(){
   Object.values(iemLayers).forEach(l => { l.options.maxNativeZoom = iemMax; l.options.maxZoom = iemMax; });
 }
 function isRadarTabVisible(){
-  return !isMobileTabLayout() || document.body.classList.contains('mtab-radar');
+  return document.body.classList.contains('mtab-radar');
 }
 function refreshRadarMapSize(){
   if(!map) return;
@@ -3243,17 +3213,34 @@ async function fetchGlfLakeProduct(lake, preferOffice){
   if(!code) return null;
   const lr = await nwsFetch('https://api.weather.gov/products/types/GLF');
   if(!lr.ok) return null;
-  const items = (await lr.json())['@graph'] || [];
+  const items = ((await lr.json())['@graph'] || []).slice(0, 32);
   const offices = LAKE_GLF_OFFICES[lake] || [];
-  const candidates = [];
-  for(const item of items.slice(0, 48)){
-    const pr = await nwsFetch('https://api.weather.gov/products/' + item.id);
-    if(!pr.ok) continue;
-    const prod = await pr.json();
-    const section = extractGlfSection(prod.productText || '', code);
-    if(!section) continue;
-    candidates.push({ office: item.issuingOffice, section });
+  let pool = items;
+  if(offices.length){
+    const officeHits = items.filter(item =>
+      item.issuingOffice === preferOffice || offices.includes(item.issuingOffice)
+    );
+    if(officeHits.length) pool = officeHits;
   }
+  pool = [...pool].sort((a, b) => {
+    if(a.issuingOffice === preferOffice) return -1;
+    if(b.issuingOffice === preferOffice) return 1;
+    const ai = offices.indexOf(a.issuingOffice);
+    const bi = offices.indexOf(b.issuingOffice);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+  });
+  const toFetch = pool.slice(0, 8);
+  const results = await Promise.all(toFetch.map(async item => {
+    try{
+      const pr = await nwsFetch('https://api.weather.gov/products/' + item.id);
+      if(!pr.ok) return null;
+      const prod = await pr.json();
+      const section = extractGlfSection(prod.productText || '', code);
+      if(!section) return null;
+      return { office: item.issuingOffice, section };
+    }catch(e){ return null; }
+  }));
+  const candidates = results.filter(Boolean);
   if(!candidates.length) return null;
   const hit = candidates.find(c => c.office === preferOffice)
     || candidates.find(c => offices.includes(c.office))
@@ -3311,8 +3298,7 @@ async function loadMarine(loc){
     box.innerHTML = ''; note.textContent = ''; nwsBox.textContent = '';
     lakeBox.style.display = 'none';
     const pointsProps = state.data && state.data.nwsPoints;
-    const nwsMarine = isLikelyUS(loc) ? await fetchNwsMarineText(loc, pointsProps).catch(() => null) : null;
-    if(nwsMarine) nwsBox.textContent = nwsMarine.source.toUpperCase() + '\n' + nwsMarine.text;
+    const nwsP = isLikelyUS(loc) ? fetchNwsMarineText(loc, pointsProps).catch(() => null) : Promise.resolve(null);
     if(buoyMeta && buoyMeta.lake !== lake){
       note.textContent = 'NWS lake forecast is for ' + lake + ' at your location. Buoy '
         + (buoyPresetName(buoyId) || buoyId) + ' is on ' + buoyMeta.lake + '.';
@@ -3324,6 +3310,9 @@ async function loadMarine(loc){
         c = await fetchMarineCurrent(buoyMeta.lat, buoyMeta.lon);
         waveAt = (buoyPresetName(buoyId) || buoyId) + ' buoy';
       }
+      const nwsMarine = await nwsP;
+      if(gen !== marineLoadGen) return;
+      if(nwsMarine) nwsBox.textContent = nwsMarine.source.toUpperCase() + '\n' + nwsMarine.text;
       if(c.wave_height === null || c.wave_height === undefined){
         const extra = note.textContent ? note.textContent + ' ' : '';
         note.textContent = extra + (nwsMarine
@@ -3560,7 +3549,7 @@ let tabPanelsLoaded = { forecast: false, radar: false, air: false, more: false }
 function resetTabPanelsLoaded(){
   tabPanelsLoaded = { forecast: false, radar: false, air: false, more: false };
 }
-function getMobileTab(){
+function getAppTab(){
   if(document.body.classList.contains('mtab-forecast')) return 'forecast';
   if(document.body.classList.contains('mtab-radar')) return 'radar';
   if(document.body.classList.contains('mtab-air')) return 'air';
@@ -3581,11 +3570,7 @@ function ensureTabPanels(tab){
   if((all || tab === 'radar') && !tabPanelsLoaded.radar){
     tabPanelsLoaded.radar = true;
     loadStormIntel(loc, d);
-    if(isRadarTabVisible()) activateRadarPanel();
-    else if(!isMobileTabLayout()){
-      initMap(loc);
-      loadRadar();
-    }
+    activateRadarPanel();
   }
   if((all || tab === 'air') && !tabPanelsLoaded.air){
     tabPanelsLoaded.air = true;
@@ -3605,55 +3590,22 @@ function scheduleIdleForecastPrefetch(){
   if(typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 2500 });
   else setTimeout(run, 2000);
 }
-let desktopPanelsLoaded = {};
-let panelObserver = null;
-function resetDesktopPanelsLoaded(){
-  desktopPanelsLoaded = {};
-  if(panelObserver){ panelObserver.disconnect(); panelObserver = null; }
-}
-function ensureDesktopPanel(panelId, loc){
-  if(!loc || desktopPanelsLoaded[panelId]) return;
-  desktopPanelsLoaded[panelId] = true;
-  const d = state.data;
-  if(panelId === 'obsPanel') loadObs(loc);
-  else if(panelId === 'airPanel') loadAir(loc);
-  else if(panelId === 'radarPanel'){
-    initMap(loc);
-    loadRadar();
-  }else if(panelId === 'stormLinks' && d) loadStormIntel(loc, d);
-  else if(panelId === 'afdPanel') loadAFD(loc);
-  else if(panelId === 'marinePanel'){
-    loadMarine(loc);
-    loadBuoy();
-  }
-}
-function setupDesktopLazyPanels(loc){
-  if(panelObserver){ panelObserver.disconnect(); panelObserver = null; }
-  const ids = ['obsPanel', 'airPanel', 'marinePanel', 'radarPanel', 'stormLinks', 'afdPanel', 'advPanel', 'moonPanel'];
-  panelObserver = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if(!entry.isIntersecting) return;
-      ensureDesktopPanel(entry.target.id, loc);
-      panelObserver.unobserve(entry.target);
-    });
-  }, { rootMargin: '280px 0px', threshold: 0 });
-  ids.forEach(id => {
-    const el = $(id);
-    if(el) panelObserver.observe(el);
-  });
+function scheduleIdleAirPrefetch(loc){
+  if(!isGreatLakesLoc(loc)) return;
+  const run = () => { if(!tabPanelsLoaded.air) ensureTabPanels('air'); };
+  if(typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3500 });
+  else setTimeout(run, 2800);
 }
 function isGreatLakesLoc(loc){
   return loc && isLikelyUS(loc) && !!greatLakeName(loc.lat, loc.lon);
 }
 async function loadAll(){
   const loc = state.locations[state.active];
-  const reloadBuoy = desktopPanelsLoaded['marinePanel'] || tabPanelsLoaded.air;
+  const reloadBuoy = tabPanelsLoaded.air;
   resetTabPanelsLoaded();
-  resetDesktopPanelsLoaded();
   syncBuoyForLocation(loc, reloadBuoy);
   $('content').classList.add('loading');
   try{
-    const mobile = isMobileTabLayout();
     const d = await fetchWeather(loc, { fastPath: true });
     state.data = d;
     renderCurrent(d);
@@ -3662,24 +3614,13 @@ async function loadAll(){
     $('lastUpdate').textContent = 'FORECAST ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + ' \u00B7 TZ ' + (d.timezone_abbreviation || '');
     $('content').classList.remove('loading');
 
-    const alertPromise = loadAlerts(loc);
+    loadAlerts(loc);
     enrichWeatherBackground(loc);
     if(map) initMap(loc);
 
-    if(mobile){
-      ensureTabPanels(getMobileTab());
-      scheduleIdleForecastPrefetch();
-    }else{
-      requestAnimationFrame(() => {
-        renderDaily(d);
-        renderForecastText(d);
-        renderMoon(loc);
-        renderAdvanced(d);
-      });
-      setupDesktopLazyPanels(loc);
-      const hashId = (location.hash || '').replace('#', '');
-      if(hashId) ensureDesktopPanel(hashId, loc);
-    }
+    ensureTabPanels(getAppTab());
+    scheduleIdleForecastPrefetch();
+    scheduleIdleAirPrefetch(loc);
   }catch(e){
     console.error(e);
     $('nowCond').textContent = 'Could not load weather \u2014 check connection and retry.';
@@ -3852,149 +3793,22 @@ async function initServiceWorker(){
 migrateAppVersion().then(migrated => { if(!migrated) initServiceWorker(); });
 
 // ---------- in-page nav ----------
-const MOBILE_TABS = ['now', 'forecast', 'radar', 'air', 'more'];
-const NAV_GROUPS = [
-  { id: 'now', label: 'Now', sections: [
-    { id: 'nowPanel', label: 'Current' },
-    { id: 'lightPanel', label: 'Sun' },
-    { id: 'hourlyPanel', label: 'Hourly' }
-  ]},
-  { id: 'forecast', label: 'Forecast', sections: [
-    { id: 'dailyPanel', label: '7-Day' },
-    { id: 'forecastTextPanel', label: 'Detailed' },
-    { id: 'obsPanel', label: 'Obs' }
-  ]},
-  { id: 'radar', label: 'Radar', sections: [
-    { id: 'radarPanel', label: 'Map' },
-    { id: 'stormLinks', label: 'Storm' }
-  ]},
-  { id: 'air', label: 'Air', sections: [
-    { id: 'airPanel', label: 'AQI' },
-    { id: 'marinePanel', label: 'Lakes' }
-  ]},
-  { id: 'more', label: 'More', sections: [
-    { id: 'moonPanel', label: 'Moon' },
-    { id: 'advPanel', label: 'Advanced' },
-    { id: 'afdPanel', label: 'Discussion' }
-  ]}
-];
-const NAV_SECTIONS = NAV_GROUPS.flatMap(g => g.sections.map(s => ({ ...s, group: g.id })));
-const NAV_GROUP_BY_SECTION = Object.fromEntries(NAV_SECTIONS.map(s => [s.id, s.group]));
-
-function navRevealTarget(el){
-  if(!el) return;
-  const details = el.tagName === 'DETAILS' ? el : el.querySelector('details.fold');
-  if(details) details.open = true;
-}
-
-function navScrollOffset(){
-  const top = $('siteTop');
-  return (top ? top.offsetHeight : 168) + 10;
-}
+const APP_TABS = ['now', 'forecast', 'radar', 'air', 'more'];
 
 function syncChromeHeight(){
   const top = $('siteTop');
   if(top) document.documentElement.style.setProperty('--chrome-h', top.offsetHeight + 'px');
 }
 
-function scrollToSection(sectionId, opts){
-  const target = $(sectionId);
-  if(!target) return;
-  navRevealTarget(target);
-  ensureDesktopPanel(sectionId, state.locations[state.active]);
-  if(sectionId === 'radarPanel') activateRadarPanel();
-  else if(map) refreshRadarMapSize();
-  if(!opts || !opts.skipScroll){
-    const y = window.scrollY + target.getBoundingClientRect().top - navScrollOffset();
-    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-  }
-  if(!opts || !opts.skipHash) history.replaceState(null, '', '#' + sectionId);
-}
-
-let desktopNavGroup = 'now';
-
-function renderDesktopSubNav(groupId){
-  const wrap = $('navSections');
-  const group = NAV_GROUPS.find(g => g.id === groupId);
-  if(!wrap || !group) return;
-  wrap.innerHTML = group.sections.filter(s => {
-    if(s.id !== 'stormLinks') return true;
-    const el = $(s.id);
-    return el && el.classList.contains('visible');
-  }).map(s =>
-    '<a href="#' + s.id + '" data-section="' + s.id + '">' + esc(s.label) + '</a>'
-  ).join('');
-  wrap.querySelectorAll('a[data-section]').forEach(a => {
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      scrollToSection(a.dataset.section);
-    });
-  });
-}
-
-function setDesktopNavActive(groupId, sectionId){
-  const groupChanged = groupId !== desktopNavGroup;
-  desktopNavGroup = groupId;
-  const groupsEl = $('navGroups');
-  if(groupsEl){
-    groupsEl.querySelectorAll('button[data-group]').forEach(btn => {
-      const on = btn.dataset.group === groupId;
-      btn.classList.toggle('on', on);
-      btn.setAttribute('aria-selected', on ? 'true' : 'false');
-    });
-  }
-  if(groupChanged) renderDesktopSubNav(groupId);
-  const sectionsEl = $('navSections');
-  if(sectionsEl){
-    sectionsEl.querySelectorAll('a[data-section]').forEach(a => {
-      const on = a.dataset.section === sectionId;
-      a.classList.toggle('on', on);
-      if(on) a.setAttribute('aria-current', 'location');
-      else a.removeAttribute('aria-current');
-    });
-  }
-}
-
-function buildDesktopNav(){
-  const groupsEl = $('navGroups');
-  if(!groupsEl) return;
-  groupsEl.innerHTML = NAV_GROUPS.map(g =>
-    '<button type="button" data-group="' + g.id + '" role="tab">' + esc(g.label) + '</button>'
-  ).join('');
-  groupsEl.querySelectorAll('button[data-group]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const group = NAV_GROUPS.find(g => g.id === btn.dataset.group);
-      const first = group && group.sections.map(s => s.id).find(id => $(id));
-      if(first) scrollToSection(first);
-    });
-  });
-  renderDesktopSubNav(desktopNavGroup);
-}
-
-function pickActiveDesktopNav(){
-  if(isMobileTabLayout()) return;
-  const offset = navScrollOffset();
-  let currentId = NAV_SECTIONS[0].id;
-  for(const s of NAV_SECTIONS){
-    const el = $(s.id);
-    if(!el) continue;
-    if(el.id === 'stormLinks' && !el.classList.contains('visible')) continue;
-    if(el.getBoundingClientRect().top <= offset) currentId = s.id;
-    else break;
-  }
-  const groupId = NAV_GROUP_BY_SECTION[currentId] || 'now';
-  setDesktopNavActive(groupId, currentId);
-}
-
 function isMobileTabLayout(){
   return window.matchMedia('(max-width:860px)').matches;
 }
 
-function setMobileTab(tab, opts){
-  if(!MOBILE_TABS.includes(tab)) tab = 'now';
+function setAppTab(tab, opts){
+  if(!APP_TABS.includes(tab)) tab = 'now';
   document.body.classList.remove('mtab-now', 'mtab-forecast', 'mtab-radar', 'mtab-air', 'mtab-more');
   document.body.classList.add('mtab-' + tab);
-  const bar = $('mobileTabBar');
+  const bar = $('appTabBar');
   if(bar){
     bar.querySelectorAll('button[data-tab]').forEach(btn => {
       const on = btn.dataset.tab === tab;
@@ -4011,11 +3825,12 @@ function setMobileTab(tab, opts){
   if(tab === 'radar') activateRadarPanel();
   else if(map) refreshRadarMapSize();
   ensureTabPanels(tab);
+  syncChromeHeight();
 }
 
-function mobileTabFromHash(){
+function tabFromHash(){
   const h = (location.hash || '').replace('#', '');
-  if(MOBILE_TABS.includes(h)) return h;
+  if(APP_TABS.includes(h)) return h;
   if(h === 'lightPanel' || h === 'hourlyPanel' || h === 'nowPanel') return 'now';
   if(h === 'dailyPanel' || h === 'forecastTextPanel' || h === 'obsPanel') return 'forecast';
   if(h === 'radarPanel' || h === 'stormLinks') return 'radar';
@@ -4025,12 +3840,10 @@ function mobileTabFromHash(){
 }
 
 function initPageNav(){
-  buildDesktopNav();
-  const tabBar = $('mobileTabBar');
-
+  const tabBar = $('appTabBar');
   if(tabBar){
     tabBar.querySelectorAll('button[data-tab]').forEach(btn => {
-      btn.addEventListener('click', () => setMobileTab(btn.dataset.tab));
+      btn.addEventListener('click', () => setAppTab(btn.dataset.tab));
     });
   }
 
@@ -4048,14 +3861,8 @@ function initPageNav(){
     }
   };
 
-  let ticking = false;
   window.addEventListener('scroll', () => {
     syncSiteTop();
-    if(isMobileTabLayout()) return;
-    if(!ticking){
-      ticking = true;
-      requestAnimationFrame(() => { pickActiveDesktopNav(); ticking = false; });
-    }
   }, {passive:true});
   syncSiteTop();
   syncChromeHeight();
@@ -4067,18 +3874,7 @@ function initPageNav(){
 
   const syncLayout = () => {
     syncChromeHeight();
-    if(isMobileTabLayout()){
-      setMobileTab(mobileTabFromHash(), { skipScroll: true, skipHash: true });
-    }else{
-      document.body.classList.remove('mtab-now', 'mtab-forecast', 'mtab-radar', 'mtab-air', 'mtab-more');
-      const h = (location.hash || '').replace('#', '');
-      if(h && $(h)){
-        scrollToSection(h, { skipScroll: true, skipHash: true });
-        setDesktopNavActive(NAV_GROUP_BY_SECTION[h] || 'now', h);
-      }else{
-        pickActiveDesktopNav();
-      }
-    }
+    setAppTab(tabFromHash(), { skipScroll: true, skipHash: true });
   };
 
   window.addEventListener('hashchange', syncLayout);
@@ -4088,7 +3884,6 @@ function initPageNav(){
     if(isRadarTabVisible() && map) refreshRadarMapSize();
   });
   syncLayout();
-  if(!isMobileTabLayout()) pickActiveDesktopNav();
 }
 
 const radarCenterBtn = $('radarCenterBtn');
