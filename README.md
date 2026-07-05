@@ -403,23 +403,6 @@ be reached with no stale cache for that grid cell. Check Apache error log and
 
 ---
 
-## Migrating from the old Python daemon
-
-If you previously ran `echo_weather_server.py` under systemd on port 8093,
-remove it before deploying PHP:
-
-```bash
-sudo systemctl stop echo-weather-server 2>/dev/null || true
-sudo systemctl disable echo-weather-server 2>/dev/null || true
-sudo rm -f /etc/systemd/system/echo-weather-server.service
-sudo systemctl daemon-reload
-```
-
-Remove any Apache `ProxyPass` rules to `:8093` from your vhost — PHP serves
-`/api/*` in-process.
-
----
-
 ## What the app includes
 
 | Section | What it shows |
