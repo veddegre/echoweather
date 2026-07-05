@@ -1,4 +1,4 @@
-const CACHE = 'echo-weather-v57';
+const CACHE = 'echo-weather-v68';
 const ASSETS = ['./manifest.json', './icon.svg', './icon-maskable.svg', './icon-192.png', './icon-512.png', './logo.svg'];
 
 self.addEventListener('install', e => {

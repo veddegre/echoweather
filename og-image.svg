@@ -2,17 +2,13 @@
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#001845"/>
-      <stop offset="55%" stop-color="#00225c"/>
-      <stop offset="100%" stop-color="#0a3568"/>
+      <stop offset="55%" stop-color="#003875"/>
+      <stop offset="100%" stop-color="#001845"/>
     </linearGradient>
-    <radialGradient id="originGlow" cx="0" cy="1" r="0.8">
-      <stop offset="0%" stop-color="#7fffff" stop-opacity="0.35"/>
-      <stop offset="100%" stop-color="#3c91e6" stop-opacity="0"/>
-    </radialGradient>
     <linearGradient id="accentBar" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#3c91e6"/>
-      <stop offset="50%" stop-color="#7fffff"/>
-      <stop offset="100%" stop-color="#3c91e6"/>
+      <stop offset="50%" stop-color="#FFC04A"/>
+      <stop offset="100%" stop-color="#5aa8f0"/>
     </linearGradient>
     <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="18" result="b"/>
@@ -22,23 +18,14 @@
 
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- decorative echo ripples -->
-  <g opacity="0.1" stroke="#7fffff" fill="none" stroke-linecap="round" transform="translate(980 630)">
-    <path d="M 0 -180 A 180 180 0 0 1 180 0" stroke-width="3"/>
-    <path d="M 0 -300 A 300 300 0 0 1 300 0" stroke-width="2.5"/>
-    <path d="M 0 -420 A 420 420 0 0 1 420 0" stroke-width="2"/>
-  </g>
-
   <!-- brand mark -->
-  <g transform="translate(120 630)" fill="none" stroke-linecap="round">
-    <rect x="0" y="-360" width="360" height="360" fill="url(#originGlow)" opacity="0.5"/>
-    <path d="M 0 -208 A 160 160 0 0 1 160 0" stroke="#7fffff" stroke-width="10" opacity="0.92"/>
-    <path d="M 0 -304 A 256 256 0 0 1 256 0" stroke="#8ec8ff" stroke-width="8" opacity="0.72"/>
-    <path d="M 0 -412 A 364 364 0 0 1 364 0" stroke="#3c91e6" stroke-width="6.5" opacity="0.55"/>
-    <path d="M 0 -508 A 460 460 0 0 1 460 0" stroke="#7fffff" stroke-width="5" opacity="0.32"/>
-    <circle cx="198" cy="-246" r="12" fill="#ffffff" stroke="none"/>
-    <circle cx="302" cy="-350" r="7.5" fill="#7fffff" stroke="none" opacity="0.85"/>
-    <circle cx="118" cy="-166" r="5" fill="#8ec8ff" stroke="none" opacity="0.9"/>
+  <g transform="translate(200 318) scale(0.62)">
+    <rect x="343.387" y="71.286" fill="#F0A028" width="36.046" height="50.645"/>
+    <polygon fill="#F0A028" points="467.92,275.957 449.897,307.173 493.757,332.498 502.769,316.888 511.78,301.281"/>
+    <polygon fill="#F0A028" points="468.139,194.212 512,168.889 502.988,153.28 493.977,137.672 450.116,162.994 459.128,178.602"/>
+    <circle cx="361.189" cy="234.895" r="119.098" fill="#FFC04A"/>
+    <path fill="#EAF4FF" d="M452.744,341.694c0-42.633-28.497-81.461-69.299-94.422l-14.597-4.638l-0.738-15.299c-3.362-69.779-60.762-124.441-130.677-124.441c-62.36,0-116.348,44.388-128.376,105.548l-2.959,15.058l-15.15,2.442C39.098,234.297,0,280.168,0,332.639c0,59.591,48.483,108.073,108.073,108.073h245.652C408.324,440.713,452.744,396.292,452.744,341.694z"/>
+    <path fill="#5aa8f0" d="M383.445,247.273l-14.597-4.638l-0.738-15.299c-3.362-69.779-60.762-124.441-130.677-124.441c-4.159,0-8.276,0.213-12.349,0.598v337.221h128.643c54.598,0,99.017-44.421,99.017-99.019C452.744,299.06,424.247,260.234,383.445,247.273z"/>
   </g>
 
   <!-- text -->
