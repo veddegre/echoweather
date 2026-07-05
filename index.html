@@ -636,7 +636,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '47';
+const APP_VERSION = '49';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2879,18 +2879,18 @@ const LAKE_GLF_CODE = {
 };
 const BUOY_PRESETS = [
   // Lake Superior
-  { id: '45028', name: 'Western Lake Superior', lake: 'Lake Superior', lat: 46.814, lon: -91.829 },
+  { id: '45028', name: 'Western Lake Superior', lake: 'Lake Superior', lat: 46.814, lon: -91.829, seasonal: true },
   { id: '45216', name: 'Ontonagon, MI', lake: 'Lake Superior', lat: 46.907, lon: -89.354 },
   { id: '45171', name: 'Granite Island, MI', lake: 'Lake Superior', lat: 46.724, lon: -87.411 },
   { id: '45173', name: 'Munising, MI', lake: 'Lake Superior', lat: 46.573, lon: -86.572 },
   { id: '45211', name: 'Grand Island North, MI', lake: 'Lake Superior', lat: 46.973, lon: -86.568 },
   { id: '45172', name: 'Grand Marais, MI', lake: 'Lake Superior', lat: 46.740, lon: -85.980 },
-  { id: '45025', name: 'South Entry, Keweenaw Peninsula', lake: 'Lake Superior', lat: 46.969, lon: -88.398 },
+  { id: '45025', name: 'South Entry, Keweenaw Peninsula', lake: 'Lake Superior', lat: 46.969, lon: -88.398, seasonal: true },
   { id: '45219', name: 'Two Harbors Nearshore', lake: 'Lake Superior', lat: 47.021, lon: -91.625 },
-  { id: '45023', name: 'North Entry, Keweenaw Peninsula', lake: 'Lake Superior', lat: 47.270, lon: -88.607 },
-  { id: '45006', name: 'West Superior (30 NM NE Outer Island)', lake: 'Lake Superior', lat: 47.335, lon: -89.793 },
-  { id: '45004', name: 'East Superior (70 NM NE Marquette)', lake: 'Lake Superior', lat: 47.583, lon: -86.586 },
-  { id: '45001', name: 'Mid Superior (60 NM NNE Hancock)', lake: 'Lake Superior', lat: 48.061, lon: -87.793 },
+  { id: '45023', name: 'North Entry, Keweenaw Peninsula', lake: 'Lake Superior', lat: 47.270, lon: -88.607, seasonal: true },
+  { id: '45006', name: 'West Superior (30 NM NE Outer Island)', lake: 'Lake Superior', lat: 47.335, lon: -89.793, seasonal: true },
+  { id: '45004', name: 'East Superior (70 NM NE Marquette)', lake: 'Lake Superior', lat: 47.583, lon: -86.586, seasonal: true },
+  { id: '45001', name: 'Mid Superior (60 NM NNE Hancock)', lake: 'Lake Superior', lat: 48.061, lon: -87.793, seasonal: true },
   // Lake Michigan
   { id: '45170', name: 'Michigan City, IN', lake: 'Lake Michigan', lat: 41.755, lon: -86.968 },
   { id: '45198', name: 'Chicago Buoy', lake: 'Lake Michigan', lat: 41.892, lon: -87.563 },
@@ -2900,22 +2900,24 @@ const BUOY_PRESETS = [
   { id: '45186', name: 'Waukegan, IL', lake: 'Lake Michigan', lat: 42.368, lon: -87.795 },
   { id: '45029', name: 'Holland, MI', lake: 'Lake Michigan', lat: 42.900, lon: -86.272 },
   { id: '45161', name: 'Muskegon, MI', lake: 'Lake Michigan', lat: 43.185, lon: -86.354 },
-  { id: '45024', name: 'Ludington, MI', lake: 'Lake Michigan', lat: 43.980, lon: -86.560 },
+  { id: '45024', name: 'Ludington, MI', lake: 'Lake Michigan', lat: 43.980, lon: -86.560, seasonal: true },
   { id: 'GTLM4', name: 'Grand Traverse Light, MI', lake: 'Lake Michigan', lat: 45.211, lon: -85.550 },
   { id: '45183', name: 'Sleeping Bear Dunes', lake: 'Lake Michigan', lat: 44.982, lon: -85.831 },
   { id: 'FPTM4', name: 'Fairport, MI (Garden Peninsula)', lake: 'Lake Michigan', lat: 45.619, lon: -86.660 },
-  { id: '45002', name: 'North Michigan (N Manitou / Washington Is.)', lake: 'Lake Michigan', lat: 45.344, lon: -86.411 },
-  { id: '45022', name: 'Little Traverse Bay', lake: 'Lake Michigan', lat: 45.404, lon: -85.088 },
+  { id: '45002', name: 'North Michigan (N Manitou / Washington Is.)', lake: 'Lake Michigan', lat: 45.344, lon: -86.411, seasonal: true },
+  { id: '45022', name: 'Little Traverse Bay', lake: 'Lake Michigan', lat: 45.404, lon: -85.088, seasonal: true },
   // Lake Huron
   { id: '45209', name: 'Lakeport, MI', lake: 'Lake Huron', lat: 43.129, lon: -82.391 },
   { id: '45149', name: 'Southern Lake Huron', lake: 'Lake Huron', lat: 43.540, lon: -82.080 },
   { id: '45163', name: 'Saginaw Bay, MI', lake: 'Lake Huron', lat: 43.983, lon: -83.600 },
-  { id: '45003', name: 'North Huron (32 NM NE Alpena)', lake: 'Lake Huron', lat: 45.351, lon: -82.840 },
+  { id: '45212', name: 'North Huron Spotter (32 NM NE Alpena)', lake: 'Lake Huron', lat: 45.351, lon: -82.840 },
+  { id: 'APNM4', name: 'Alpena Harbor Light', lake: 'Lake Huron', lat: 45.060, lon: -83.424 },
+  { id: '45162', name: 'Thunder Bay Buoy, Alpena', lake: 'Lake Huron', lat: 44.988, lon: -83.269, seasonal: true },
   { id: '45194', name: 'McGulpin Point North', lake: 'Lake Huron', lat: 45.803, lon: -84.792 },
   { id: '45175', name: 'Mackinac Straits West', lake: 'Lake Huron', lat: 45.825, lon: -84.772 },
   // Lake Erie
   { id: '45176', name: 'Cleveland Intake Crib, OH', lake: 'Lake Erie', lat: 41.550, lon: -81.765 },
-  { id: '45005', name: 'West Erie (16 NM NW Lorain)', lake: 'Lake Erie', lat: 41.677, lon: -82.398 },
+  { id: '45005', name: 'West Erie (16 NM NW Lorain)', lake: 'Lake Erie', lat: 41.677, lon: -82.398, seasonal: true },
   { id: '45165', name: 'Toledo Water Intake, OH', lake: 'Lake Erie', lat: 41.704, lon: -83.264 },
   { id: '45200', name: 'Maumee Bay', lake: 'Lake Erie', lat: 41.724, lon: -83.370 },
   { id: '45164', name: 'Cleveland, OH', lake: 'Lake Erie', lat: 41.748, lon: -81.698 },
@@ -2926,7 +2928,7 @@ const BUOY_PRESETS = [
   { id: '45139', name: 'West Lake Ontario — Grimsby', lake: 'Lake Ontario', lat: 43.250, lon: -79.530 },
   { id: '45190', name: 'Sodus Point, NY', lake: 'Lake Ontario', lat: 43.282, lon: -76.961 },
   { id: '45215', name: 'Oswego, NY', lake: 'Lake Ontario', lat: 43.501, lon: -76.539 },
-  { id: '45012', name: 'East Lake Ontario (20 NM NNE Rochester)', lake: 'Lake Ontario', lat: 43.621, lon: -77.401 },
+  { id: '45012', name: 'East Lake Ontario (20 NM NNE Rochester)', lake: 'Lake Ontario', lat: 43.621, lon: -77.401, seasonal: true },
   { id: '45159', name: 'NW Lake Ontario — Ajax', lake: 'Lake Ontario', lat: 43.770, lon: -78.980 },
   // Lake St Clair
   { id: '45147', name: 'Lake St Clair', lake: 'Lake St Clair', lat: 42.430, lon: -82.680 }
@@ -2951,16 +2953,27 @@ function distNm(lat1, lon1, lat2, lon2){
 function buoyCoords(id){
   return BUOY_PRESETS.find(b => b.id === (id || '').toUpperCase()) || null;
 }
-function nearestBuoyForLoc(lat, lon){
+function isGreatLakesBuoyWinter(){
+  const m = new Date().getMonth() + 1;
+  return m >= 11 || m <= 4;
+}
+function nearestBuoyForLoc(lat, lon, excludeIds){
+  const exclude = new Set((excludeIds || []).map(id => String(id).toUpperCase()));
   const lake = greatLakeName(lat, lon);
   let pool = lake ? BUOY_PRESETS.filter(b => b.lake === lake) : BUOY_PRESETS;
   if(!pool.length) pool = BUOY_PRESETS;
-  let best = null, bestD = Infinity;
-  for(const b of pool){
-    const d = distNm(lat, lon, b.lat, b.lon);
-    if(d < bestD){ bestD = d; best = b; }
-  }
-  return best;
+  const winter = isGreatLakesBuoyWinter();
+  const pick = skipSeasonal => {
+    let best = null, bestD = Infinity;
+    for(const b of pool){
+      if(exclude.has(b.id)) continue;
+      if(skipSeasonal && winter && b.seasonal) continue;
+      const d = distNm(lat, lon, b.lat, b.lon);
+      if(d < bestD){ bestD = d; best = b; }
+    }
+    return best;
+  };
+  return pick(true) || pick(false);
 }
 function buoyPins(){
   const p = store.get('st_buoy_pins');
@@ -2979,13 +2992,23 @@ function setBuoyPin(loc, id){
   store.set('st_buoy_pins', { ...pins });
 }
 function migrateBuoyPins(){
-  const pins = buoyPins();
-  if(Object.keys(pins).length) return;
+  let pins = buoyPins();
+  let changed = false;
+  for(const k of Object.keys(pins)){
+    const id = String(pins[k]).toUpperCase();
+    if(id === '45003'){ pins[k] = '45212'; changed = true; }
+  }
+  if(changed) store.set('st_buoy_pins', { ...pins });
+  if(Object.keys(pins).length && !changed) return;
+  if(Object.keys(buoyPins()).length) return;
   const manual = store.get('st_buoy_manual') === '1';
   const saved = store.get('st_buoy');
   const savedLoc = store.get('st_buoy_loc');
-  if(manual && saved && savedLoc) pins[savedLoc] = String(saved).toUpperCase();
-  if(Object.keys(pins).length) store.set('st_buoy_pins', pins);
+  if(manual && saved && savedLoc){
+    const id = String(saved).toUpperCase();
+    pins[savedLoc] = id === '45003' ? '45212' : id;
+    store.set('st_buoy_pins', { ...pins });
+  }
 }
 function resolveBuoyForLocation(loc){
   const pinned = buoyPinForLocation(loc);
@@ -3343,7 +3366,8 @@ async function loadBuoyFromNws(st){
   const obsTime = p.timestamp ? new Date(p.timestamp).toLocaleString([], { hour:'numeric', minute:'2-digit', timeZoneName:'short' }) : '';
   return { rows, obsTime, note: 'NWS obs only (no wave data) \u2014 proxy /api/buoy/ on your server for full NDBC' };
 }
-async function loadBuoy(){
+async function loadBuoy(allowFallback){
+  if(allowFallback === undefined) allowFallback = true;
   const gen = ++buoyLoadGen;
   const st = ($('buoyId').value || '').trim();
   const box = $('buoyMetrics'), note = $('buoyNote');
@@ -3387,7 +3411,19 @@ async function loadBuoy(){
     if(stale()) return;
     updateBuoyHead(id, stationName);
     if(!rows.length){
-      note.textContent = 'No current data — station may be offline or seasonal.';
+      const loc = state.locations[state.active];
+      if(allowFallback && loc && !buoyPinForLocation(loc)){
+        const alt = nearestBuoyForLoc(loc.lat, loc.lon, [id]);
+        if(alt){
+          setBuoyId(alt.id, false);
+          note.textContent = id + ' has no data (often winter layup) — trying ' + alt.id + '\u2026';
+          return loadBuoy(false);
+        }
+      }
+      const seasonal = buoyCoords(id)?.seasonal;
+      note.textContent = seasonal && isGreatLakesBuoyWinter()
+        ? 'Station pulled for winter layup — try a nearshore station or tap Nearest.'
+        : 'No current data — station may be offline or seasonal.';
       return;
     }
     box.innerHTML = rows.map(r =>
