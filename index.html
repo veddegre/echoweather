@@ -636,7 +636,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '36';
+const APP_VERSION = '37';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -3335,7 +3335,7 @@ function ensureDesktopPanel(panelId, loc){
   if(panelId === 'obsPanel') loadObs(loc);
   else if(panelId === 'airPanel') loadAir(loc);
   else if(panelId === 'radarPanel'){
-    if(!map) initMap(loc);
+    initMap(loc);
     loadRadar();
   }else if(panelId === 'stormLinks' && d) loadStormIntel(loc, d);
   else if(panelId === 'afdPanel') loadAFD(loc);
@@ -3376,6 +3376,7 @@ async function loadAll(){
 
     const alertPromise = loadAlerts(loc);
     enrichWeatherBackground(loc);
+    if(map) initMap(loc);
 
     if(mobile){
       ensureTabPanels(getMobileTab());
