@@ -21,4 +21,9 @@
     <FilesMatch "^(index\.html|sw\.js)$">
         Header set Cache-Control "no-cache, must-revalidate"
     </FilesMatch>
+
+    # PWA icons — avoid stale CDN/browser caches after regenerating PNGs.
+    <FilesMatch "^(apple-touch-icon|icon-192|icon-512)\.png$">
+        Header set Cache-Control "public, max-age=0, must-revalidate"
+    </FilesMatch>
 </IfModule>

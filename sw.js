@@ -1,5 +1,15 @@
-const CACHE = 'echo-weather-v85';
-const ASSETS = ['./manifest.json', './icon.svg', './icon-maskable.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './logo.svg'];
+const CACHE = 'echo-weather-v86';
+const ICON_Q = '?v=86';
+const ASSETS = [
+  './manifest.json',
+  './icon.svg',
+  './icon-maskable.svg',
+  './icon-192.png' + ICON_Q,
+  './icon-512.png' + ICON_Q,
+  './apple-touch-icon.png' + ICON_Q,
+  './apple-touch-icon.png',
+  './logo.svg'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -27,7 +37,12 @@ function isNavigate(req, u){
 }
 
 function isAsset(u){
-  return ASSETS.some(p => u.pathname.endsWith(p.replace('./', '')));
+  const p = u.pathname;
+  return ASSETS.some(a => p.endsWith(a.replace('./', '').split('?')[0]));
+}
+
+function isIconRequest(u){
+  return /\/(apple-touch-icon|icon-192|icon-512)\.png$/i.test(u.pathname);
 }
 
 self.addEventListener('fetch', e => {
@@ -40,14 +55,15 @@ self.addEventListener('fetch', e => {
   }
 
   if(isAsset(u)){
+    const fetchFresh = fetch(e.request).then(r => {
+      const copy = r.clone();
+      caches.open(CACHE).then(c => c.put(e.request, copy));
+      return r;
+    });
     e.respondWith(
-      caches.match(e.request).then(cached =>
-        fetch(e.request).then(r => {
-          const copy = r.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy));
-          return r;
-        }).catch(() => cached)
-      )
+      isIconRequest(u)
+        ? fetchFresh.catch(() => caches.match(e.request))
+        : caches.match(e.request).then(cached => fetchFresh.catch(() => cached))
     );
   }
 });
