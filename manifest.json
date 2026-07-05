@@ -1,0 +1,24 @@
+{
+  "name": "Echo Weather",
+  "short_name": "Echo Weather",
+  "description": "Personal weather app — forecasts, observations, radar, and atmosphere metrics",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000E22",
+  "theme_color": "#3c91e6",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

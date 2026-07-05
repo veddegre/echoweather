@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Echo Weather">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#001845"/>
+      <stop offset="55%" stop-color="#00225c"/>
+      <stop offset="100%" stop-color="#0a3568"/>
+    </linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7fffff" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#7fffff" stop-opacity="0.82"/>
+    </linearGradient>
+    <linearGradient id="cloudTop" x1="120" y1="150" x2="400" y2="300">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="55%" stop-color="#c5e4ff"/>
+      <stop offset="100%" stop-color="#5aa8f0"/>
+    </linearGradient>
+    <linearGradient id="cloudSide" x1="300" y1="160" x2="420" y2="280">
+      <stop offset="0%" stop-color="#eaf4ff"/>
+      <stop offset="100%" stop-color="#3c91e6"/>
+    </linearGradient>
+    <radialGradient id="radarGlow" cx="50%" cy="58%" r="50%">
+      <stop offset="0%" stop-color="#7fffff" stop-opacity="0.55"/>
+      <stop offset="65%" stop-color="#3c91e6" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#3c91e6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accentBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3c91e6"/>
+      <stop offset="50%" stop-color="#7fffff"/>
+      <stop offset="100%" stop-color="#3c91e6"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- decorative radar rings -->
+  <g opacity="0.08" stroke="#7fffff" fill="none" transform="translate(900 120)">
+    <circle r="280" stroke-width="2"/>
+    <circle r="210" stroke-width="1.5"/>
+    <circle r="140" stroke-width="1"/>
+    <line x1="-300" y1="0" x2="300" y2="0" stroke-width="1"/>
+    <line x1="0" y1="-300" x2="0" y2="300" stroke-width="1"/>
+  </g>
+
+  <!-- brand mark -->
+  <g transform="translate(200 315)" filter="url(#softGlow)">
+    <ellipse cx="0" cy="12" rx="165" ry="138" fill="url(#radarGlow)"/>
+    <g transform="translate(0 25)">
+      <circle r="140" fill="none" stroke="#001845" stroke-width="5" opacity="0.65"/>
+      <circle r="140" fill="none" stroke="#7fffff" stroke-width="2.6"/>
+      <circle r="106" fill="none" stroke="#001845" stroke-width="4.8" opacity="0.6"/>
+      <circle r="106" fill="none" stroke="#8ec8ff" stroke-width="2.4"/>
+      <circle r="72" fill="none" stroke="#001845" stroke-width="4.4" opacity="0.58"/>
+      <circle r="72" fill="none" stroke="#7fffff" stroke-width="2.2"/>
+      <circle r="38" fill="none" stroke="#001845" stroke-width="4" opacity="0.55"/>
+      <circle r="38" fill="none" stroke="#8ec8ff" stroke-width="2"/>
+      <circle r="10" fill="#001845" stroke="#7fffff" stroke-width="2.2"/>
+      <line x1="-148" y1="0" x2="148" y2="0" stroke="#001845" stroke-width="3" opacity="0.55"/>
+      <line x1="-148" y1="0" x2="148" y2="0" stroke="#8ec8ff" stroke-width="1.5"/>
+      <line x1="0" y1="-148" x2="0" y2="148" stroke="#001845" stroke-width="3" opacity="0.55"/>
+      <line x1="0" y1="-148" x2="0" y2="148" stroke="#8ec8ff" stroke-width="1.5"/>
+      <path d="M0 0 L0 -140 A140 140 0 0 1 99 -99 Z" fill="url(#beam)"/>
+      <line x1="0" y1="0" x2="88" y2="-121" stroke="#001845" stroke-width="6.5" stroke-linecap="round" opacity="0.55"/>
+      <line x1="0" y1="0" x2="88" y2="-121" stroke="#7fffff" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="39" cy="-81" r="6.5" fill="#7fffff"/>
+      <circle cx="66" cy="-46" r="4.5" fill="#8ec8ff"/>
+      <circle cx="-27" cy="-99" r="5" fill="#3c91e6"/>
+    </g>
+    <g opacity="0.88">
+      <ellipse cx="-68" cy="-62" rx="58" ry="37" fill="url(#cloudSide)"/>
+      <ellipse cx="0" cy="-78" rx="72" ry="43" fill="url(#cloudTop)"/>
+      <ellipse cx="68" cy="-58" rx="52" ry="33" fill="#dceeff"/>
+      <ellipse cx="-8" cy="-48" rx="80" ry="40" fill="#ffffff"/>
+      <ellipse cx="-42" cy="-68" rx="38" ry="27" fill="#ffffff" opacity="0.92"/>
+    </g>
+  </g>
+
+  <!-- text -->
+  <g font-family="Georgia, 'Times New Roman', serif">
+    <text x="430" y="250" fill="#ffffff" font-size="108" font-weight="700" letter-spacing="-2">Echo</text>
+    <text x="432" y="310" fill="#7ec8ff" font-size="34" font-weight="600" letter-spacing="12">WEATHER</text>
+    <text x="432" y="390" fill="#b8d4f0" font-size="36" font-family="'Segoe UI', system-ui, sans-serif" font-weight="500">Forecasts, radar &amp; atmosphere</text>
+    <text x="432" y="438" fill="#8aa8c8" font-size="28" font-family="'Segoe UI', system-ui, sans-serif">Built for weather enthusiasts</text>
+    <text x="432" y="510" fill="#3c91e6" font-size="30" font-family="'Segoe UI', system-ui, sans-serif" font-weight="600">echoweather.com</text>
+  </g>
+
+  <rect x="430" y="540" width="520" height="5" rx="2.5" fill="url(#accentBar)" opacity="0.9"/>
+</svg>

@@ -1,0 +1,11 @@
+# Block direct web access to local config (Apache).
+<Files "config.local.php">
+    Require all denied
+</Files>
+
+# App shell should always revalidate so deploys take effect immediately.
+<IfModule mod_headers.c>
+    <FilesMatch "^(index\.html|sw\.js)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>

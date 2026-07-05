@@ -1,0 +1,6 @@
+# Local secrets — use config.example.php template in git
+config.local.php
+cache/
+
+# OS
+.DS_Store
