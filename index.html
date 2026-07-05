@@ -604,13 +604,13 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     </div>
 
     <section class="panel full nav-target" id="hourlyPanel" data-tab="now" aria-label="Hourly forecast">
-      <h2>Next 48 Hours <span class="panel-status" id="hourlySource"></span></h2>
+      <h2>Next 24 Hours <span class="panel-status" id="hourlySource"></span></h2>
       <div class="trends" id="trends"></div>
       <div class="hourly-strip" id="hourly"></div>
     </section>
 
-    <section class="panel full nav-target" id="dailyPanel" data-tab="forecast" aria-label="Six day forecast">
-      <h2>6-Day Forecast <span class="panel-status" id="dailySource"></span></h2>
+    <section class="panel full nav-target" id="dailyPanel" data-tab="forecast" aria-label="Five day forecast">
+      <h2>5-Day Forecast <span class="panel-status" id="dailySource"></span></h2>
       <div class="daily" id="daily"></div>
     </section>
 
@@ -780,7 +780,9 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '95';
+const APP_VERSION = '96';
+const HOURLY_HOURS = 24;
+const DAILY_DAYS = 5;
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -1532,7 +1534,7 @@ async function fetchOpenMeteoHrrr(loc){
   return r.json();
 }
 function buildHourlyFromNws(periods, om){
-  const sliced = periods.slice(0, 48);
+  const sliced = periods.slice(0, HOURLY_HOURS);
   const omTimes = om.hourly.time;
   const hourly = {
     time: sliced.map(p => p.startTime),
@@ -1569,7 +1571,7 @@ function buildHourlyFromNws(periods, om){
 }
 function buildDailyFromNws(periods, omDaily){
   const days = [];
-  for(let i = 0; i < periods.length && days.length < 6; i++){
+  for(let i = 0; i < periods.length && days.length < DAILY_DAYS; i++){
     const p = periods[i];
     if(!p.isDaytime) continue;
     const night = periods[i + 1];
@@ -1992,7 +1994,7 @@ function renderLight(d){
 // ---------- render: hourly + sparkline trends ----------
 function renderHourly(d){
   const i0 = nowIndex(d);
-  const end = Math.min(i0 + 48, d.hourly.time.length);
+  const end = Math.min(i0 + HOURLY_HOURS, d.hourly.time.length);
   const slice = (arr, f) => arr.slice(i0, end).map(f);
   const pres = slice(d.hourly.pressure_msl, v => v);
   const temps = slice(d.hourly.temperature_2m, v => v);
@@ -2179,7 +2181,7 @@ function renderDaily(d){
   }
   const nowI = nowIndex(d);
   const nowHour = d.hourly.time[nowI] ? d.hourly.time[nowI].slice(0, 13) : '';
-  const dayCount = Math.min(6, dd.time.length);
+  const dayCount = Math.min(DAILY_DAYS, dd.time.length);
   try{
   $('daily').innerHTML = dd.time.slice(0, dayCount).map((t, i) => {
     const cond = dd.shortForecast ? dd.shortForecast[i] : wmo(dd.weather_code[i])[0];
