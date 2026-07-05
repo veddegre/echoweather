@@ -44,6 +44,9 @@ RSYNC_FILES=(
   .htaccess
   logo.svg
   icon.svg
+  icon-maskable.svg
+  icon-192.png
+  icon-512.png
   og-image.png
   og-image.svg
   api

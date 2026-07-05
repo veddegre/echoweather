@@ -1,5 +1,5 @@
-const CACHE = 'echo-weather-v55';
-const ASSETS = ['./manifest.json', './icon.svg', './logo.svg'];
+const CACHE = 'echo-weather-v56';
+const ASSETS = ['./manifest.json', './icon.svg', './icon-maskable.svg', './icon-192.png', './icon-512.png', './logo.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

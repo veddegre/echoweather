@@ -8,7 +8,7 @@
 <meta name="description" content="Forecasts, radar, observations, and atmosphere metrics — built for weather enthusiasts.">
 <link rel="canonical" href="https://echoweather.com/">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-title" content="Echo Weather">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Echo Weather">
@@ -94,7 +94,7 @@ button{font-family:inherit;cursor:pointer}
 header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:24px 0 20px;transition:padding .2s}
 body.scrolled header{padding:10px 0 8px}
 .brand-icon{transition:width .2s,height .2s,border-radius .2s}
-body.scrolled .brand-icon{width:48px;height:48px;border-radius:14px}
+body.scrolled .brand-icon{width:48px;height:48px}
 body.scrolled .brand-name{font-size:1.65rem}
 body.scrolled .tagline{display:none}
 body.scrolled .locbar{padding:10px 0}
@@ -106,7 +106,7 @@ body.scrolled .locbar{padding:10px 0}
 .tab-ico svg{width:1.125rem;height:1.125rem;display:block}
 .brand-block{display:flex;flex-direction:column;gap:8px}
 .brand-mark{display:flex;align-items:center;gap:16px}
-.brand-icon{width:72px;height:72px;flex-shrink:0;display:block;border-radius:18px}
+.brand-icon{width:72px;height:72px;flex-shrink:0;display:block}
 .brand-text{display:flex;flex-direction:column;gap:4px}
 .brand-name{font-family:var(--serif);font-weight:700;font-size:2.25rem;line-height:1;letter-spacing:-.03em;color:var(--ink)}
 .brand-kind{font-size:.75rem;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--accent)}
@@ -416,7 +416,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   <header>
     <div class="brand-block">
       <div class="brand-mark">
-        <img class="brand-icon" src="icon.svg" width="72" height="72" alt="" decoding="async">
+        <img class="brand-icon" src="logo.svg" width="72" height="72" alt="" decoding="async">
         <div class="brand-text">
           <span class="brand-name">Echo</span>
           <span class="brand-kind">Weather</span>
@@ -689,7 +689,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '55';
+const APP_VERSION = '56';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
