@@ -173,16 +173,16 @@ body.mtab-now #content [data-tab="now"]{display:block!important}
 body.mtab-forecast #content [data-tab="forecast"]{display:block!important}
 body.mtab-radar #content [data-tab="radar"]{display:block!important}
 body.mtab-radar #stormLinks.visible{display:block!important}
-body.mtab-air #content [data-tab="air"]{display:block!important}
-body.mtab-air #airMarineGrid{display:grid!important}
+body.mtab-outdoor #content [data-tab="outdoor"]{display:block!important}
+body.mtab-outdoor #outdoorGrid{display:grid!important}
 body.mtab-more #content [data-tab="more"]{display:block!important}
 body.mtab-more #moonAdvGrid{display:grid!important}
 body.mtab-more #afdPanelWrap{display:block!important}
-body.mtab-now #obsAfdGrid,body.mtab-now #airMarineGrid,body.mtab-now #moonAdvGrid,body.mtab-now #afdPanelWrap,
-body.mtab-radar #obsAfdGrid,body.mtab-radar #airMarineGrid,body.mtab-radar #moonAdvGrid,body.mtab-radar #afdPanelWrap,
-body.mtab-forecast #airMarineGrid,body.mtab-forecast #moonAdvGrid,body.mtab-forecast #afdPanelWrap,
-body.mtab-air #obsAfdGrid,body.mtab-air #moonAdvGrid,body.mtab-air #afdPanelWrap,
-body.mtab-more #obsAfdGrid,body.mtab-more #airMarineGrid{display:none!important}
+body.mtab-now #obsAfdGrid,body.mtab-now #outdoorGrid,body.mtab-now #moonAdvGrid,body.mtab-now #afdPanelWrap,
+body.mtab-radar #obsAfdGrid,body.mtab-radar #outdoorGrid,body.mtab-radar #moonAdvGrid,body.mtab-radar #afdPanelWrap,
+body.mtab-forecast #outdoorGrid,body.mtab-forecast #moonAdvGrid,body.mtab-forecast #afdPanelWrap,
+body.mtab-outdoor #obsAfdGrid,body.mtab-outdoor #moonAdvGrid,body.mtab-outdoor #afdPanelWrap,
+body.mtab-more #obsAfdGrid,body.mtab-more #outdoorGrid{display:none!important}
 body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .nav-target,[id].panel{scroll-margin-top:calc(var(--chrome-h) + 10px)}
 .alert{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;background:var(--panel)}
@@ -336,6 +336,11 @@ body.radar-expanded{overflow:hidden}
 .pd-row span:first-child{color:var(--mut)}
 .pd-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:normal;text-align:right;overflow-wrap:anywhere}
 .pd-val.pd-low{color:var(--good)}.pd-val.pd-mid{color:var(--warm)}.pd-val.pd-high{color:var(--warn)}.pd-val.pd-none{color:var(--dim)}
+.pollen-empty-msg{font-size:.75rem;color:var(--mut);line-height:1.45;text-align:center;padding:6px 2px}
+#outdoorGrid .outdoor-wide{grid-column:1/-1}
+.uv-hour{min-width:64px}
+.uv-hour .uv-val{font-size:1rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+.uv-hour .uv-val.uv-low{color:var(--good)}.uv-hour .uv-val.uv-mid{color:var(--warm)}.uv-hour .uv-val.uv-high{color:var(--warn)}
 .radar-mode{grid-column:1/-1;width:100%;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 10px;font-size:.8125rem;font-weight:500}
 .radar-anim-ctl{display:grid;grid-column:1/-1;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;width:100%;min-width:0}
 .radar-anim-ctl.hidden{display:none}
@@ -540,7 +545,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     <button type="button" data-tab="now" aria-current="page"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="tab-lbl">Now</span></button>
     <button type="button" data-tab="forecast"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tab-lbl">Forecast</span></button>
     <button type="button" data-tab="radar"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M12 2a10 10 0 0 1 10 10M12 6a6 6 0 0 1 6 6"/><path d="M12 10a2 2 0 0 1 2 2"/></svg></span><span class="tab-lbl">Radar</span></button>
-    <button type="button" data-tab="air"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5 12 3l2.5 2.5"/><path d="M12 3v8"/><path d="M5 14h14"/><path d="M7 18h10"/></svg></span><span class="tab-lbl">Air</span></button>
+    <button type="button" data-tab="outdoor"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2"/><path d="M4.5 14 8.5 9l3 4 3.5-5L19 14"/><path d="M3 18h18"/></svg></span><span class="tab-lbl">Outdoor</span></button>
     <button type="button" data-tab="more"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></span><span class="tab-lbl">More</span></button>
   </nav>
 
@@ -667,8 +672,8 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
       </section>
     </div>
 
-    <div class="grid" id="airMarineGrid" style="margin-top:16px">
-      <section class="panel nav-target" id="airPanel" data-tab="air" aria-label="Air quality and pollen">
+    <div class="grid" id="outdoorGrid" style="margin-top:16px">
+      <section class="panel nav-target" id="airPanel" data-tab="outdoor" aria-label="Air quality and pollen">
         <h2>Air Quality &amp; Pollen <span class="panel-status" id="airStatus"></span></h2>
         <div class="outlook" style="margin-top:0">
           <div class="lbl">US AQI</div>
@@ -676,7 +681,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
           <div class="detail" id="aqiDetail"></div>
         </div>
         <div class="metrics" id="airMetrics" style="margin-top:12px"></div>
-        <div class="pollen-block" id="pollenBlock" style="display:none">
+        <div class="pollen-block" id="pollenBlock">
           <div class="pollen-lbl">3-day pollen forecast</div>
           <div class="pollen-forecast" id="pollenForecast"></div>
           <div class="radar-note" id="pollenNote" style="margin-top:8px"></div>
@@ -684,7 +689,19 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div class="airnow-row" id="airnowRow"></div>
       </section>
 
-      <section class="panel nav-target" id="marinePanel" data-tab="air" aria-label="Great Lakes">
+      <section class="panel nav-target" id="exposurePanel" data-tab="outdoor" aria-label="UV and outdoor exposure">
+        <h2>UV &amp; Exposure</h2>
+        <div class="outlook" style="margin-top:0">
+          <div class="lbl">UV index</div>
+          <div class="verdict" id="uvVerdict">&mdash;</div>
+          <div class="detail" id="uvDetail"></div>
+        </div>
+        <div class="metrics" id="exposureMetrics" style="margin-top:12px"></div>
+        <div class="metrics-lbl">Rest of today</div>
+        <div class="hourly-strip" id="exposureUvStrip"></div>
+      </section>
+
+      <section class="panel nav-target outdoor-wide" id="marinePanel" data-tab="outdoor" aria-label="Great Lakes water conditions">
         <h2><span id="marineTitle">Great Lakes</span> <span class="panel-status" id="marineStatus"></span></h2>
         <div class="outlook" id="lakeOutlook" style="margin-top:0;display:none">
           <div class="lbl">Lake-air delta</div>
@@ -780,7 +797,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '97';
+const APP_VERSION = '98';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -1798,6 +1815,100 @@ function dewPointNote(temp, dew){
   if(spread <= 8) return 'Humid \u2014 muggy feel likely';
   if(spread <= 15) return 'Comfortable humidity';
   return 'Dry air';
+}
+function uvVerdictCls(u){
+  if(u < 3) return 'good';
+  if(u < 6) return 'mid';
+  if(u < 8) return 'mid';
+  return 'warn';
+}
+function uvValCls(u){
+  if(u < 3) return 'uv-low';
+  if(u < 6) return 'uv-mid';
+  if(u < 8) return 'uv-mid';
+  return 'uv-high';
+}
+function uvExposureNote(u){
+  if(u < 3) return 'Minimal sun protection needed.';
+  if(u < 6) return 'Some protection if outside for long periods.';
+  if(u < 8) return 'Seek shade midday \u00B7 sunscreen and hat advised.';
+  if(u < 11) return 'Reduce sun exposure 10am\u20134pm \u00B7 protection essential.';
+  return 'Avoid midday sun \u00B7 high burn risk in minutes.';
+}
+function exposureVisibility(d, c, i){
+  const visUnit = (d.om && d.om.hourly_units && d.om.hourly_units.visibility) || 'm';
+  let visMeters = c.visibility_m;
+  if(visMeters == null) visMeters = d.hourly.visibility[i];
+  if(visUnit === 'ft' && visMeters != null) visMeters = visMeters * 0.3048;
+  const visMiNum = visMeters != null
+    ? (state.units === 'F' ? visMeters / 1609.34 : visMeters / 1000)
+    : null;
+  const vis = visMiNum != null
+    ? (state.units === 'F' ? visMiNum.toFixed(1) + '<small> mi</small>' : visMiNum.toFixed(1) + '<small> km</small>')
+    : '\u2014';
+  return { vis, visMiNum };
+}
+function renderExposure(d){
+  if(!d || !d.hourly) return;
+  const c = d.current;
+  const i = nowIndex(d);
+  const h = d.hourly;
+  const uvNow = h.uv_index[i] ?? 0;
+  const uvMax = d.daily.uv_index_max[0] ?? 0;
+  const todayKey = h.time[i].slice(0, 10);
+  let peakIdx = i, peakUv = uvNow;
+  for(let j = i; j < h.time.length && h.time[j].slice(0, 10) === todayKey; j++){
+    const u = h.uv_index[j] ?? 0;
+    if(u > peakUv){ peakUv = u; peakIdx = j; }
+  }
+  const uvV = $('uvVerdict');
+  if(uvV){
+    uvV.textContent = uvNow.toFixed(1) + ' \u2014 ' + uvCat(uvNow);
+    uvV.className = 'verdict ' + uvVerdictCls(uvNow);
+  }
+  const peakStr = peakUv > 0.5
+    ? 'Peak near ' + hourLabelCompact(h.time[peakIdx]) + ' (' + peakUv.toFixed(1) + ')'
+    : 'Low sun angle today';
+  const uvD = $('uvDetail');
+  if(uvD) uvD.textContent = 'Today\u2019s max ' + uvMax.toFixed(1) + ' \u00B7 ' + peakStr + ' \u00B7 ' + uvExposureNote(uvNow);
+
+  const temp = c.temperature_2m ?? h.temperature_2m[i] ?? 0;
+  const dewVal = c.dewpoint_c != null
+    ? (state.units === 'F' ? Math.round(c.dewpoint_c * 9/5 + 32) : Math.round(c.dewpoint_c))
+    : Math.round(h.dew_point_2m[i] ?? 0);
+  const rh = rhDisp(c.relative_humidity_2m ?? h.relative_humidity_2m[i]);
+  const { vis, visMiNum } = exposureVisibility(d, c, i);
+  const wetBulb = Math.round(h.wet_bulb_temperature_2m[i] ?? temp);
+  const rows = [
+    ['Humidity', rh + '<small>%</small>', dewPointNote(temp, dewVal)],
+    ['Dew point', dewVal + '<small>' + degSym() + '</small>', dewPointNote(temp, dewVal)],
+    ['Visibility', vis, visMiNum != null ? visibilityQuality(visMiNum) : ''],
+    ['Wet bulb', wetBulb + '<small>' + degSym() + '</small>', 'Evaporative cooling / heat stress']
+  ];
+  const box = $('exposureMetrics');
+  if(box){
+    box.innerHTML = rows.map(r =>
+      '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1]
+      + (r[2] ? '<small>' + r[2] + '</small>' : '') + '</div></div>'
+    ).join('');
+  }
+
+  const strip = $('exposureUvStrip');
+  if(!strip) return;
+  const cells = [];
+  for(let j = i; j < h.time.length && h.time[j].slice(0, 10) === todayKey; j++){
+    const uv = h.uv_index[j] ?? 0;
+    if(!(h.is_day[j]) && uv < 0.1) continue;
+    cells.push('<div class="hour uv-hour' + (j === i ? ' now-h' : '') + '">'
+      + '<div class="t">' + (j === i ? 'Now' : hourLabelCompact(h.time[j])) + '</div>'
+      + '<div class="uv-val ' + uvValCls(uv) + '">' + uv.toFixed(1) + '</div>'
+      + '<div class="pp">' + uvCat(uv) + '</div>'
+      + '</div>');
+    if(cells.length >= 10) break;
+  }
+  strip.innerHTML = cells.length
+    ? cells.join('')
+    : '<div class="radar-note">UV stays low for the rest of today.</div>';
 }
 function todayOutlook(d){
   const periods = d.nwsDaily;
@@ -3144,6 +3255,20 @@ function pollenCatCls(cat){
   if(c.includes('low')) return 'pd-low';
   return 'pd-none';
 }
+function meteoPollenLevel(v){
+  if(v == null || v <= 0) return { text: 'Off', cls: 'pd-none' };
+  if(v < 10) return { text: 'Low', cls: 'pd-low' };
+  if(v < 50) return { text: 'Moderate', cls: 'pd-mid' };
+  return { text: 'High', cls: 'pd-high' };
+}
+function meteoTreePollen(daily, i){
+  const vals = [daily.birch_pollen[i], daily.alder_pollen[i], daily.olive_pollen[i]].filter(v => v != null);
+  return meteoPollenLevel(vals.length ? Math.max(...vals) : 0);
+}
+function meteoWeedPollen(daily, i){
+  const vals = [daily.ragweed_pollen[i], daily.mugwort_pollen[i]].filter(v => v != null);
+  return meteoPollenLevel(vals.length ? Math.max(...vals) : 0);
+}
 function pollenDayLabel(dateStr, i){
   if(i === 0) return 'Today';
   const d = new Date(dateStr + 'T12:00:00');
@@ -3155,26 +3280,56 @@ function pollenTypeVal(types, code){
   if(!t.inSeason && !t.index) return { text: 'Off', cls: 'pd-none' };
   return { text: t.category || String(t.index), cls: pollenCatCls(t.category) };
 }
-function renderPollenForecast(pollen){
+function renderPollenPlaceholder(){
   const box = $('pollenForecast'), block = $('pollenBlock');
   if(!box || !block) return;
-  if(!pollen || !pollen.days || !pollen.days.length){
-    block.style.display = 'none';
-    box.innerHTML = '';
-    return;
-  }
   block.style.display = 'block';
-  box.innerHTML = pollen.days.slice(0, 3).map((day, i) => {
-    const tree = pollenTypeVal(day.types, 'TREE');
-    const grass = pollenTypeVal(day.types, 'GRASS');
-    const weed = pollenTypeVal(day.types, 'WEED');
+  box.innerHTML = [0, 1, 2].map(i =>
+    '<div class="pollen-day' + (i === 0 ? ' pd-today' : '') + '">'
+    + '<div class="pd-label">' + (i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : 'Day 3') + '</div>'
+    + '<div class="pd-row"><span>Tree</span><span class="pd-val pd-none">Off</span></div>'
+    + '<div class="pd-row"><span>Grass</span><span class="pd-val pd-none">Off</span></div>'
+    + '<div class="pd-row"><span>Weed</span><span class="pd-val pd-none">Off</span></div>'
+    + '</div>'
+  ).join('');
+}
+function renderPollenFromMeteoDaily(daily){
+  const box = $('pollenForecast'), block = $('pollenBlock');
+  if(!box || !block || !daily || !daily.time || !daily.time.length) return false;
+  block.style.display = 'block';
+  box.innerHTML = daily.time.slice(0, 3).map((dateStr, i) => {
+    const tree = meteoTreePollen(daily, i);
+    const grass = meteoPollenLevel(daily.grass_pollen[i]);
+    const weed = meteoWeedPollen(daily, i);
     return '<div class="pollen-day' + (i === 0 ? ' pd-today' : '') + '">'
-      + '<div class="pd-label">' + pollenDayLabel(day.date, i) + '</div>'
+      + '<div class="pd-label">' + pollenDayLabel(dateStr, i) + '</div>'
       + '<div class="pd-row"><span>Tree</span><span class="pd-val ' + tree.cls + '">' + esc(tree.text) + '</span></div>'
       + '<div class="pd-row"><span>Grass</span><span class="pd-val ' + grass.cls + '">' + esc(grass.text) + '</span></div>'
       + '<div class="pd-row"><span>Weed</span><span class="pd-val ' + weed.cls + '">' + esc(weed.text) + '</span></div>'
       + '</div>';
   }).join('');
+  return true;
+}
+function renderPollenForecast(pollen, meteoDaily){
+  const box = $('pollenForecast'), block = $('pollenBlock');
+  if(!box || !block) return;
+  block.style.display = 'block';
+  if(pollen && pollen.days && pollen.days.length){
+    box.innerHTML = pollen.days.slice(0, 3).map((day, i) => {
+      const tree = pollenTypeVal(day.types, 'TREE');
+      const grass = pollenTypeVal(day.types, 'GRASS');
+      const weed = pollenTypeVal(day.types, 'WEED');
+      return '<div class="pollen-day' + (i === 0 ? ' pd-today' : '') + '">'
+        + '<div class="pd-label">' + pollenDayLabel(day.date, i) + '</div>'
+        + '<div class="pd-row"><span>Tree</span><span class="pd-val ' + tree.cls + '">' + esc(tree.text) + '</span></div>'
+        + '<div class="pd-row"><span>Grass</span><span class="pd-val ' + grass.cls + '">' + esc(grass.text) + '</span></div>'
+        + '<div class="pd-row"><span>Weed</span><span class="pd-val ' + weed.cls + '">' + esc(weed.text) + '</span></div>'
+        + '</div>';
+    }).join('');
+    return;
+  }
+  if(meteoDaily && renderPollenFromMeteoDaily(meteoDaily)) return;
+  renderPollenPlaceholder();
 }
 function renderPollenMeta(pollen){
   if(!pollen) return '';
@@ -3195,10 +3350,10 @@ function renderAirnowKey(){
 async function loadAir(loc){
   const gen = ++airLoadGen;
   return panelTask('airPanel', 'airStatus', async () => {
+    let meteoDaily = null;
+    renderPollenPlaceholder();
     try{
       $('pollenNote').textContent = '';
-      $('pollenBlock').style.display = 'none';
-      $('pollenForecast').innerHTML = '';
       let aqi = null, source = '', detail = '', rows = [];
       const [airNow, pollen] = await Promise.all([fetchAirNow(loc), fetchPollen(loc)]);
       if(airLoadGen !== gen) return;
@@ -3213,12 +3368,14 @@ async function loadAir(loc){
       const url = 'https://air-quality-api.open-meteo.com/v1/air-quality'
         + '?latitude=' + loc.lat + '&longitude=' + loc.lon
         + '&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
+        + '&daily=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
         + '&timezone=auto';
       const needMeteo = !aqi || !pollen;
       const r = needMeteo ? await fetch(url) : null;
       if(r && !r.ok && !airNow) throw new Error('AQ HTTP ' + r.status);
       const j = r && r.ok ? await r.json() : null;
       const c = j ? j.current : null;
+      meteoDaily = j ? j.daily : null;
       if(airLoadGen !== gen) return;
       if(!aqi && c){
         aqi = c.us_aqi;
@@ -3246,8 +3403,14 @@ async function loadAir(loc){
         ].filter(p => p[1] !== null && p[1] !== undefined);
         if(meteoPollen.length){
           meteoPollen.forEach(p => rows.push([p[0] + ' pollen', p[1] + '<small> gr/m\u00B3</small>']));
-          $('pollenNote').textContent = 'Pollen: Open-Meteo modeled';
         }
+        renderPollenForecast(null, meteoDaily);
+        $('pollenNote').textContent = meteoPollen.length
+          ? 'Pollen: Open-Meteo modeled'
+          : 'Pollen forecast shown year-round \u2014 levels are low or off-season.';
+      } else {
+        renderPollenForecast(null, meteoDaily);
+        $('pollenNote').textContent = 'Pollen forecast shown year-round \u2014 levels are low or off-season.';
       }
       if(airLoadGen !== gen) return;
       const cat = AQI_CATS.find(x => aqi <= x[0]) || AQI_CATS[AQI_CATS.length - 1];
@@ -3263,8 +3426,7 @@ async function loadAir(loc){
       $('aqiVerdict').textContent = 'unavailable';
       $('aqiDetail').textContent = '';
       $('pollenNote').textContent = '';
-      $('pollenBlock').style.display = 'none';
-      $('pollenForecast').innerHTML = '';
+      renderPollenForecast(null, meteoDaily);
       $('airnowRow').style.display = 'none';
       console.error('air', e);
     }
@@ -3813,15 +3975,12 @@ let marineLoadGen = 0;
 async function loadMarine(loc){
   const gen = ++marineLoadGen;
   const panel = $('marinePanel');
-  const grid = $('airMarineGrid');
   const lake = greatLakeName(loc.lat, loc.lon);
   if(!lake || !isLikelyUS(loc)){
     panel.style.display = 'none';
-    grid.classList.add('adv-only');
     return;
   }
   panel.style.display = '';
-  grid.classList.remove('adv-only');
   if(!($('buoyId').value || '').trim()) applyBuoyForLocation(loc);
   const buoyId = ($('buoyId').value || '').trim().toUpperCase();
   const buoyMeta = buoyCoords(buoyId);
@@ -4081,14 +4240,14 @@ function setUnits(u){
 $('refreshBtn').addEventListener('click', loadAll);
 
 // ---------- master load ----------
-let tabPanelsLoaded = { forecast: false, radar: false, air: false, more: false };
+let tabPanelsLoaded = { forecast: false, radar: false, outdoor: false, more: false };
 function resetTabPanelsLoaded(){
-  tabPanelsLoaded = { forecast: false, radar: false, air: false, more: false };
+  tabPanelsLoaded = { forecast: false, radar: false, outdoor: false, more: false };
 }
 function getAppTab(){
   if(document.body.classList.contains('mtab-forecast')) return 'forecast';
   if(document.body.classList.contains('mtab-radar')) return 'radar';
-  if(document.body.classList.contains('mtab-air')) return 'air';
+  if(document.body.classList.contains('mtab-outdoor')) return 'outdoor';
   if(document.body.classList.contains('mtab-more')) return 'more';
   return 'now';
 }
@@ -4108,9 +4267,10 @@ function ensureTabPanels(tab){
     loadStormIntel(loc, d);
     activateRadarPanel();
   }
-  if((all || tab === 'air') && !tabPanelsLoaded.air){
-    tabPanelsLoaded.air = true;
+  if((all || tab === 'outdoor') && !tabPanelsLoaded.outdoor){
+    tabPanelsLoaded.outdoor = true;
     loadAir(loc);
+    renderExposure(d);
     loadMarine(loc);
     loadBuoy();
   }
@@ -4126,9 +4286,9 @@ function scheduleIdleForecastPrefetch(){
   if(typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 2500 });
   else setTimeout(run, 2000);
 }
-function scheduleIdleAirPrefetch(loc){
+function scheduleIdleOutdoorPrefetch(loc){
   if(!isGreatLakesLoc(loc)) return;
-  const run = () => { if(!tabPanelsLoaded.air) ensureTabPanels('air'); };
+  const run = () => { if(!tabPanelsLoaded.outdoor) ensureTabPanels('outdoor'); };
   if(typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3500 });
   else setTimeout(run, 2800);
 }
@@ -4137,7 +4297,7 @@ function isGreatLakesLoc(loc){
 }
 async function loadAll(){
   const loc = state.locations[state.active];
-  const reloadBuoy = tabPanelsLoaded.air;
+  const reloadBuoy = tabPanelsLoaded.outdoor;
   resetTabPanelsLoaded();
   syncBuoyForLocation(loc, reloadBuoy);
   $('content').classList.add('loading');
@@ -4156,7 +4316,7 @@ async function loadAll(){
 
     ensureTabPanels(getAppTab());
     scheduleIdleForecastPrefetch();
-    scheduleIdleAirPrefetch(loc);
+    scheduleIdleOutdoorPrefetch(loc);
   }catch(e){
     console.error(e);
     $('nowCond').textContent = 'Could not load weather \u2014 check connection and retry.';
@@ -4393,7 +4553,7 @@ async function initServiceWorker(){
 }
 
 // ---------- in-page nav ----------
-const APP_TABS = ['now', 'forecast', 'radar', 'air', 'more'];
+const APP_TABS = ['now', 'forecast', 'radar', 'outdoor', 'more'];
 
 function syncChromeHeight(){
   const top = $('siteTop');
@@ -4414,7 +4574,7 @@ function isMobileTabLayout(){
 
 function setAppTab(tab, opts){
   if(!APP_TABS.includes(tab)) tab = 'now';
-  document.body.classList.remove('mtab-now', 'mtab-forecast', 'mtab-radar', 'mtab-air', 'mtab-more');
+  document.body.classList.remove('mtab-now', 'mtab-forecast', 'mtab-radar', 'mtab-outdoor', 'mtab-more');
   document.body.classList.add('mtab-' + tab);
   const bar = $('appTabBar');
   if(bar){
@@ -4439,10 +4599,11 @@ function setAppTab(tab, opts){
 function tabFromHash(){
   const h = (location.hash || '').replace('#', '');
   if(APP_TABS.includes(h)) return h;
+  if(h === 'air') return 'outdoor';
   if(h === 'lightPanel' || h === 'hourlyPanel' || h === 'nowPanel') return 'now';
   if(h === 'dailyPanel' || h === 'forecastTextPanel' || h === 'obsPanel') return 'forecast';
   if(h === 'radarPanel' || h === 'stormLinks') return 'radar';
-  if(h === 'airPanel' || h === 'marinePanel') return 'air';
+  if(h === 'airPanel' || h === 'exposurePanel' || h === 'marinePanel') return 'outdoor';
   if(h === 'afdPanel' || h === 'moonPanel' || h === 'advPanel' || h === 'advCollapse') return 'more';
   return 'now';
 }
