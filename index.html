@@ -31,6 +31,7 @@
 <style>
 :root, html[data-theme="light"] {
   color-scheme: light;
+  --chrome-h:168px;
   /* Logo: navy #001845/#00225c · blue #3c91e6 · sky #5aa8f0/#8ec8ff · beam #7fffff · mist #eaf4ff/#dceeff */
   --bg:#EAF4FF;--panel:#FFFFFF;--panel-2:#DCEEFF;--line:#B8CFE8;
   --ink:#001845;--mut:#2A4E78;--dim:#5A7FA0;
@@ -89,8 +90,7 @@ a{color:var(--sky)}
 button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .wrap{max-width:1120px;margin:0 auto;padding:0 20px 64px;min-width:0;overflow-x:clip}
-.site-top{position:sticky;top:0;z-index:920;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color .2s}
-body.scrolled .site-top{border-bottom-color:var(--line)}
+.site-top{position:sticky;top:0;z-index:920;background:color-mix(in srgb,var(--bg) 96%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);transition:border-color .2s}
 header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:24px 0 20px;transition:padding .2s}
 body.scrolled header{padding:10px 0 8px}
 .brand-icon{transition:width .2s,height .2s,border-radius .2s}
@@ -145,17 +145,22 @@ body.scrolled .locbar{padding:10px 0}
 .sw-update-bottom{margin-top:12px}
 .sw-update button{background:var(--accent);color:var(--on-accent);border:none;border-radius:8px;padding:7px 14px;font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap}
 .sw-update button:hover{filter:brightness(1.08)}
-.page-nav{position:sticky;top:0;z-index:900;padding:8px 0 10px;margin:0 0 4px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.nav-pills{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.nav-pills::-webkit-scrollbar{display:none}
-.nav-pills a{flex-shrink:0;text-decoration:none;font-size:.8125rem;font-weight:500;color:var(--mut);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);white-space:nowrap}
-.nav-pills a:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
-.nav-pills a.on{color:var(--ink);background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.page-nav{padding:8px 0 10px;border-top:1px solid var(--line);margin-top:4px}
+body.scrolled .page-nav{padding:6px 0 8px}
+.nav-groups{display:flex;gap:6px;flex-wrap:wrap}
+.nav-groups button{flex-shrink:0;background:var(--panel);border:1px solid var(--line);border-radius:999px;color:var(--mut);padding:7px 14px;font-size:.8125rem;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap}
+.nav-groups button:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.nav-groups button.on{color:var(--ink);background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.nav-sections{display:flex;gap:5px;overflow-x:auto;margin-top:7px;padding:1px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.nav-sections::-webkit-scrollbar{display:none}
+.nav-sections a{flex-shrink:0;text-decoration:none;font-size:.75rem;font-weight:500;color:var(--dim);padding:5px 11px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.nav-sections a:hover{color:var(--ink);background:var(--panel-2);border-color:var(--line)}
+.nav-sections a.on{color:var(--ink);background:var(--panel);border-color:var(--line);font-weight:600}
 .mobile-tab-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:950;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;box-sizing:border-box}
 .mobile-tab-bar button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;border-radius:10px;color:var(--mut);font-size:.5625rem;font-weight:600;padding:7px 2px;letter-spacing:.02em}
 .mobile-tab-bar button .tab-lbl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mobile-tab-bar button.on{color:var(--ink);background:var(--accent-soft)}
-.nav-target,[id].panel{scroll-margin-top:72px}
+.nav-target,[id].panel{scroll-margin-top:calc(var(--chrome-h) + 10px)}
 .alert{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;background:var(--panel)}
 .alert summary{cursor:pointer;padding:12px 16px;list-style:none}
 .alert summary::-webkit-details-marker{display:none}
@@ -458,6 +463,11 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     </div>
     <button class="geo-btn" id="geoBtn" title="Use my location" aria-label="Use my current location"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span></button>
   </div>
+
+  <nav class="page-nav" id="pageNav" aria-label="On this page">
+    <div class="nav-groups" id="navGroups" role="tablist" aria-label="Sections"></div>
+    <div class="nav-sections" id="navSections" aria-label="Subsections"></div>
+  </nav>
   </div>
 
   <div class="alerts" id="alerts"></div>
@@ -466,23 +476,6 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     <span data-sw-text>Update downloaded — refreshes when you return</span>
     <button type="button" data-sw-btn>Refresh now</button>
   </div>
-
-  <nav class="page-nav" id="pageNav" aria-label="On this page">
-    <div class="nav-pills" id="navPills">
-      <a href="#nowPanel">Now</a>
-      <a href="#lightPanel">Sun</a>
-      <a href="#hourlyPanel">Hourly</a>
-      <a href="#dailyPanel">7-Day</a>
-      <a href="#forecastTextPanel">Forecast</a>
-      <a href="#radarPanel">Radar</a>
-      <a href="#obsPanel">Obs</a>
-      <a href="#airPanel">Air</a>
-      <a href="#marinePanel">Lakes</a>
-      <a href="#moonPanel">Moon</a>
-      <a href="#afdPanel">Discussion</a>
-      <a href="#advPanel">Advanced</a>
-    </div>
-  </nav>
 
   <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Sections">
     <button type="button" data-tab="now" aria-current="page"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="tab-lbl">Now</span></button>
@@ -725,7 +718,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '50';
+const APP_VERSION = '51';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2202,6 +2195,7 @@ async function loadStormIntel(loc, d){
     if(!show){ box.classList.remove('visible'); return; }
     renderStormPanel(box, loc, risks, mcds, discussions);
     box.classList.add('visible');
+    if(!isMobileTabLayout() && desktopNavGroup === 'radar') renderDesktopSubNav('radar');
   }catch(e){
     console.error('storm intel', e);
     box.classList.remove('visible');
@@ -3859,11 +3853,137 @@ migrateAppVersion().then(migrated => { if(!migrated) initServiceWorker(); });
 
 // ---------- in-page nav ----------
 const MOBILE_TABS = ['now', 'forecast', 'radar', 'air', 'more'];
+const NAV_GROUPS = [
+  { id: 'now', label: 'Now', sections: [
+    { id: 'nowPanel', label: 'Current' },
+    { id: 'lightPanel', label: 'Sun' },
+    { id: 'hourlyPanel', label: 'Hourly' }
+  ]},
+  { id: 'forecast', label: 'Forecast', sections: [
+    { id: 'dailyPanel', label: '7-Day' },
+    { id: 'forecastTextPanel', label: 'Detailed' },
+    { id: 'obsPanel', label: 'Obs' }
+  ]},
+  { id: 'radar', label: 'Radar', sections: [
+    { id: 'radarPanel', label: 'Map' },
+    { id: 'stormLinks', label: 'Storm' }
+  ]},
+  { id: 'air', label: 'Air', sections: [
+    { id: 'airPanel', label: 'AQI' },
+    { id: 'marinePanel', label: 'Lakes' }
+  ]},
+  { id: 'more', label: 'More', sections: [
+    { id: 'moonPanel', label: 'Moon' },
+    { id: 'advPanel', label: 'Advanced' },
+    { id: 'afdPanel', label: 'Discussion' }
+  ]}
+];
+const NAV_SECTIONS = NAV_GROUPS.flatMap(g => g.sections.map(s => ({ ...s, group: g.id })));
+const NAV_GROUP_BY_SECTION = Object.fromEntries(NAV_SECTIONS.map(s => [s.id, s.group]));
 
 function navRevealTarget(el){
   if(!el) return;
   const details = el.tagName === 'DETAILS' ? el : el.querySelector('details.fold');
   if(details) details.open = true;
+}
+
+function navScrollOffset(){
+  const top = $('siteTop');
+  return (top ? top.offsetHeight : 168) + 10;
+}
+
+function syncChromeHeight(){
+  const top = $('siteTop');
+  if(top) document.documentElement.style.setProperty('--chrome-h', top.offsetHeight + 'px');
+}
+
+function scrollToSection(sectionId, opts){
+  const target = $(sectionId);
+  if(!target) return;
+  navRevealTarget(target);
+  ensureDesktopPanel(sectionId, state.locations[state.active]);
+  if(sectionId === 'radarPanel') activateRadarPanel();
+  else if(map) refreshRadarMapSize();
+  if(!opts || !opts.skipScroll){
+    const y = window.scrollY + target.getBoundingClientRect().top - navScrollOffset();
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  }
+  if(!opts || !opts.skipHash) history.replaceState(null, '', '#' + sectionId);
+}
+
+let desktopNavGroup = 'now';
+
+function renderDesktopSubNav(groupId){
+  const wrap = $('navSections');
+  const group = NAV_GROUPS.find(g => g.id === groupId);
+  if(!wrap || !group) return;
+  wrap.innerHTML = group.sections.filter(s => {
+    if(s.id !== 'stormLinks') return true;
+    const el = $(s.id);
+    return el && el.classList.contains('visible');
+  }).map(s =>
+    '<a href="#' + s.id + '" data-section="' + s.id + '">' + esc(s.label) + '</a>'
+  ).join('');
+  wrap.querySelectorAll('a[data-section]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      scrollToSection(a.dataset.section);
+    });
+  });
+}
+
+function setDesktopNavActive(groupId, sectionId){
+  const groupChanged = groupId !== desktopNavGroup;
+  desktopNavGroup = groupId;
+  const groupsEl = $('navGroups');
+  if(groupsEl){
+    groupsEl.querySelectorAll('button[data-group]').forEach(btn => {
+      const on = btn.dataset.group === groupId;
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+  if(groupChanged) renderDesktopSubNav(groupId);
+  const sectionsEl = $('navSections');
+  if(sectionsEl){
+    sectionsEl.querySelectorAll('a[data-section]').forEach(a => {
+      const on = a.dataset.section === sectionId;
+      a.classList.toggle('on', on);
+      if(on) a.setAttribute('aria-current', 'location');
+      else a.removeAttribute('aria-current');
+    });
+  }
+}
+
+function buildDesktopNav(){
+  const groupsEl = $('navGroups');
+  if(!groupsEl) return;
+  groupsEl.innerHTML = NAV_GROUPS.map(g =>
+    '<button type="button" data-group="' + g.id + '" role="tab">' + esc(g.label) + '</button>'
+  ).join('');
+  groupsEl.querySelectorAll('button[data-group]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const group = NAV_GROUPS.find(g => g.id === btn.dataset.group);
+      const first = group && group.sections.map(s => s.id).find(id => $(id));
+      if(first) scrollToSection(first);
+    });
+  });
+  renderDesktopSubNav(desktopNavGroup);
+}
+
+function pickActiveDesktopNav(){
+  if(isMobileTabLayout()) return;
+  const offset = navScrollOffset();
+  let currentId = NAV_SECTIONS[0].id;
+  for(const s of NAV_SECTIONS){
+    const el = $(s.id);
+    if(!el) continue;
+    if(el.id === 'stormLinks' && !el.classList.contains('visible')) continue;
+    if(el.getBoundingClientRect().top <= offset) currentId = s.id;
+    else break;
+  }
+  const groupId = NAV_GROUP_BY_SECTION[currentId] || 'now';
+  setDesktopNavActive(groupId, currentId);
 }
 
 function isMobileTabLayout(){
@@ -3905,29 +4025,8 @@ function mobileTabFromHash(){
 }
 
 function initPageNav(){
-  const pills = $('navPills');
+  buildDesktopNav();
   const tabBar = $('mobileTabBar');
-  if(!pills && !tabBar) return;
-
-  const pillLinks = pills ? [...pills.querySelectorAll('a[href^="#"]')] : [];
-  const sectionMap = new Map();
-  pillLinks.forEach(a => {
-    const sel = a.getAttribute('href');
-    const el = document.querySelector(sel);
-    if(el) sectionMap.set(el, a);
-    a.addEventListener('click', e => {
-      if(isMobileTabLayout()) return;
-      e.preventDefault();
-      const target = document.querySelector(sel);
-      navRevealTarget(target);
-      if(target){
-        ensureDesktopPanel(target.id, state.locations[state.active]);
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      history.replaceState(null, '', sel);
-    });
-  });
-  const sections = [...sectionMap.keys()];
 
   if(tabBar){
     tabBar.querySelectorAll('button[data-tab]').forEach(btn => {
@@ -3939,29 +4038,13 @@ function initPageNav(){
     if(e.key === 'Escape' && $('radarStage')?.classList.contains('expanded')) toggleRadarExpand();
   });
 
-  const pickActivePill = () => {
-    if(isMobileTabLayout() || !sections.length) return;
-    const offset = 88;
-    let current = sections[0];
-    for(const s of sections){
-      if(s.getBoundingClientRect().top <= offset) current = s;
-      else break;
-    }
-    const activeLink = sectionMap.get(current);
-    pillLinks.forEach(a => {
-      const on = activeLink === a;
-      a.classList.toggle('on', on);
-      if(on) a.setAttribute('aria-current', 'location');
-      else a.removeAttribute('aria-current');
-    });
-  };
-
   let siteTopCompact = false;
   const syncSiteTop = () => {
     const compact = window.scrollY > 48;
     if(compact !== siteTopCompact){
       siteTopCompact = compact;
       document.body.classList.toggle('scrolled', compact);
+      syncChromeHeight();
     }
   };
 
@@ -3971,34 +4054,41 @@ function initPageNav(){
     if(isMobileTabLayout()) return;
     if(!ticking){
       ticking = true;
-      requestAnimationFrame(() => { pickActivePill(); ticking = false; });
+      requestAnimationFrame(() => { pickActiveDesktopNav(); ticking = false; });
     }
   }, {passive:true});
   syncSiteTop();
+  syncChromeHeight();
+
+  const siteTop = $('siteTop');
+  if(siteTop && typeof ResizeObserver !== 'undefined'){
+    new ResizeObserver(() => syncChromeHeight()).observe(siteTop);
+  }
 
   const syncLayout = () => {
+    syncChromeHeight();
     if(isMobileTabLayout()){
       setMobileTab(mobileTabFromHash(), { skipScroll: true, skipHash: true });
     }else{
       document.body.classList.remove('mtab-now', 'mtab-forecast', 'mtab-radar', 'mtab-air', 'mtab-more');
-      pickActivePill();
-      if(location.hash){
-        const target = document.querySelector(location.hash);
-        if(target){
-          navRevealTarget(target);
-          ensureDesktopPanel(target.id, state.locations[state.active]);
-        }
+      const h = (location.hash || '').replace('#', '');
+      if(h && $(h)){
+        scrollToSection(h, { skipScroll: true, skipHash: true });
+        setDesktopNavActive(NAV_GROUP_BY_SECTION[h] || 'now', h);
+      }else{
+        pickActiveDesktopNav();
       }
     }
   };
 
   window.addEventListener('hashchange', syncLayout);
   window.addEventListener('resize', () => {
+    syncChromeHeight();
     syncLayout();
     if(isRadarTabVisible() && map) refreshRadarMapSize();
   });
   syncLayout();
-  pickActivePill();
+  if(!isMobileTabLayout()) pickActiveDesktopNav();
 }
 
 const radarCenterBtn = $('radarCenterBtn');
