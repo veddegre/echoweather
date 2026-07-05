@@ -1,39 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Echo Weather">
   <defs>
-    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#7fffff" stop-opacity="0.5"/>
-      <stop offset="100%" stop-color="#7fffff" stop-opacity="0"/>
-    </linearGradient>
-    <linearGradient id="cloudFill" x1="256" y1="108" x2="256" y2="228" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#6eb8f5"/>
-    </linearGradient>
-    <linearGradient id="cloudShadow" x1="256" y1="188" x2="256" y2="240" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#3c91e6" stop-opacity="0.35"/>
+    <radialGradient id="originGlow" cx="0" cy="512" r="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3c91e6" stop-opacity="0.2"/>
       <stop offset="100%" stop-color="#3c91e6" stop-opacity="0"/>
-    </linearGradient>
+    </radialGradient>
   </defs>
 
-  <circle cx="256" cy="318" r="148" fill="#3c91e6" opacity="0.12"/>
+  <rect width="512" height="512" fill="url(#originGlow)"/>
 
-  <g transform="translate(256 328)" fill="none" stroke-linecap="round">
-    <circle r="124" stroke="#3c91e6" stroke-width="8" opacity="0.35"/>
-    <circle r="124" stroke="#7fffff" stroke-width="4" opacity="0.75"/>
-    <circle r="82" stroke="#3c91e6" stroke-width="7" opacity="0.3"/>
-    <circle r="82" stroke="#8ec8ff" stroke-width="3.5" opacity="0.8"/>
-    <circle r="40" stroke="#3c91e6" stroke-width="6" opacity="0.28"/>
-    <circle r="40" stroke="#7fffff" stroke-width="3" opacity="0.9"/>
-    <path d="M0 0 L0 -124 A124 124 0 0 1 88 -88 Z" fill="url(#sweep)"/>
-    <line x1="0" y1="0" x2="78" y2="-106" stroke="#3c91e6" stroke-width="12" stroke-linecap="round" opacity="0.35"/>
-    <line x1="0" y1="0" x2="78" y2="-106" stroke="#7fffff" stroke-width="7" stroke-linecap="round"/>
-    <circle r="12" fill="#3c91e6" stroke="#7fffff" stroke-width="3"/>
-    <circle cx="44" cy="-72" r="11" fill="#ffffff" stroke="#3c91e6" stroke-width="2"/>
-    <circle cx="76" cy="-42" r="8" fill="#8ec8ff"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M 0 352 A 160 160 0 0 1 160 512" stroke="#3c91e6" stroke-width="18" opacity="0.35"/>
+    <path d="M 0 352 A 160 160 0 0 1 160 512" stroke="#7fffff" stroke-width="10" opacity="0.9"/>
+    <path d="M 0 256 A 256 256 0 0 1 256 512" stroke="#3c91e6" stroke-width="15" opacity="0.3"/>
+    <path d="M 0 256 A 256 256 0 0 1 256 512" stroke="#8ec8ff" stroke-width="8" opacity="0.78"/>
+    <path d="M 0 148 A 364 364 0 0 1 364 512" stroke="#3c91e6" stroke-width="12" opacity="0.25"/>
+    <path d="M 0 148 A 364 364 0 0 1 364 512" stroke="#3c91e6" stroke-width="6" opacity="0.55"/>
+    <path d="M 0 52 A 460 460 0 0 1 460 512" stroke="#3c91e6" stroke-width="10" opacity="0.2"/>
+    <path d="M 0 52 A 460 460 0 0 1 460 512" stroke="#7fffff" stroke-width="5" opacity="0.35"/>
   </g>
 
-  <ellipse cx="256" cy="214" rx="118" ry="34" fill="url(#cloudShadow)"/>
-  <ellipse cx="256" cy="168" rx="102" ry="56" fill="url(#cloudFill)"/>
-  <ellipse cx="196" cy="188" rx="64" ry="46" fill="#eaf4ff"/>
-  <ellipse cx="320" cy="184" rx="68" ry="48" fill="#dceeff"/>
-  <ellipse cx="256" cy="204" rx="118" ry="36" fill="#ffffff" opacity="0.92"/>
+  <circle cx="198" cy="314" r="18" fill="#3c91e6" opacity="0.25"/>
+  <circle cx="198" cy="314" r="14" fill="#ffffff" stroke="#3c91e6" stroke-width="3"/>
+  <circle cx="302" cy="210" r="9" fill="#7fffff"/>
+  <circle cx="118" cy="394" r="6" fill="#8ec8ff"/>
 </svg>
