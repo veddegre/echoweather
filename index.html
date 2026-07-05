@@ -689,7 +689,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '54';
+const APP_VERSION = '55';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2174,7 +2174,9 @@ async function loadStormIntel(loc, d){
 
 // ---------- radar (RainViewer + IEM NEXRAD) ----------
 let map = null, mapMarker = null, radarFrames = [], satFrames = [], iemFrames = [];
-let radarOverlayLayer = null, satOverlayLayer = null, iemOverlayLayer = null;
+let radarOverlayLayers = [null, null], satOverlayLayers = [null, null], iemOverlayLayers = [null, null];
+let radarOverlaySlot = 0, satOverlaySlot = 0, iemOverlaySlot = 0;
+let radarSlotFrame = [-1, -1], satSlotFrame = [-1, -1], iemSlotFrame = [-1, -1];
 let goesSatLayer = null;
 let radarIdx = 0, radarTimer = null, radarHost = '', radarSatOn = false, radarLoadId = 0;
 let rainviewerTileErrors = 0;
@@ -2209,18 +2211,90 @@ function applyRadarZoomLimits(){
   map.setMaxZoom(maxZ);
   if(map.getZoom() > maxZ) map.setZoom(maxZ);
   if(basemapLayer) basemapLayer.options.maxZoom = maxZ;
-  if(radarOverlayLayer){
-    radarOverlayLayer.options.maxNativeZoom = RADAR_ZOOM.rainviewer;
-    radarOverlayLayer.options.maxZoom = RADAR_ZOOM.rainviewer;
+  radarOverlayLayers.forEach(l => {
+    if(l){ l.options.maxNativeZoom = RADAR_ZOOM.rainviewer; l.options.maxZoom = RADAR_ZOOM.rainviewer; }
+  });
+  satOverlayLayers.forEach(l => {
+    if(l){ l.options.maxNativeZoom = RADAR_ZOOM.rainviewer; l.options.maxZoom = RADAR_ZOOM.rainviewer; }
+  });
+  iemOverlayLayers.forEach(l => {
+    if(l){ l.options.maxNativeZoom = RADAR_ZOOM.iem; l.options.maxZoom = RADAR_ZOOM.iem; }
+  });
+}
+function swapOverlaySlot(layers, slot, opacity){
+  layers.forEach((l, i) => { if(l) l.setOpacity(i === slot ? opacity : 0); });
+}
+function ensurePingPongLayer(layers, slot, onError, opts){
+  if(!map) return null;
+  if(!layers[slot]){
+    layers[slot] = L.tileLayer('', { ...opts, opacity: 0 });
+    if(onError) layers[slot].on('tileerror', onError);
+    layers[slot].addTo(map);
+  } else if(!map.hasLayer(layers[slot])) {
+    layers[slot].addTo(map);
   }
-  if(satOverlayLayer){
-    satOverlayLayer.options.maxNativeZoom = RADAR_ZOOM.rainviewer;
-    satOverlayLayer.options.maxZoom = RADAR_ZOOM.rainviewer;
+  return layers[slot];
+}
+function loadPingPongFrame(layers, slotFrames, slot, frameIdx, url, opacity, onError, showWhenReady, layerOpts){
+  const layer = ensurePingPongLayer(layers, slot, onError, layerOpts || RV_TILE_OPTS);
+  if(slotFrames[slot] === frameIdx && layer._url === url){
+    if(showWhenReady) swapOverlaySlot(layers, slot, opacity);
+    return;
   }
-  if(iemOverlayLayer){
-    iemOverlayLayer.options.maxNativeZoom = RADAR_ZOOM.iem;
-    iemOverlayLayer.options.maxZoom = RADAR_ZOOM.iem;
+  slotFrames[slot] = frameIdx;
+  if(showWhenReady){
+    let done = false;
+    const finish = () => {
+      if(done) return;
+      done = true;
+      swapOverlaySlot(layers, slot, opacity);
+    };
+    layer.once('load', finish);
+    layer.once('tileerror', finish);
+    layer.setOpacity(0);
+    layer.setUrl(url);
+    return;
   }
+  layer.setOpacity(0);
+  layer.setUrl(url);
+}
+function showPingPongFrame(layers, slotFrames, activeSlot, frameIdx, url, opacity, onError, layerOpts){
+  if(slotFrames[activeSlot] === frameIdx){
+    swapOverlaySlot(layers, activeSlot, opacity);
+    return activeSlot;
+  }
+  const inactive = 1 - activeSlot;
+  if(slotFrames[inactive] === frameIdx){
+    swapOverlaySlot(layers, inactive, opacity);
+    return inactive;
+  }
+  loadPingPongFrame(layers, slotFrames, inactive, frameIdx, url, opacity, onError, true, layerOpts);
+  return inactive;
+}
+function preloadPingPongFrame(layers, slotFrames, activeSlot, frameIdx, url, onError, layerOpts){
+  const preloadSlot = 1 - activeSlot;
+  if(slotFrames[preloadSlot] === frameIdx) return;
+  loadPingPongFrame(layers, slotFrames, preloadSlot, frameIdx, url, 0, onError, false, layerOpts);
+}
+const SAT_TILE_OPTS = { ...RV_TILE_OPTS, zIndex: 448 };
+const IEM_TILE_OPTS = {
+  opacity: 0.78,
+  maxNativeZoom: RADAR_ZOOM.iem,
+  maxZoom: RADAR_ZOOM.iem,
+  zIndex: 450,
+  updateWhenIdle: true,
+  updateWhenZooming: false,
+  keepBuffer: 1,
+  attribution: 'IEM / NOAA NEXRAD'
+};
+function hidePingPongLayers(layers){
+  layers.forEach(l => { if(l) l.setOpacity(0); });
+}
+function resetPingPongSlots(){
+  radarSlotFrame = [-1, -1];
+  satSlotFrame = [-1, -1];
+  iemSlotFrame = [-1, -1];
+  radarOverlaySlot = satOverlaySlot = iemOverlaySlot = 0;
 }
 function onRainviewerTileError(){
   rainviewerTileErrors++;
@@ -2232,41 +2306,6 @@ function onRainviewerTileError(){
   $('radarNote').textContent = 'RainViewer rate limited — using IEM NEXRAD.';
   stopRadarTimer();
   loadIemRadar('iem-n0q');
-}
-function ensureRadarOverlay(){
-  if(!map) return null;
-  if(!radarOverlayLayer){
-    radarOverlayLayer = L.tileLayer('', RV_TILE_OPTS);
-    radarOverlayLayer.on('tileerror', onRainviewerTileError);
-  }
-  if(!map.hasLayer(radarOverlayLayer)) radarOverlayLayer.addTo(map);
-  return radarOverlayLayer;
-}
-function ensureSatOverlay(){
-  if(!map) return null;
-  if(!satOverlayLayer){
-    satOverlayLayer = L.tileLayer('', { ...RV_TILE_OPTS, opacity: 0.45, zIndex: 448 });
-    satOverlayLayer.on('tileerror', onRainviewerTileError);
-  }
-  if(!map.hasLayer(satOverlayLayer)) satOverlayLayer.addTo(map);
-  return satOverlayLayer;
-}
-function ensureIemOverlay(){
-  if(!map) return null;
-  if(!iemOverlayLayer){
-    iemOverlayLayer = L.tileLayer('', {
-      opacity: 0.78,
-      maxNativeZoom: RADAR_ZOOM.iem,
-      maxZoom: RADAR_ZOOM.iem,
-      zIndex: 450,
-      updateWhenIdle: true,
-      updateWhenZooming: false,
-      keepBuffer: 1,
-      attribution: 'IEM / NOAA NEXRAD'
-    });
-  }
-  if(!map.hasLayer(iemOverlayLayer)) iemOverlayLayer.addTo(map);
-  return iemOverlayLayer;
 }
 function isRadarTabVisible(){
   return document.body.classList.contains('mtab-radar');
@@ -2326,10 +2365,11 @@ function stopRadarTimer(){
   if(radarTimer){ clearInterval(radarTimer); radarTimer = null; $('radarPlay').textContent = '\u25B6 Play'; }
 }
 function clearRadarLayers(){
-  [radarOverlayLayer, satOverlayLayer, iemOverlayLayer].forEach(l => {
-    if(l && map && map.hasLayer(l)) map.removeLayer(l);
+  [radarOverlayLayers, satOverlayLayers, iemOverlayLayers].forEach(arr => {
+    arr.forEach(l => { if(l && map && map.hasLayer(l)) map.removeLayer(l); });
   });
   hideGoesSatellite();
+  resetPingPongSlots();
 }
 function setRadarAnimControls(visible){
   $('radarAnimCtl').classList.toggle('hidden', !visible);
@@ -2359,8 +2399,8 @@ function ensureGoesSatLayer(){
   return goesSatLayer;
 }
 function applySatelliteOverlay(frameIdx){
-  if(satOverlayLayer && map && map.hasLayer(satOverlayLayer)) map.removeLayer(satOverlayLayer);
   if(!map || radarMode !== 'rainviewer' || !radarSatOn){
+    hidePingPongLayers(satOverlayLayers);
     hideGoesSatellite();
     return;
   }
@@ -2369,12 +2409,15 @@ function applySatelliteOverlay(frameIdx){
     const si = Math.min(Math.floor(frameIdx / Math.max(1, radarFrames.length) * satFrames.length), satFrames.length - 1);
     const f = satFrames[si];
     if(f){
-      const layer = ensureSatOverlay();
-      layer.setUrl(radarHost + f.path + '/256/{z}/{x}/{y}/2/1_1.png');
-      layer.setOpacity(0.45);
+      const url = radarHost + f.path + '/256/{z}/{x}/{y}/2/1_1.png';
+      satOverlaySlot = showPingPongFrame(satOverlayLayers, satSlotFrame, satOverlaySlot, si, url, 0.45, onRainviewerTileError, SAT_TILE_OPTS);
+      const nextSi = (si + 1) % satFrames.length;
+      const nf = satFrames[nextSi];
+      if(nf) preloadPingPongFrame(satOverlayLayers, satSlotFrame, satOverlaySlot, nextSi, radarHost + nf.path + '/256/{z}/{x}/{y}/2/1_1.png', onRainviewerTileError, SAT_TILE_OPTS);
     }
     return;
   }
+  hidePingPongLayers(satOverlayLayers);
   const goes = ensureGoesSatLayer();
   if(goes && !map.hasLayer(goes)) goes.addTo(map);
   if(goes) goes.setOpacity(0.55);
@@ -2446,27 +2489,34 @@ function showFrame(i){
   radarIdx = i;
   if(radarMode === 'rainviewer'){
     if(!radarFrames.length) return;
-    if(iemOverlayLayer && map.hasLayer(iemOverlayLayer)) map.removeLayer(iemOverlayLayer);
+    hidePingPongLayers(iemOverlayLayers);
     const f = radarFrames[i];
     if(f){
-      const layer = ensureRadarOverlay();
-      layer.setUrl(radarHost + f.path + '/256/{z}/{x}/{y}/2/1_1.png');
-      layer.setOpacity(0.72);
+      const url = radarHost + f.path + '/256/{z}/{x}/{y}/2/1_1.png';
+      radarOverlaySlot = showPingPongFrame(radarOverlayLayers, radarSlotFrame, radarOverlaySlot, i, url, 0.72, onRainviewerTileError, RV_TILE_OPTS);
+      const next = (i + 1) % radarFrames.length;
+      const nf = radarFrames[next];
+      if(nf) preloadPingPongFrame(radarOverlayLayers, radarSlotFrame, radarOverlaySlot, next, radarHost + nf.path + '/256/{z}/{x}/{y}/2/1_1.png', onRainviewerTileError, RV_TILE_OPTS);
       const t = new Date(f.time * 1000);
       const isFuture = i >= radarFrames.length - 3 && f.time * 1000 > Date.now();
       $('radarTime').textContent = t.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + (isFuture ? ' (nowcast)' : '');
     }
     applySatelliteOverlay(i);
   }else if(IEM_TILES[radarMode]){
-    if(radarOverlayLayer && map.hasLayer(radarOverlayLayer)) map.removeLayer(radarOverlayLayer);
-    if(satOverlayLayer && map.hasLayer(satOverlayLayer)) map.removeLayer(satOverlayLayer);
+    hidePingPongLayers(radarOverlayLayers);
+    hidePingPongLayers(satOverlayLayers);
     hideGoesSatellite();
     const mode = radarMode;
     const suffix = iemFrames[i];
     const name = iemLayerName(mode, suffix);
-    const layer = ensureIemOverlay();
-    layer.setUrl('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png');
-    layer.setOpacity(0.78);
+    const url = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png';
+    iemOverlaySlot = showPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, i, url, 0.78, null, IEM_TILE_OPTS);
+    const next = (i + 1) % iemFrames.length;
+    const ns = iemFrames[next];
+    if(ns){
+      const nname = iemLayerName(mode, ns);
+      preloadPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, next, 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + nname + '/{z}/{x}/{y}.png', null, IEM_TILE_OPTS);
+    }
     $('radarTime').textContent = IEM_MINS[i] === 0 ? 'Live \u00B7 now' : IEM_MINS[i] + ' min ago';
   }
   if(basemapLayer) basemapLayer.bringToBack();
