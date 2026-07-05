@@ -309,6 +309,8 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-tick .day-tick-t{font-size:.5625rem;color:var(--dim);line-height:1.2;white-space:nowrap}
 .day-tick .day-tick-v{font-size:.6875rem;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3;margin-top:2px}
 .day-tick.now .day-tick-t,.day-tick.now .day-tick-v{color:var(--warn)}
+.day-card-summary-only .day-cond-strip{opacity:.85}
+.day-card-note{font-size:.625rem;color:var(--dim);margin-top:6px;text-align:center}
 #radar{width:100%;height:380px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
 #radar .leaflet-container{width:100%;height:100%;border-radius:inherit}
 .radar-stage{display:flex;flex-direction:column;gap:10px}
@@ -607,8 +609,8 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
       <div class="hourly-strip" id="hourly"></div>
     </section>
 
-    <section class="panel full nav-target" id="dailyPanel" data-tab="forecast" aria-label="Seven day forecast">
-      <h2>7-Day Forecast <span class="panel-status" id="dailySource"></span></h2>
+    <section class="panel full nav-target" id="dailyPanel" data-tab="forecast" aria-label="Six day forecast">
+      <h2>6-Day Forecast <span class="panel-status" id="dailySource"></span></h2>
       <div class="daily" id="daily"></div>
     </section>
 
@@ -778,7 +780,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '93';
+const APP_VERSION = '95';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -1567,24 +1569,27 @@ function buildHourlyFromNws(periods, om){
 }
 function buildDailyFromNws(periods, omDaily){
   const days = [];
-  for(let i = 0; i < periods.length && days.length < 7; i++){
+  for(let i = 0; i < periods.length && days.length < 6; i++){
     const p = periods[i];
     if(!p.isDaytime) continue;
     const night = periods[i + 1];
     const date = p.startTime.slice(0, 10);
     const omIdx = omDaily.time.findIndex(t => t === date);
+    const dayMax = nwsTempToDisp(p.temperature, p.temperatureUnit === 'C' ? 'C' : 'F');
+    const dayMin = night && !night.isDaytime
+      ? nwsTempToDisp(night.temperature, night.temperatureUnit === 'C' ? 'C' : 'F')
+      : (omIdx >= 0 ? omDaily.temperature_2m_min[omIdx] : dayMax);
     days.push({
       time: date,
-      temperature_2m_max: nwsTempToDisp(p.temperature, p.temperatureUnit === 'C' ? 'C' : 'F'),
-      temperature_2m_min: night && !night.isDaytime
-        ? nwsTempToDisp(night.temperature, night.temperatureUnit === 'C' ? 'C' : 'F')
-        : nwsTempToDisp(p.temperature, p.temperatureUnit === 'C' ? 'C' : 'F'),
+      temperature_2m_max: dayMax,
+      temperature_2m_min: dayMin,
       weather_code: nwsToWmo(p.shortForecast),
       shortForecast: p.shortForecast,
       precipitation_probability_max: Math.max(
         p.probabilityOfPrecipitation?.value ?? 0,
         night && !night.isDaytime ? (night.probabilityOfPrecipitation?.value ?? 0) : 0
       ),
+      wind_speed_10m_max: omIdx >= 0 ? (omDaily.wind_speed_10m_max[omIdx] ?? 0) : 0,
       wind_gusts_10m_max: omIdx >= 0 ? (omDaily.wind_gusts_10m_max[omIdx] ?? 0) : 0,
       uv_index_max: omIdx >= 0 ? (omDaily.uv_index_max[omIdx] ?? 0) : 0,
       sunrise: omIdx >= 0 ? omDaily.sunrise[omIdx] : omDaily.sunrise[0],
@@ -1663,6 +1668,7 @@ function mergeWeatherData(loc, om, hrrr, nws){
       shortForecast: dailyArr.map(d => d.shortForecast),
       precipitation_probability_max: dailyArr.map(d => d.precipitation_probability_max),
       wind_gusts_10m_max: dailyArr.map(d => d.wind_gusts_10m_max),
+      wind_speed_10m_max: dailyArr.map(d => d.wind_speed_10m_max),
       uv_index_max: dailyArr.map(d => d.uv_index_max),
       sunrise: dailyArr.map(d => d.sunrise),
       sunset: dailyArr.map(d => d.sunset),
@@ -2110,6 +2116,59 @@ function dayTempSparkline(temps, w, h){
     + '<polygon points="' + area + '" fill="currentColor" opacity=".14"/>'
     + '<polyline points="' + line + '" fill="none" stroke="currentColor" stroke-width="1.75" vector-effect="non-scaling-stroke"/></svg>';
 }
+function buildDayTimeline(indices, hh, dd, i, opts){
+  const compactTicks = opts.compactTicks;
+  const nowHour = opts.nowHour;
+  const nowPct = opts.nowPct;
+  if(indices.length){
+    const segs = buildConditionSegments(indices, hh);
+    const segHtml = segs.map(s =>
+      '<div class="day-seg dc-' + s.bucket + '" style="width:' + s.pct.toFixed(2) + '%" title="' + esc(s.label) + '">'
+      + (s.pct >= 9 ? '<span>' + esc(s.label) + '</span>' : '')
+      + '</div>'
+    ).join('');
+    const nowMark = nowPct != null
+      ? '<div class="day-now" style="left:' + nowPct.toFixed(2) + '%" title="Now"></div>'
+      : '';
+    const temps = indices.map(j => hh.temperature_2m[j]);
+    const maxTicks = compactTicks ? 6 : 12;
+    const tickStep = Math.max(1, Math.ceil(indices.length / maxTicks));
+    const tickParts = [];
+    for(let j = 0; j < indices.length; j += tickStep){
+      const idx = indices[j];
+      const hrKey = hh.time[idx].slice(0, 13);
+      const isNow = hrKey === nowHour;
+      const tickLbl = compactTicks ? hourLabelCompact(hh.time[idx]) : hourLabel(hh.time[idx]);
+      tickParts.push('<div class="day-tick' + (isNow ? ' now' : '') + '">'
+        + '<div class="day-tick-t">' + tickLbl + '</div>'
+        + '<div class="day-tick-v">' + Math.round(hh.temperature_2m[idx]) + '°</div>'
+        + '</div>');
+    }
+    return {
+      hourly: true,
+      segHtml: segHtml + nowMark,
+      temps,
+      ticksHtml: tickParts.length ? '<div class="day-ticks">' + tickParts.join('') + '</div>' : '',
+      note: ''
+    };
+  }
+  const bucket = conditionBucket(dd.weather_code[i]);
+  const lo = dd.temperature_2m_min[i];
+  const hi = dd.temperature_2m_max[i];
+  const segHtml = '<div class="day-seg dc-' + bucket + '" style="width:100%" title="' + esc(COND_BUCKETS[bucket]) + '">'
+    + '<span>' + esc(COND_BUCKETS[bucket]) + '</span></div>';
+  const ticksHtml = '<div class="day-ticks">'
+    + '<div class="day-tick"><div class="day-tick-t">Low</div><div class="day-tick-v">' + Math.round(lo) + '°</div></div>'
+    + '<div class="day-tick"><div class="day-tick-t">High</div><div class="day-tick-v">' + Math.round(hi) + '°</div></div>'
+    + '</div>';
+  return {
+    hourly: false,
+    segHtml,
+    temps: [lo, hi],
+    ticksHtml,
+    note: '<div class="day-card-note">Hourly detail not available for this day</div>'
+  };
+}
 function renderDaily(d){
   const dd = d.daily;
   const hh = d.om && d.om.hourly;
@@ -2120,8 +2179,9 @@ function renderDaily(d){
   }
   const nowI = nowIndex(d);
   const nowHour = d.hourly.time[nowI] ? d.hourly.time[nowI].slice(0, 13) : '';
+  const dayCount = Math.min(6, dd.time.length);
   try{
-  $('daily').innerHTML = dd.time.map((t, i) => {
+  $('daily').innerHTML = dd.time.slice(0, dayCount).map((t, i) => {
     const cond = dd.shortForecast ? dd.shortForecast[i] : wmo(dd.weather_code[i])[0];
     const [ , icon] = wmo(dd.weather_code[i]);
     const indices = dayHourlyIndices(hh, t);
@@ -2135,7 +2195,9 @@ function renderDaily(d){
     const rainMeta = rainAmt
       ? 'Rain ' + rainAmt
       : (pop > 0 ? pop + '% rain' : '');
-    const windMeta = stats.wind ? 'Wind ~' + stats.wind + ' ' + windUnit() : '';
+    const windSpd = stats.wind
+      || Math.round(dd.wind_speed_10m_max?.[i] ?? dd.wind_gusts_10m_max?.[i] ?? 0);
+    const windMeta = windSpd ? 'Wind ~' + windSpd + ' ' + windUnit() : '';
     const metaParts = [rainMeta, windMeta].filter(Boolean);
     const title = i === 0
       ? '<span class="day-dn">Today</span> <span class="day-date">' + fmtDayDate(t) + '</span>'
@@ -2144,34 +2206,12 @@ function renderDaily(d){
       + (loAt ? ' at ' + loAt : '')
       + ' · High <strong>' + hi + '°</strong>'
       + (hiAt ? ' at ' + hiAt : '');
-    const segs = buildConditionSegments(indices, hh);
-    const segHtml = segs.map(s =>
-      '<div class="day-seg dc-' + s.bucket + '" style="width:' + s.pct.toFixed(2) + '%" title="' + esc(s.label) + '">'
-      + (s.pct >= 9 ? '<span>' + esc(s.label) + '</span>' : '')
-      + '</div>'
-    ).join('');
-    const nowPct = i === 0 ? (nowMinsInTz(d.timezone) / 1440) * 100 : null;
-    const nowMark = nowPct != null
-      ? '<div class="day-now" style="left:' + nowPct.toFixed(2) + '%" title="Now"></div>'
-      : '';
-    const temps = indices.map(j => hh.temperature_2m[j]);
     const compactTicks = window.matchMedia('(max-width:860px)').matches;
-    const maxTicks = compactTicks ? 6 : 12;
-    const tickStep = Math.max(1, Math.ceil(indices.length / maxTicks));
-    const ticks = [];
-    for(let j = 0; j < indices.length; j += tickStep){
-      const idx = indices[j];
-      const hrKey = hh.time[idx].slice(0, 13);
-      const isNow = hrKey === nowHour;
-      const tickLbl = compactTicks ? hourLabelCompact(hh.time[idx]) : hourLabel(hh.time[idx]);
-      ticks.push('<div class="day-tick' + (isNow ? ' now' : '') + '">'
-        + '<div class="day-tick-t">' + tickLbl + '</div>'
-        + '<div class="day-tick-v">' + Math.round(hh.temperature_2m[idx]) + '°</div>'
-        + '</div>');
-    }
+    const nowPct = i === 0 ? (nowMinsInTz(d.timezone) / 1440) * 100 : null;
+    const timeline = buildDayTimeline(indices, hh, dd, i, { compactTicks, nowHour, nowPct });
     const gust = Math.round(dd.wind_gusts_10m_max[i]);
     const uv = (dd.uv_index_max[i] ?? 0).toFixed(0);
-    return '<article class="day-card" title="' + esc(cond) + ' · gusts ' + gust + ' ' + windUnit() + ' · UV ' + uv + '">'
+    return '<article class="day-card' + (timeline.hourly ? '' : ' day-card-summary-only') + '" title="' + esc(cond) + ' · gusts ' + gust + ' ' + windUnit() + ' · UV ' + uv + '">'
       + '<div class="day-card-head">'
       + '<div class="day-card-title"><span class="day-ic" aria-hidden="true">' + icon + '</span>' + title
       + '<span class="day-cond">' + esc(cond) + '</span></div>'
@@ -2181,12 +2221,11 @@ function renderDaily(d){
       }).join('') + '</div>' : '')
       + '</div>'
       + '<div class="day-summary">' + summary + '</div>'
-      + '<div class="day-cond-strip">' + segHtml + nowMark + '</div>'
+      + '<div class="day-cond-strip">' + timeline.segHtml + '</div>'
       + '<div class="day-temp-chart">'
-      + '<div class="day-temp-line">' + dayTempSparkline(temps, 320, 36) + '</div>'
-      + (ticks.length
-        ? '<div class="day-ticks">' + ticks.join('') + '</div>'
-        : '')
+      + '<div class="day-temp-line">' + dayTempSparkline(timeline.temps, 320, 36) + '</div>'
+      + timeline.ticksHtml
+      + timeline.note
       + '</div></article>';
   }).join('');
   }catch(e){
