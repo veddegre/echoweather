@@ -599,7 +599,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
           <select id="buoySelect" aria-label="Select NDBC buoy station"></select>
           <input id="buoyId" aria-label="Custom NDBC buoy station ID" placeholder="ID" style="display:none">
           <button id="buoyGo" type="button">Load</button>
-          <a class="buoy-find" href="https://www.ndbc.noaa.gov/maps/all.shtml" target="_blank" rel="noopener noreferrer">Find stations ↗</a>
+          <a class="buoy-find" id="buoyFindLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">Find stations ↗</a>
         </div>
         <div class="buoy-head" id="buoyHead" hidden>
           <div class="buoy-name" id="buoyName"></div>
@@ -635,7 +635,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '38';
+const APP_VERSION = '39';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2874,6 +2874,11 @@ const BUOY_PRESETS = [
   { id: '45147', name: 'Lake St Clair', lake: 'Lake St Clair', lat: 42.430, lon: -82.680 }
 ];
 const NDBC_STATION_URL = 'https://www.ndbc.noaa.gov/station_page.php?station=';
+const NDBC_MAP_BASE = 'https://www.ndbc.noaa.gov/';
+function ndbcMapUrl(loc){
+  if(!loc) return NDBC_MAP_BASE;
+  return NDBC_MAP_BASE + '?lat=' + loc.lat + '&lon=' + loc.lon + '&zoom=7';
+}
 function locKey(loc){
   return (loc.lat || 0).toFixed(2) + ',' + (loc.lon || 0).toFixed(2);
 }
@@ -2914,6 +2919,8 @@ function applyBuoyForLocation(loc){
   const id = resolveBuoyForLocation(loc);
   setBuoyId(id, false);
   bindBuoyToLocation(id, loc);
+  const findLink = $('buoyFindLink');
+  if(findLink) findLink.href = ndbcMapUrl(loc);
 }
 function userSelectBuoy(id){
   const loc = state.locations[state.active];
