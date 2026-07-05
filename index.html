@@ -778,7 +778,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '90';
+const APP_VERSION = '91';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -971,7 +971,15 @@ const WMO = {
   85:['Snow showers','\uD83C\uDF28\uFE0F'],86:['Snow showers','\u2744\uFE0F'],
   95:['Thunderstorm','\u26C8\uFE0F'],96:['T-storm w/ hail','\u26C8\uFE0F'],99:['T-storm w/ hail','\u26C8\uFE0F']
 };
-const wmo = c => WMO[c] || ['—','\u2601\uFE0F'];
+const wmo = (c, isDay) => {
+  const entry = WMO[c] || ['—','\u2601\uFE0F'];
+  if(isDay === 0 || isDay === false){
+    if(c === 0) return ['Clear', '\uD83C\uDF19'];
+    if(c === 1) return ['Mostly clear', '\uD83C\uDF19'];
+    if(c === 2) return ['Partly cloudy', '\u2601\uFE0F'];
+  }
+  return entry;
+};
 const COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
 const compass = d => COMPASS[Math.round(d/22.5) % 16];
 const RAD = Math.PI / 180;
@@ -1498,7 +1506,7 @@ async function fetchOpenMeteoBase(loc){
   const url = 'https://api.open-meteo.com/v1/forecast'
     + '?latitude=' + loc.lat + '&longitude=' + loc.lon
     + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m'
-    + '&hourly=temperature_2m,dew_point_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,pressure_msl,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cape,freezing_level_height,wet_bulb_temperature_2m,boundary_layer_height,sunshine_duration,snow_depth,soil_temperature_0cm,soil_moisture_0_to_1cm,wind_speed_80m,wind_speed_120m,wind_speed_180m,wind_direction_80m,wind_direction_120m,wind_direction_180m'
+    + '&hourly=is_day,temperature_2m,dew_point_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,pressure_msl,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cape,freezing_level_height,wet_bulb_temperature_2m,boundary_layer_height,sunshine_duration,snow_depth,soil_temperature_0cm,soil_moisture_0_to_1cm,wind_speed_80m,wind_speed_120m,wind_speed_180m,wind_direction_80m,wind_direction_120m,wind_direction_180m'
     + '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,sunshine_duration,daylight_duration'
     + '&temperature_unit=' + tempU + '&wind_speed_unit=' + windU + '&precipitation_unit=' + precU
     + '&timezone=auto&forecast_days=7';
@@ -1522,7 +1530,14 @@ function buildHourlyFromNws(periods, om){
     time: sliced.map(p => p.startTime),
     temperature_2m: sliced.map(p => nwsTempToDisp(p.temperature, p.temperatureUnit === 'C' ? 'C' : 'F')),
     precipitation_probability: sliced.map(p => p.probabilityOfPrecipitation?.value ?? 0),
-    weather_code: sliced.map(p => nwsToWmo(p.shortForecast)),
+    weather_code: sliced.map(p => {
+      const oi = closestOmIndex(p.startTime, omTimes);
+      return om.hourly.weather_code[oi] ?? nwsToWmo(p.shortForecast);
+    }),
+    is_day: sliced.map(p => {
+      const oi = closestOmIndex(p.startTime, omTimes);
+      return om.hourly.is_day[oi] ?? 0;
+    }),
     wind_speed_10m: sliced.map(p => parseNwsWindMph(p.windSpeed)),
     wind_direction_10m: sliced.map(p => nwsDirToDeg(p.windDirection)),
     shortForecast: sliced.map(p => p.shortForecast),
@@ -1983,7 +1998,8 @@ function renderHourly(d){
   const out = [];
   for(let i = i0; i < end; i++){
     const code = d.hourly.weather_code[i];
-    const [ , icon] = wmo(code);
+    const isDay = d.hourly.is_day ? d.hourly.is_day[i] : 1;
+    const [ , icon] = wmo(code, isDay);
     const tip = d.hourly.shortForecast ? d.hourly.shortForecast[i] : wmo(code)[0];
     out.push('<div class="hour' + (i === i0 ? ' now-h' : '') + '" title="' + esc(tip) + '">'
       + '<div class="t">' + (i === i0 ? 'NOW' : hourLabel(d.hourly.time[i])) + '</div>'
