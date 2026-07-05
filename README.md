@@ -373,17 +373,7 @@ cd /var/www/echoweather
 git pull --ff-only
 ```
 
-If `fix-permissions.sh` is not on the server yet, run manually:
-
-```bash
-sudo chown -R "$USER:$USER" /var/www/echoweather/.git
-sudo chown -R "$USER:www-data" /var/www/echoweather
-sudo chown -R "$USER:$USER" /var/www/echoweather/.git
-sudo chown -R www-data:www-data /var/www/echoweather/cache
-sudo chown root:www-data /var/www/echoweather/config.local.php
-sudo chmod 640 /var/www/echoweather/config.local.php
-sudo -u "$USER" -H git config --global --add safe.directory /var/www/echoweather
-```
+If the script is missing, `git pull` the latest repo first — `scripts/fix-permissions.sh` is included.
 
 **`git pull` fails with permission errors (general).** The clone should be owned by your
 SSH user, not `www-data`. Only `cache/` and `config.local.php` need special
