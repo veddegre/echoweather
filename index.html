@@ -164,7 +164,6 @@ body.scrolled .tagline{display:none}
 .sw-update button{background:var(--accent);color:var(--on-accent);border:none;border-radius:8px;padding:7px 14px;font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap}
 .sw-update button:hover{filter:brightness(1.08)}
 .app-tab-bar{display:flex;gap:4px;border-top:1px solid var(--line);margin-top:4px;padding:8px 0 10px}
-body.scrolled .app-tab-bar{padding:6px 0 8px}
 .app-tab-bar button{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;background:transparent;border:1px solid transparent;border-radius:10px;color:var(--mut);font-size:.8125rem;font-weight:600;font-family:inherit;cursor:pointer;padding:8px 10px;letter-spacing:.02em}
 .app-tab-bar button .tab-lbl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .app-tab-bar button.on{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
@@ -804,7 +803,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '101';
+const APP_VERSION = '102';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -4584,12 +4583,30 @@ function syncChromeHeight(){
   const loc = $('locbar');
   const tabs = $('appTabBar');
   const mobile = isMobileTabLayout();
-  if(mobile && loc){
-    document.documentElement.style.setProperty('--chrome-h', loc.offsetHeight + 'px');
-  } else if(top){
-    document.documentElement.style.setProperty('--chrome-h', top.offsetHeight + 'px');
+  let chromeH = '';
+  if(mobile && loc) chromeH = loc.offsetHeight + 'px';
+  else if(top) chromeH = top.offsetHeight + 'px';
+  if(chromeH && chromeH !== syncChromeHeight._chromeH){
+    syncChromeHeight._chromeH = chromeH;
+    document.documentElement.style.setProperty('--chrome-h', chromeH);
   }
-  if(tabs && mobile) document.documentElement.style.setProperty('--tab-bar-h', tabs.offsetHeight + 'px');
+  if(tabs && mobile){
+    const tabH = tabs.offsetHeight + 'px';
+    if(tabH !== syncChromeHeight._tabH){
+      syncChromeHeight._tabH = tabH;
+      document.documentElement.style.setProperty('--tab-bar-h', tabH);
+    }
+  }
+}
+syncChromeHeight._chromeH = '';
+syncChromeHeight._tabH = '';
+let chromeHeightRaf = 0;
+function scheduleSyncChromeHeight(){
+  if(chromeHeightRaf) return;
+  chromeHeightRaf = requestAnimationFrame(() => {
+    chromeHeightRaf = 0;
+    syncChromeHeight();
+  });
 }
 
 function isMobileTabLayout(){
@@ -4647,12 +4664,18 @@ function initPageNav(){
   });
 
   let siteTopCompact = false;
+  const SCROLL_COMPACT_AT = 72;
+  const SCROLL_EXPAND_AT = 16;
   const syncSiteTop = () => {
-    const compact = window.scrollY > 48;
+    if(isMobileTabLayout()) return;
+    const y = window.scrollY;
+    let compact = siteTopCompact;
+    if(!siteTopCompact && y > SCROLL_COMPACT_AT) compact = true;
+    else if(siteTopCompact && y < SCROLL_EXPAND_AT) compact = false;
     if(compact !== siteTopCompact){
       siteTopCompact = compact;
       document.body.classList.toggle('scrolled', compact);
-      syncChromeHeight();
+      scheduleSyncChromeHeight();
     }
   };
 
@@ -4666,7 +4689,7 @@ function initPageNav(){
   const locbar = $('locbar');
   const siteHeader = siteTop?.querySelector('header');
   if(typeof ResizeObserver !== 'undefined'){
-    const ro = new ResizeObserver(() => syncChromeHeight());
+    const ro = new ResizeObserver(() => scheduleSyncChromeHeight());
     if(siteTop) ro.observe(siteTop);
     if(siteHeader) ro.observe(siteHeader);
     if(locbar) ro.observe(locbar);
