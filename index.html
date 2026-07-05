@@ -338,9 +338,14 @@ body.radar-expanded{overflow:hidden}
 .pd-val.pd-low{color:var(--good)}.pd-val.pd-mid{color:var(--warm)}.pd-val.pd-high{color:var(--warn)}.pd-val.pd-none{color:var(--dim)}
 .pollen-empty-msg{font-size:.75rem;color:var(--mut);line-height:1.45;text-align:center;padding:6px 2px}
 #outdoorGrid .outdoor-wide{grid-column:1/-1}
-.uv-hour{min-width:64px}
-.uv-hour .uv-val{font-size:1rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
-.uv-hour .uv-val.uv-low{color:var(--good)}.uv-hour .uv-val.uv-mid{color:var(--warm)}.uv-hour .uv-val.uv-high{color:var(--warn)}
+.exposure-hour{min-width:92px;padding:10px 8px}
+.exposure-hour .ex-row{display:flex;justify-content:space-between;align-items:baseline;gap:4px;font-size:.6875rem;margin-top:5px;line-height:1.2}
+.exposure-hour .ex-k{color:var(--dim);font-weight:500;letter-spacing:.02em}
+.exposure-hour .ex-v{font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+.exposure-hour .ex-v.uv-low{color:var(--good)}.exposure-hour .ex-v.uv-mid{color:var(--warm)}.exposure-hour .ex-v.uv-high{color:var(--warn)}
+.exposure-hour .ex-note{font-size:.625rem;color:var(--mut);margin-top:5px;line-height:1.25}
+.exposure-strip-note{font-size:.6875rem;color:var(--dim);margin:-6px 0 8px;line-height:1.4}
+footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .radar-mode{grid-column:1/-1;width:100%;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 10px;font-size:.8125rem;font-weight:500}
 .radar-anim-ctl{display:grid;grid-column:1/-1;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;width:100%;min-width:0}
 .radar-anim-ctl.hidden{display:none}
@@ -697,7 +702,8 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
           <div class="detail" id="uvDetail"></div>
         </div>
         <div class="metrics" id="exposureMetrics" style="margin-top:12px"></div>
-        <div class="metrics-lbl">Rest of today</div>
+        <div class="metrics-lbl">Outdoor rest of today</div>
+        <div class="exposure-strip-note">UV, humidity, and comfort each hour</div>
         <div class="hourly-strip" id="exposureUvStrip"></div>
       </section>
 
@@ -783,6 +789,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     Echo Weather &middot; NWS &middot; METAR &middot; HRRR &middot; Open-Meteo &middot; IEM &middot; RainViewer &middot; NDBC
     &middot; <a href="#" id="installBtn" style="display:none">Install app</a>
     &middot; <a href="#" id="updateAppBtn">Update app</a>
+    &middot; <span class="app-ver" id="footerVersion" aria-label="App version"></span>
     <details class="install-hint" id="installHint" hidden>
       <summary id="installHintSummary">Add to home screen</summary>
       <div class="install-hint-body" id="installHintBody"></div>
@@ -797,7 +804,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '99';
+const APP_VERSION = '100';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -1838,6 +1845,13 @@ function uvExposureNote(u){
   if(u < 11) return 'Reduce sun exposure 10am\u20134pm \u00B7 protection essential.';
   return 'Avoid midday sun \u00B7 high burn risk in minutes.';
 }
+function hourlyComfortNote(temp, dew){
+  const spread = temp - dew;
+  if(spread <= 3) return 'Muggy';
+  if(spread <= 8) return 'Humid';
+  if(spread <= 15) return 'Comfortable';
+  return 'Dry air';
+}
 function exposureVisibility(d, c, i){
   const visUnit = (d.om && d.om.hourly_units && d.om.hourly_units.visibility) || 'm';
   let visMeters = c.visibility_m;
@@ -1902,19 +1916,27 @@ function renderExposure(d){
 
   const strip = $('exposureUvStrip');
   if(!strip) return;
+  const rhSeries = h.relative_humidity_2m || [];
+  const tempSeries = h.temperature_2m || [];
+  const dewSeries = h.dew_point_2m || [];
   const cells = [];
   for(let j = i; j < h.time.length && h.time[j].slice(0, 10) === todayKey; j++){
     const uv = uvSeries[j] ?? 0;
-    cells.push('<div class="hour uv-hour' + (j === i ? ' now-h' : '') + '">'
+    const temp = Math.round(tempSeries[j] ?? 0);
+    const dew = Math.round(dewSeries[j] ?? temp);
+    const rh = rhDisp(rhSeries[j]);
+    const comfort = hourlyComfortNote(temp, dew);
+    cells.push('<div class="hour exposure-hour' + (j === i ? ' now-h' : '') + '">'
       + '<div class="t">' + (j === i ? 'Now' : hourLabelCompact(h.time[j])) + '</div>'
-      + '<div class="uv-val ' + uvValCls(uv) + '">' + uv.toFixed(1) + '</div>'
-      + '<div class="pp">' + uvCat(uv) + '</div>'
+      + '<div class="ex-row"><span class="ex-k">UV</span><span class="ex-v ' + uvValCls(uv) + '">' + uv.toFixed(1) + '</span></div>'
+      + '<div class="ex-row"><span class="ex-k">RH</span><span class="ex-v">' + rh + '%</span></div>'
+      + '<div class="ex-note">' + comfort + (uv >= 3 ? ' \u00B7 ' + uvCat(uv) + ' sun' : '') + '</div>'
       + '</div>');
     if(cells.length >= 10) break;
   }
   strip.innerHTML = cells.length
     ? cells.join('')
-    : '<div class="radar-note">UV stays low for the rest of today.</div>';
+    : '<div class="radar-note">Outdoor exposure stays low for the rest of today.</div>';
 }
 function todayOutlook(d){
   const periods = d.nwsDaily;
@@ -4615,6 +4637,8 @@ function tabFromHash(){
 }
 
 function initPageNav(){
+  const ver = $('footerVersion');
+  if(ver) ver.textContent = 'v' + APP_VERSION;
   const tabBar = $('appTabBar');
   if(tabBar){
     tabBar.querySelectorAll('button[data-tab]').forEach(btn => {

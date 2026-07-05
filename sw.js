@@ -1,4 +1,4 @@
-const CACHE = 'echo-weather-v99';
+const CACHE = 'echo-weather-v100';
 const ICON_Q = '?v=86';
 const ASSETS = [
   './manifest.json',
