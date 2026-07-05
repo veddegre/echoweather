@@ -636,7 +636,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '44';
+const APP_VERSION = '47';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2850,13 +2850,25 @@ function mToFt(m){ return (m * 3.28084).toFixed(1); }
 function cToF(c){ return Math.round(c * 9 / 5 + 32); }
 function greatLakeName(lat, lon){
   if(lat >= 42.2 && lat <= 42.7 && lon >= -83.2 && lon <= -82.2) return 'Lake St Clair';
-  if(lat >= 41 && lat <= 49 && lon >= -92 && lon <= -76) return 'Lake Michigan';
-  if(lat >= 46 && lat <= 49 && lon >= -92 && lon <= -84) return 'Lake Superior';
+  // Superior before Michigan — western/central UP and north shore (MI/MN/WI)
+  if(lat >= 46.35 && lon >= -92.5 && lon < -86.8) return 'Lake Superior';
+  if(lat >= 46.5 && lon >= -86.8 && lon <= -84.5) return 'Lake Superior';
+  // Huron — eastern UP, Georgian Bay, Saginaw, Ontario shore
+  if(lat >= 43 && lat <= 46.55 && lon >= -84.5 && lon <= -79) return 'Lake Huron';
   if(lat >= 41 && lat <= 43 && lon >= -83 && lon <= -78) return 'Lake Erie';
   if(lat >= 42.5 && lat <= 44.5 && lon >= -79.5 && lon <= -76) return 'Lake Ontario';
-  if(lat >= 41 && lat <= 46 && lon >= -84 && lon <= -79) return 'Lake Huron';
+  // Lake Michigan — lower peninsula and NW lake Michigan shore
+  if(lat >= 41 && lat <= 46.35 && lon >= -92 && lon <= -84.3) return 'Lake Michigan';
   return null;
 }
+const LAKE_GLF_OFFICES = {
+  'Lake Superior': ['KMQT', 'KDLH'],
+  'Lake Huron': ['KDTX', 'KAPX', 'KGRB'],
+  'Lake Michigan': ['KMKX', 'KGRB', 'KLOT'],
+  'Lake Erie': ['KCLE', 'KBUF'],
+  'Lake Ontario': ['KBUF'],
+  'Lake St Clair': ['KDTX']
+};
 const LAKE_GLF_CODE = {
   'Lake Michigan': 'GLFLM',
   'Lake Superior': 'GLFLS',
@@ -2869,6 +2881,10 @@ const BUOY_PRESETS = [
   // Lake Superior
   { id: '45028', name: 'Western Lake Superior', lake: 'Lake Superior', lat: 46.814, lon: -91.829 },
   { id: '45216', name: 'Ontonagon, MI', lake: 'Lake Superior', lat: 46.907, lon: -89.354 },
+  { id: '45171', name: 'Granite Island, MI', lake: 'Lake Superior', lat: 46.724, lon: -87.411 },
+  { id: '45173', name: 'Munising, MI', lake: 'Lake Superior', lat: 46.573, lon: -86.572 },
+  { id: '45211', name: 'Grand Island North, MI', lake: 'Lake Superior', lat: 46.973, lon: -86.568 },
+  { id: '45172', name: 'Grand Marais, MI', lake: 'Lake Superior', lat: 46.740, lon: -85.980 },
   { id: '45025', name: 'South Entry, Keweenaw Peninsula', lake: 'Lake Superior', lat: 46.969, lon: -88.398 },
   { id: '45219', name: 'Two Harbors Nearshore', lake: 'Lake Superior', lat: 47.021, lon: -91.625 },
   { id: '45023', name: 'North Entry, Keweenaw Peninsula', lake: 'Lake Superior', lat: 47.270, lon: -88.607 },
@@ -2887,6 +2903,7 @@ const BUOY_PRESETS = [
   { id: '45024', name: 'Ludington, MI', lake: 'Lake Michigan', lat: 43.980, lon: -86.560 },
   { id: 'GTLM4', name: 'Grand Traverse Light, MI', lake: 'Lake Michigan', lat: 45.211, lon: -85.550 },
   { id: '45183', name: 'Sleeping Bear Dunes', lake: 'Lake Michigan', lat: 44.982, lon: -85.831 },
+  { id: 'FPTM4', name: 'Fairport, MI (Garden Peninsula)', lake: 'Lake Michigan', lat: 45.619, lon: -86.660 },
   { id: '45002', name: 'North Michigan (N Manitou / Washington Is.)', lake: 'Lake Michigan', lat: 45.344, lon: -86.411 },
   { id: '45022', name: 'Little Traverse Bay', lake: 'Lake Michigan', lat: 45.404, lon: -85.088 },
   // Lake Huron
@@ -3097,24 +3114,44 @@ function trimGlfProduct(text){
   const slice = syn > 0 ? body.slice(0, syn) : body;
   return slice.trim().slice(0, 1400);
 }
-async function fetchGlfLakeProduct(lake){
+function extractGlfSection(text, code){
+  if(!text || !code) return null;
+  const startRe = new RegExp('^\\s*' + code + '\\b', 'm');
+  const start = text.search(startRe);
+  if(start < 0) return null;
+  const tail = text.slice(start);
+  const next = tail.slice(1).search(/\nGLFL[A-Z]{1,2}\s/m);
+  const section = next >= 0 ? tail.slice(0, next + 1) : tail;
+  return trimGlfProduct(section);
+}
+async function fetchGlfLakeProduct(lake, preferOffice){
   const code = LAKE_GLF_CODE[lake];
   if(!code) return null;
   const lr = await nwsFetch('https://api.weather.gov/products/types/GLF');
   if(!lr.ok) return null;
   const items = (await lr.json())['@graph'] || [];
-  for(const item of items.slice(0, 24)){
+  const offices = LAKE_GLF_OFFICES[lake] || [];
+  const candidates = [];
+  for(const item of items.slice(0, 48)){
     const pr = await nwsFetch('https://api.weather.gov/products/' + item.id);
     if(!pr.ok) continue;
     const prod = await pr.json();
-    const text = prod.productText || '';
-    if(new RegExp('\\b' + code + '\\b').test(text)){
-      return { source: 'NWS Great Lakes \u2014 ' + lake, text: trimGlfProduct(text) };
-    }
+    const section = extractGlfSection(prod.productText || '', code);
+    if(!section) continue;
+    candidates.push({ office: item.issuingOffice, section });
   }
-  return null;
+  if(!candidates.length) return null;
+  const hit = candidates.find(c => c.office === preferOffice)
+    || candidates.find(c => offices.includes(c.office))
+    || candidates[0];
+  return { source: 'NWS Great Lakes \u2014 ' + lake, text: hit.section };
 }
 async function fetchNwsMarineText(loc, pointsProps){
+  const lake = greatLakeName(loc.lat, loc.lon);
+  if(lake && isLikelyUS(loc)){
+    const glf = await fetchGlfLakeProduct(lake, pointsProps && pointsProps.cwa);
+    if(glf) return glf;
+  }
   const marineUrl = pointsProps && pointsProps.forecastMarineZone;
   if(marineUrl){
     const r = await nwsFetch(marineUrl + '/forecast');
@@ -3124,9 +3161,7 @@ async function fetchNwsMarineText(loc, pointsProps){
       if(p) return { source: 'NWS marine zone', text: (p.shortForecast || '') + '\n\n' + (p.detailedForecast || '') };
     }
   }
-  const lake = greatLakeName(loc.lat, loc.lon);
-  if(!lake || !isLikelyUS(loc)) return null;
-  return fetchGlfLakeProduct(lake);
+  return null;
 }
 async function fetchMarineCurrent(lat, lon){
   const url = 'https://marine-api.open-meteo.com/v1/marine'
@@ -3137,7 +3172,9 @@ async function fetchMarineCurrent(lat, lon){
   if(!r.ok) throw new Error('marine HTTP ' + r.status);
   return (await r.json()).current || {};
 }
+let marineLoadGen = 0;
 async function loadMarine(loc){
+  const gen = ++marineLoadGen;
   const panel = $('marinePanel');
   const grid = $('advCollapse');
   const lake = greatLakeName(loc.lat, loc.lon);
@@ -3154,6 +3191,7 @@ async function loadMarine(loc){
   $('marineTitle').textContent = lake;
 
   return panelTask('marinePanel', 'marineStatus', async () => {
+    if(gen !== marineLoadGen) return;
     const box = $('marineMetrics'), note = $('marineNote'), nwsBox = $('marineNws');
     const lakeBox = $('lakeOutlook');
     box.innerHTML = ''; note.textContent = ''; nwsBox.textContent = '';
