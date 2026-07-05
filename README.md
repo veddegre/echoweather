@@ -28,7 +28,6 @@ and more, mostly fetched client-side from public APIs.
 | `index.html` | The weather app |
 | `manifest.json` | PWA install manifest |
 | `sw.js` | Service worker |
-| `config.js` | Optional client overrides via `window.ECHO_WEATHER` (no secrets; see `config.example.js`) |
 | `logo.svg`, `icon.svg`, `og-image.png` | Branding |
 | `api/` | Integration endpoints (`status`, `airnow`, `pollen`, `buoy`) |
 | `lib/` | Shared PHP helpers (not web-accessible in production) |
@@ -37,6 +36,7 @@ and more, mostly fetched client-side from public APIs.
 | `deploy.sh` | Optional rsync deploy when the server is not a git clone |
 | `scripts/update-server.sh` | Server-side update logic (called by `update.sh`) |
 | `scripts/fix-permissions.sh` | Repair `.git` / cache ownership after a bad `chown` |
+| `scripts/check-versions.sh` | Verify `APP_VERSION` and `sw.js` `CACHE` stay in sync |
 | `scripts/smoke.sh` | Post-deploy health checks |
 | `config.example.php` | Config template — merge new keys into `config.local.php` on the server |
 | `config.local.php` | Server secrets (gitignored — lives only on the server) |
@@ -140,6 +140,7 @@ On the server (hits `127.0.0.1` with `Host: example.com`):
 
 ```bash
 cd /var/www/echoweather
+# Production: export SMOKE_HOST=echoweather.com  (or add to ~/.bashrc)
 ./scripts/smoke.sh
 ```
 
@@ -220,9 +221,15 @@ into `config.local.php` by hand.
 When you change `index.html` or `sw.js`, bump **both**:
 
 - `APP_VERSION` in `index.html`
-- `CACHE` name in `sw.js` (e.g. `echo-weather-v36` → `echo-weather-v37`)
+- `CACHE` name in `sw.js` (e.g. `echo-weather-v38` → `echo-weather-v39`)
 
-Deploy them together. Users can hard-refresh or use the in-app **Update app** link.
+Verify before deploy:
+
+```bash
+./scripts/check-versions.sh
+```
+
+`update.sh`, `deploy.sh`, and `smoke.sh` run this automatically. Deploy `index.html` and `sw.js` together. Users can hard-refresh or use the in-app **Update app** link.
 
 ---
 

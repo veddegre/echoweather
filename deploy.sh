@@ -41,7 +41,6 @@ RSYNC_FILES=(
   index.html
   manifest.json
   sw.js
-  config.js
   .htaccess
   logo.svg
   icon.svg
@@ -51,13 +50,13 @@ RSYNC_FILES=(
   lib
   router.php
   config.example.php
-  config.example.js
   deploy.sh
   update.sh
   scripts
 )
 
 if [[ "$SMOKE_ONLY" -eq 0 ]]; then
+  bash "$ROOT/scripts/check-versions.sh"
   echo "Deploying to $DEPLOY_HOST:$REMOTE_STAGING"
   echo "Never syncing: config.local.php, cache/"
   rsync -avz --delete \
@@ -73,6 +72,6 @@ fi
 
 if [[ "$DO_SMOKE" -eq 1 ]]; then
   echo
-  echo "Running smoke tests on server (127.0.0.1, Host: ${SMOKE_HOST:-echoweather.com})..."
-  ssh "$DEPLOY_HOST" "SMOKE_HOST=${SMOKE_HOST:-echoweather.com} BASE_URL=http://127.0.0.1 bash -s" < "$ROOT/scripts/smoke.sh"
+  echo "Running smoke tests on server (127.0.0.1, Host: ${SMOKE_HOST:-example.com})..."
+  ssh "$DEPLOY_HOST" "SMOKE_HOST=${SMOKE_HOST:-example.com} BASE_URL=http://127.0.0.1 bash -s" < "$ROOT/scripts/smoke.sh"
 fi

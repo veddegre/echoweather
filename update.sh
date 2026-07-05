@@ -44,8 +44,8 @@ run_update() {
 
 if [[ -n "${DEPLOY_HOST:-}" ]]; then
   if [[ "$SMOKE_ONLY" -eq 1 ]]; then
-    echo "Running smoke tests on $DEPLOY_HOST (127.0.0.1, Host: ${SMOKE_HOST:-echoweather.com})..."
-    ssh "$DEPLOY_HOST" "SMOKE_HOST=${SMOKE_HOST:-echoweather.com} BASE_URL=http://127.0.0.1 bash -s" < "$ROOT/scripts/smoke.sh"
+    echo "Running smoke tests on $DEPLOY_HOST (127.0.0.1, Host: ${SMOKE_HOST:-example.com})..."
+    ssh "$DEPLOY_HOST" "SMOKE_HOST=${SMOKE_HOST:-example.com} BASE_URL=http://127.0.0.1 bash -s" < "$ROOT/scripts/smoke.sh"
   else
     echo "Updating on $DEPLOY_HOST:$APP_DIR"
     remote_cmd="APP_DIR=$APP_DIR GIT_BRANCH=$GIT_BRANCH bash -s"
@@ -55,7 +55,7 @@ if [[ -n "${DEPLOY_HOST:-}" ]]; then
 elif [[ -d "$ROOT/.git" ]]; then
   APP_DIR="$ROOT"
   if [[ "$SMOKE_ONLY" -eq 1 ]]; then
-    SMOKE_HOST="${SMOKE_HOST:-echoweather.com}" BASE_URL="${BASE_URL:-http://127.0.0.1}" bash "$ROOT/scripts/smoke.sh"
+    SMOKE_HOST="${SMOKE_HOST:-example.com}" BASE_URL="${BASE_URL:-http://127.0.0.1}" bash "$ROOT/scripts/smoke.sh"
   else
     run_update
   fi

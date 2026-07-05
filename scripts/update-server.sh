@@ -63,6 +63,8 @@ echo "Updating Echo Weather in $APP_DIR (branch $GIT_BRANCH)..."
 git fetch origin
 git pull --ff-only origin "$GIT_BRANCH"
 
+APP_ROOT="$APP_DIR" bash "$APP_DIR/scripts/check-versions.sh"
+
 # Gitignored server state — never overwritten by pull
 if [[ ! -f config.local.php ]]; then
   echo
@@ -82,6 +84,6 @@ echo "Update complete."
 
 if [[ "$DO_SMOKE" -eq 1 ]]; then
   echo
-  echo "Running smoke tests (127.0.0.1, Host: ${SMOKE_HOST:-echoweather.com})..."
-  SMOKE_HOST="${SMOKE_HOST:-echoweather.com}" BASE_URL=http://127.0.0.1 bash "$APP_DIR/scripts/smoke.sh"
+  echo "Running smoke tests (127.0.0.1, Host: ${SMOKE_HOST:-example.com})..."
+  SMOKE_HOST="${SMOKE_HOST:-example.com}" BASE_URL=http://127.0.0.1 bash "$APP_DIR/scripts/smoke.sh"
 fi
