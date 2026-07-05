@@ -569,7 +569,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
           </span>
           <div class="radar-meta">
             <span class="radar-time" id="radarTime">&mdash;</span>
-            <span class="radar-note" id="radarNote">RainViewer &middot; past 70 min + 30 min nowcast</span>
+            <span class="radar-note" id="radarNote">RainViewer</span>
           </div>
         </div>
       </div>
@@ -695,7 +695,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '71';
+const APP_VERSION = '72';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2186,6 +2186,7 @@ let radarOverlaySlot = 0, satOverlaySlot = 0, iemOverlaySlot = 0;
 let radarSlotFrame = [-1, -1], satSlotFrame = [-1, -1], iemSlotFrame = [-1, -1];
 let goesSatLayer = null;
 let radarIdx = 0, radarTimer = null, radarHost = '', radarSatOn = false, radarLoadId = 0;
+let rvPastCount = 0;
 let rainviewerTileErrors = 0;
 let radarMode = store.get('st_radar_mode') || 'rainviewer';
 const IEM_SUFFIXES = ['900913-m50m','900913-m45m','900913-m40m','900913-m35m','900913-m30m','900913-m25m','900913-m20m','900913-m15m','900913-m10m','900913-m05m','900913'];
@@ -2429,6 +2430,21 @@ function applySatelliteOverlay(frameIdx){
   if(goes && !map.hasLayer(goes)) goes.addTo(map);
   if(goes) goes.setOpacity(0.55);
 }
+function rainviewerCoverageNote(){
+  if(!radarFrames.length) return 'RainViewer';
+  const past = radarFrames.slice(0, rvPastCount);
+  const fc = radarFrames.slice(rvPastCount);
+  const parts = ['RainViewer'];
+  if(past.length >= 2){
+    const mins = Math.round((past[past.length - 1].time - past[0].time) / 60);
+    if(mins > 0) parts.push('past ' + mins + ' min');
+  } else if(past.length) parts.push('recent radar');
+  if(fc.length >= 2){
+    const fm = Math.round((fc[fc.length - 1].time - fc[0].time) / 60);
+    parts.push((fm > 0 ? fm + ' min ' : '') + 'nowcast');
+  } else if(fc.length) parts.push('nowcast');
+  return parts.join(' \u00B7 ');
+}
 function radarNoteForMode(){
   if(radarMode !== 'rainviewer') return IEM_TILES[radarMode].label + ' \u00B7 last 50 min \u00B7 Iowa Environmental Mesonet';
   if(radarSatOn){
@@ -2436,7 +2452,7 @@ function radarNoteForMode(){
       ? 'RainViewer \u00B7 radar + synced satellite IR'
       : 'RainViewer radar + GOES-East IR (IEM) \u00B7 CONUS';
   }
-  return 'RainViewer \u00B7 past 70 min + 30 min nowcast';
+  return rainviewerCoverageNote();
 }
 function loadIemRadar(mode){
   clearRadarLayers();
@@ -2463,8 +2479,10 @@ async function loadRainViewerRadar(loadId){
   $('radarSat').classList.remove('on');
   setRadarAnimControls(true);
   radarHost = j.host;
-  const past = (j.radar.past || []).slice(-5);
-  radarFrames = [...past, ...(j.radar.nowcast || []).slice(0, 3)];
+  const past = (j.radar.past || []).slice(-8);
+  const nowcast = (j.radar.nowcast || []).slice(0, 3);
+  rvPastCount = past.length;
+  radarFrames = [...past, ...nowcast];
   satFrames = (j.satellite && j.satellite.infrared) ? j.satellite.infrared.slice(-3) : [];
   if(!radarFrames.length) throw new Error('no RainViewer frames');
   radarIdx = Math.max(0, past.length - 1);
@@ -2505,7 +2523,7 @@ function showFrame(i){
       const nf = radarFrames[next];
       if(nf) preloadPingPongFrame(radarOverlayLayers, radarSlotFrame, radarOverlaySlot, next, radarHost + nf.path + '/256/{z}/{x}/{y}/2/1_1.png', onRainviewerTileError, RV_TILE_OPTS);
       const t = new Date(f.time * 1000);
-      const isFuture = i >= radarFrames.length - 3 && f.time * 1000 > Date.now();
+      const isFuture = i >= rvPastCount && f.time * 1000 > Date.now();
       $('radarTime').textContent = t.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + (isFuture ? ' (nowcast)' : '');
     }
     applySatelliteOverlay(i);
