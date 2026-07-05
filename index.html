@@ -130,15 +130,16 @@ body.scrolled .tagline{display:none}
 .pill-toggle{display:flex;background:var(--panel-2);border-radius:999px;padding:3px;border:1px solid var(--line)}
 .pill-toggle button{background:transparent;color:var(--mut);border:none;padding:6px 12px;font-size:.75rem;border-radius:999px;font-weight:500;white-space:nowrap}
 .pill-toggle button.on{background:var(--panel);color:var(--ink);box-shadow:var(--toggle-shadow)}
-.locbar{display:flex;flex-direction:column;gap:0;padding:16px 0}
-.locbar-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0}
-.locbar-row .chip.active{flex:0 1 auto;min-width:0;max-width:min(46vw,240px)}
-.locbar-row .chip.active .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
-.locbar-row .search{flex:1 1 100px;min-width:0}
-.locbar-row .search input{width:100%;max-width:none}
+.locbar{display:flex;flex-direction:column;gap:8px;padding:16px 0}
+.locbar-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.locbar-tools{display:flex;align-items:center;gap:8px;min-width:0;width:100%}
+.locbar-tools .search{flex:1 1 120px;min-width:0}
+.locbar-tools .search input{width:100%;max-width:none}
+.locbar-chips .chip.active{max-width:min(100%,320px)}
+.locbar-chips .chip.active .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .loc-more-btn{flex-shrink:0;background:var(--panel);border:1px solid var(--line);border-radius:999px;color:var(--mut);padding:5px 10px;font-size:.75rem;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap}
 .loc-more-btn:hover{border-color:var(--accent);color:var(--ink)}
-.loc-more-panel{display:flex;flex-wrap:wrap;gap:8px;padding-top:8px}
+.loc-more-panel{display:flex;flex-wrap:wrap;gap:8px;padding-top:8px;flex-basis:100%;width:100%}
 .loc-more-panel[hidden]{display:none!important}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 12px;font-size:.8125rem;color:var(--mut);box-shadow:var(--card-shadow)}
 .chip.active{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
@@ -430,16 +431,13 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   body.scrolled .brand-name{font-size:1.35rem}
   .header-controls{width:auto;margin-left:auto;flex:1;justify-content:flex-end;min-width:0}
   .locbar{
-    position:sticky;top:env(safe-area-inset-top,0px);z-index:945;
-    margin:0 -20px;padding:8px 20px 10px;
-    background:color-mix(in srgb,var(--bg) 96%,transparent);
-    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    position:-webkit-sticky;position:sticky;top:env(safe-area-inset-top,0px);z-index:945;
+    margin:0 -20px;padding:8px 20px 10px;gap:8px;
+    background:var(--bg);
     border-bottom:1px solid var(--line);
   }
   body.scrolled .locbar{padding:8px 20px 10px}
-  .locbar-row{max-width:100%;width:100%}
-  .locbar-row .search{flex:1 1 72px;min-width:72px}
-  .locbar-row .search input{font-size:16px}
+  .locbar-tools .search input{font-size:16px}
   .search-results.search-results-fixed{position:fixed;right:auto;width:auto;max-width:none}
   .obs-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,max-content);grid-template-areas:"label label label" "obs fc badge"}
   .obs-row .obs-label{grid-area:label}
@@ -454,6 +452,9 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 }
 @media (min-width:861px){
   .wrap{padding-bottom:64px}
+  .locbar{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
+  .locbar-chips,.locbar-tools{display:contents}
+  .locbar-tools .search{flex:1 1 100px}
 }
 @media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.day-row{grid-template-columns:70px 28px 1fr 58px;gap:8px}.day-row .pp{display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
@@ -488,8 +489,10 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   </header>
 
   <div class="locbar" id="locbar">
-    <div class="locbar-row">
+    <div class="locbar-chips" id="locbarChips">
       <button type="button" class="loc-more-btn" id="locMoreBtn" hidden aria-expanded="false" aria-controls="locMorePanel">More</button>
+    </div>
+    <div class="locbar-tools">
       <div class="search">
         <input id="searchInput" type="text" placeholder="Add location&hellip;" aria-label="Search for a location">
         <div class="search-results" id="searchResults"></div>
@@ -740,7 +743,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '82';
+const APP_VERSION = '83';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -1149,18 +1152,17 @@ function createLocationChip(loc, i){
 }
 
 function renderChips(){
-  const row = $('locbar')?.querySelector('.locbar-row');
+  const chips = $('locbarChips');
   const panel = $('locMorePanel');
   const moreBtn = $('locMoreBtn');
-  if(!row || !panel) return;
+  if(!chips || !panel) return;
 
-  row.querySelectorAll('.chip').forEach(c => c.remove());
+  chips.querySelectorAll('.chip').forEach(c => c.remove());
   panel.innerHTML = '';
 
-  const anchor = moreBtn || row.querySelector('.search');
   const active = state.locations[state.active];
   if(active){
-    row.insertBefore(createLocationChip(active, state.active), anchor);
+    chips.insertBefore(createLocationChip(active, state.active), moreBtn);
   }
 
   const others = state.locations.map((loc, i) => ({ loc, i })).filter(x => x.i !== state.active);
