@@ -111,7 +111,7 @@ body.scrolled .locbar{padding:10px 0}
 .tab-ico svg{width:1.125rem;height:1.125rem;display:block}
 .brand-block{display:flex;flex-direction:column;gap:8px}
 .brand-mark{display:flex;align-items:center;gap:16px}
-.brand-icon{width:72px;height:72px;flex-shrink:0;display:block}
+.brand-icon{width:72px;height:72px;flex-shrink:0;display:block;object-fit:contain}
 .brand-text{display:flex;flex-direction:column;gap:4px}
 .brand-name{font-family:var(--serif);font-weight:700;font-size:2.25rem;line-height:1;letter-spacing:-.03em;color:var(--ink)}
 .brand-kind{font-size:.75rem;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--accent)}
@@ -398,18 +398,25 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   .metrics{grid-template-columns:repeat(2,1fr)}
   .trends{grid-template-columns:repeat(2,1fr)}
   .tagline{display:none}
+  html{--header-h:calc(56px + env(safe-area-inset-top,0px))}
+  .brand-icon{width:40px;height:40px;border-radius:9px}
+  body.scrolled .brand-icon{width:36px;height:36px;border-radius:8px}
+  .brand-name{font-size:1.35rem}
+  body.scrolled .brand-name{font-size:1.2rem}
+  .brand-mark{gap:10px;flex-shrink:0}
+  .brand-block{flex-shrink:0;min-width:auto;overflow:visible}
   .site-top{padding-top:var(--header-h);min-height:var(--header-h);border-bottom:none}
   .site-top > header{
     position:fixed;top:0;left:0;right:0;z-index:945;
-    flex-wrap:nowrap;
+    flex-wrap:nowrap;align-items:center;overflow:visible;
     padding:calc(8px + env(safe-area-inset-top,0px)) max(14px, env(safe-area-inset-left,0px)) 8px max(14px, env(safe-area-inset-right,0px));
     background:color-mix(in srgb,var(--bg) 94%,transparent);
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     border-bottom:1px solid var(--line);
   }
   body.scrolled .site-top > header{padding-top:calc(6px + env(safe-area-inset-top,0px));padding-bottom:6px}
-  .header-controls{width:auto;margin-left:auto;flex:1;justify-content:flex-end}
-  .brand-block{flex:0 1 auto;min-width:0}
+  body.scrolled header{padding:0}
+  .header-controls{width:auto;margin-left:auto;flex:1;justify-content:flex-end;min-width:0}
   .obs-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,max-content);grid-template-areas:"label label label" "obs fc badge"}
   .obs-row .obs-label{grid-area:label}
   .obs-row .obs-val:nth-of-type(2){grid-area:obs}
@@ -426,7 +433,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 @media (min-width:861px){
   .wrap{padding-bottom:64px}
 }
-@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + var(--locbar-h) + 8px + env(safe-area-inset-bottom,0px))}.site-top > header{padding-left:max(14px, env(safe-area-inset-left,0px));padding-right:max(14px, env(safe-area-inset-right,0px))}.locbar{padding:10px 14px 12px}.panel{padding:16px 14px}body.scrolled .brand-icon{width:40px;height:40px}body.scrolled .brand-name{font-size:1.35rem}.brand-icon{width:48px;height:48px}.brand-name{font-size:1.5rem}.search input{width:140px;max-width:calc(100vw - 120px)}.day-row{grid-template-columns:70px 28px 1fr 58px;gap:8px}.day-row .pp{display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
+@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + var(--locbar-h) + 8px + env(safe-area-inset-bottom,0px))}.site-top > header{padding-left:max(14px, env(safe-area-inset-left,0px));padding-right:max(14px, env(safe-area-inset-right,0px))}.locbar{padding:10px 14px 12px}.panel{padding:16px 14px}.search input{width:140px;max-width:calc(100vw - 120px)}.day-row{grid-template-columns:70px 28px 1fr 58px;gap:8px}.day-row .pp{display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
 </head>
 <body class="mtab-now">
@@ -708,7 +715,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '75';
+const APP_VERSION = '76';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -3943,7 +3950,7 @@ function syncChromeHeight(){
   const header = top?.querySelector('header');
   const mobile = isMobileTabLayout();
   if(header && mobile){
-    const hh = header.offsetHeight;
+    const hh = Math.ceil(header.getBoundingClientRect().height);
     document.documentElement.style.setProperty('--header-h', hh + 'px');
     document.documentElement.style.setProperty('--chrome-h', hh + 'px');
   } else if(top){
