@@ -635,7 +635,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '40';
+const APP_VERSION = '41';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2884,6 +2884,7 @@ const BUOY_PRESETS = [
   { id: '45029', name: 'Holland, MI', lake: 'Lake Michigan', lat: 42.900, lon: -86.272 },
   { id: '45161', name: 'Muskegon, MI', lake: 'Lake Michigan', lat: 43.185, lon: -86.354 },
   { id: '45024', name: 'Ludington, MI', lake: 'Lake Michigan', lat: 43.980, lon: -86.560 },
+  { id: '45020', name: 'Grand Traverse Bay South', lake: 'Lake Michigan', lat: 44.789, lon: -85.604 },
   { id: '45183', name: 'Sleeping Bear Dunes', lake: 'Lake Michigan', lat: 44.982, lon: -85.831 },
   { id: '45002', name: 'North Michigan (N Manitou / Washington Is.)', lake: 'Lake Michigan', lat: 45.344, lon: -86.411 },
   { id: '45022', name: 'Little Traverse Bay', lake: 'Lake Michigan', lat: 45.404, lon: -85.088 },
@@ -2943,21 +2944,26 @@ function nearestBuoyForLoc(lat, lon){
   }
   return best;
 }
-function bindBuoyToLocation(id, loc){
+function bindBuoyToLocation(id, loc, manual){
   store.set('st_buoy', (id || '').trim().toUpperCase());
   store.set('st_buoy_loc', locKey(loc));
+  if(manual) store.set('st_buoy_manual', '1');
+  else store.set('st_buoy_manual', null);
 }
 function resolveBuoyForLocation(loc){
+  const key = locKey(loc);
   const saved = store.get('st_buoy');
   const savedLoc = store.get('st_buoy_loc');
-  if(saved && savedLoc === locKey(loc)) return saved;
+  const manual = store.get('st_buoy_manual') === '1';
+  if(manual && saved && savedLoc === key) return saved;
   const near = nearestBuoyForLoc(loc.lat, loc.lon);
   return near ? near.id : (saved || '45029');
 }
 function applyBuoyForLocation(loc){
+  if(!loc) return;
   const id = resolveBuoyForLocation(loc);
   setBuoyId(id, false);
-  bindBuoyToLocation(id, loc);
+  bindBuoyToLocation(id, loc, false);
   const findLink = $('buoyFindLink');
   if(findLink) findLink.href = ndbcMapUrl(loc);
 }
@@ -2966,7 +2972,7 @@ function userSelectBuoy(id){
   const st = (id || '').trim().toUpperCase();
   if(!st) return;
   setBuoyId(st, true);
-  bindBuoyToLocation(st, loc);
+  bindBuoyToLocation(st, loc, true);
 }
 function buoyPresetName(id){
   const hit = BUOY_PRESETS.find(b => b.id === (id || '').toUpperCase());
@@ -3404,10 +3410,20 @@ function setupDesktopLazyPanels(loc){
     if(el) panelObserver.observe(el);
   });
 }
+function isGreatLakesLoc(loc){
+  return loc && isLikelyUS(loc) && !!greatLakeName(loc.lat, loc.lon);
+}
+function syncBuoyForLocation(loc, reloadData){
+  if(!isGreatLakesLoc(loc)) return;
+  applyBuoyForLocation(loc);
+  if(reloadData) loadBuoy();
+}
 async function loadAll(){
   const loc = state.locations[state.active];
+  const reloadBuoy = desktopPanelsLoaded['advCollapse'] || tabPanelsLoaded.more;
   resetTabPanelsLoaded();
   resetDesktopPanelsLoaded();
+  syncBuoyForLocation(loc, reloadBuoy);
   $('content').classList.add('loading');
   try{
     const mobile = isMobileTabLayout();
