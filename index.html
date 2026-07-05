@@ -689,7 +689,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '53';
+const APP_VERSION = '54';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2174,9 +2174,10 @@ async function loadStormIntel(loc, d){
 
 // ---------- radar (RainViewer + IEM NEXRAD) ----------
 let map = null, mapMarker = null, radarFrames = [], satFrames = [], iemFrames = [];
-let radarLayers = {}, satLayers = {}, iemLayers = {};
+let radarOverlayLayer = null, satOverlayLayer = null, iemOverlayLayer = null;
 let goesSatLayer = null;
 let radarIdx = 0, radarTimer = null, radarHost = '', radarSatOn = false, radarLoadId = 0;
+let rainviewerTileErrors = 0;
 let radarMode = store.get('st_radar_mode') || 'rainviewer';
 const IEM_SUFFIXES = ['900913-m50m','900913-m45m','900913-m40m','900913-m35m','900913-m30m','900913-m25m','900913-m20m','900913-m15m','900913-m10m','900913-m05m','900913'];
 const IEM_MINS = [50,45,40,35,30,25,20,15,10,5,0];
@@ -2184,7 +2185,16 @@ const IEM_TILES = {
   'iem-n0q': { product: 'n0q', label: 'IEM NEXRAD base reflectivity' },
   'iem-n0r': { product: 'n0r', label: 'IEM composite reflectivity' }
 };
-const RADAR_ZOOM = { min: 4, default: 6, rainviewer: 7, iem: 9 };
+const RADAR_ZOOM = { min: 4, default: 6, rainviewer: 6, iem: 9 };
+const RV_TILE_OPTS = {
+  opacity: 0.72,
+  maxNativeZoom: 6,
+  maxZoom: 6,
+  zIndex: 450,
+  updateWhenIdle: true,
+  updateWhenZooming: false,
+  keepBuffer: 1
+};
 function markerStyle(){
   const c = cssVar('--accent') || '#3c91e6';
   return { radius: 7, color: c, fillColor: c, fillOpacity: 0.9, weight: 2 };
@@ -2199,23 +2209,71 @@ function applyRadarZoomLimits(){
   map.setMaxZoom(maxZ);
   if(map.getZoom() > maxZ) map.setZoom(maxZ);
   if(basemapLayer) basemapLayer.options.maxZoom = maxZ;
-  const rvMax = RADAR_ZOOM.rainviewer;
-  Object.values(radarLayers).forEach(l => { l.options.maxNativeZoom = rvMax; l.options.maxZoom = rvMax; });
-  Object.values(satLayers).forEach(l => { l.options.maxNativeZoom = rvMax; l.options.maxZoom = rvMax; });
-  const iemMax = RADAR_ZOOM.iem;
-  Object.values(iemLayers).forEach(l => { l.options.maxNativeZoom = iemMax; l.options.maxZoom = iemMax; });
+  if(radarOverlayLayer){
+    radarOverlayLayer.options.maxNativeZoom = RADAR_ZOOM.rainviewer;
+    radarOverlayLayer.options.maxZoom = RADAR_ZOOM.rainviewer;
+  }
+  if(satOverlayLayer){
+    satOverlayLayer.options.maxNativeZoom = RADAR_ZOOM.rainviewer;
+    satOverlayLayer.options.maxZoom = RADAR_ZOOM.rainviewer;
+  }
+  if(iemOverlayLayer){
+    iemOverlayLayer.options.maxNativeZoom = RADAR_ZOOM.iem;
+    iemOverlayLayer.options.maxZoom = RADAR_ZOOM.iem;
+  }
+}
+function onRainviewerTileError(){
+  rainviewerTileErrors++;
+  if(rainviewerTileErrors < 5 || radarMode !== 'rainviewer') return;
+  rainviewerTileErrors = 0;
+  radarMode = 'iem-n0q';
+  store.set('st_radar_mode', radarMode);
+  $('radarMode').value = radarMode;
+  $('radarNote').textContent = 'RainViewer rate limited — using IEM NEXRAD.';
+  stopRadarTimer();
+  loadIemRadar('iem-n0q');
+}
+function ensureRadarOverlay(){
+  if(!map) return null;
+  if(!radarOverlayLayer){
+    radarOverlayLayer = L.tileLayer('', RV_TILE_OPTS);
+    radarOverlayLayer.on('tileerror', onRainviewerTileError);
+  }
+  if(!map.hasLayer(radarOverlayLayer)) radarOverlayLayer.addTo(map);
+  return radarOverlayLayer;
+}
+function ensureSatOverlay(){
+  if(!map) return null;
+  if(!satOverlayLayer){
+    satOverlayLayer = L.tileLayer('', { ...RV_TILE_OPTS, opacity: 0.45, zIndex: 448 });
+    satOverlayLayer.on('tileerror', onRainviewerTileError);
+  }
+  if(!map.hasLayer(satOverlayLayer)) satOverlayLayer.addTo(map);
+  return satOverlayLayer;
+}
+function ensureIemOverlay(){
+  if(!map) return null;
+  if(!iemOverlayLayer){
+    iemOverlayLayer = L.tileLayer('', {
+      opacity: 0.78,
+      maxNativeZoom: RADAR_ZOOM.iem,
+      maxZoom: RADAR_ZOOM.iem,
+      zIndex: 450,
+      updateWhenIdle: true,
+      updateWhenZooming: false,
+      keepBuffer: 1,
+      attribution: 'IEM / NOAA NEXRAD'
+    });
+  }
+  if(!map.hasLayer(iemOverlayLayer)) iemOverlayLayer.addTo(map);
+  return iemOverlayLayer;
 }
 function isRadarTabVisible(){
   return document.body.classList.contains('mtab-radar');
 }
 function refreshRadarMapSize(){
   if(!map) return;
-  map.invalidateSize({ animate: false });
-  requestAnimationFrame(() => {
-    if(!map) return;
-    map.invalidateSize({ animate: false });
-    setTimeout(() => { if(map) map.invalidateSize({ animate: false }); }, 150);
-  });
+  requestAnimationFrame(() => { if(map) map.invalidateSize({ animate: false }); });
 }
 function activateRadarPanel(){
   const loc = state.locations[state.active];
@@ -2268,11 +2326,10 @@ function stopRadarTimer(){
   if(radarTimer){ clearInterval(radarTimer); radarTimer = null; $('radarPlay').textContent = '\u25B6 Play'; }
 }
 function clearRadarLayers(){
-  Object.values(radarLayers).forEach(l => map && map.removeLayer(l));
-  Object.values(satLayers).forEach(l => map && map.removeLayer(l));
-  Object.values(iemLayers).forEach(l => map && map.removeLayer(l));
+  [radarOverlayLayer, satOverlayLayer, iemOverlayLayer].forEach(l => {
+    if(l && map && map.hasLayer(l)) map.removeLayer(l);
+  });
   hideGoesSatellite();
-  radarLayers = {}; satLayers = {}; iemLayers = {};
 }
 function setRadarAnimControls(visible){
   $('radarAnimCtl').classList.toggle('hidden', !visible);
@@ -2302,18 +2359,22 @@ function ensureGoesSatLayer(){
   return goesSatLayer;
 }
 function applySatelliteOverlay(frameIdx){
+  if(satOverlayLayer && map && map.hasLayer(satOverlayLayer)) map.removeLayer(satOverlayLayer);
   if(!map || radarMode !== 'rainviewer' || !radarSatOn){
     hideGoesSatellite();
-    Object.values(satLayers).forEach(l => l.setOpacity(0));
     return;
   }
   if(satFrames.length){
     hideGoesSatellite();
     const si = Math.min(Math.floor(frameIdx / Math.max(1, radarFrames.length) * satFrames.length), satFrames.length - 1);
-    satFrames.forEach((f, k) => frameLayer(f, satLayers, radarHost, 's').setOpacity(k === si ? 0.45 : 0));
+    const f = satFrames[si];
+    if(f){
+      const layer = ensureSatOverlay();
+      layer.setUrl(radarHost + f.path + '/256/{z}/{x}/{y}/2/1_1.png');
+      layer.setOpacity(0.45);
+    }
     return;
   }
-  Object.values(satLayers).forEach(l => l.setOpacity(0));
   const goes = ensureGoesSatLayer();
   if(goes && !map.hasLayer(goes)) goes.addTo(map);
   if(goes) goes.setOpacity(0.55);
@@ -2348,13 +2409,15 @@ async function loadRainViewerRadar(loadId){
   clearRadarLayers();
   stopRadarTimer();
   radarSatOn = false;
+  rainviewerTileErrors = 0;
   $('radarSat').classList.remove('on');
   setRadarAnimControls(true);
   radarHost = j.host;
-  radarFrames = [...(j.radar.past || []).slice(-7), ...(j.radar.nowcast || [])];
-  satFrames = (j.satellite && j.satellite.infrared) ? j.satellite.infrared.slice(-5) : [];
+  const past = (j.radar.past || []).slice(-5);
+  radarFrames = [...past, ...(j.radar.nowcast || []).slice(0, 3)];
+  satFrames = (j.satellite && j.satellite.infrared) ? j.satellite.infrared.slice(-3) : [];
   if(!radarFrames.length) throw new Error('no RainViewer frames');
-  radarIdx = Math.max(0, (j.radar.past || []).slice(-7).length - 1);
+  radarIdx = Math.max(0, past.length - 1);
   $('radarScrub').max = Math.max(0, radarFrames.length - 1);
   $('radarScrub').value = radarIdx;
   $('radarNote').textContent = radarNoteForMode();
@@ -2378,42 +2441,32 @@ async function loadRadar(){
     }
   });
 }
-function frameLayer(f, store, host, pathPrefix){
-  const key = pathPrefix + f.path;
-  const zMax = RADAR_ZOOM.rainviewer;
-  if(!store[key]){
-    store[key] = L.tileLayer(host + f.path + '/256/{z}/{x}/{y}/2/1_1.png', {
-      opacity: 0, maxNativeZoom: zMax, maxZoom: zMax, zIndex: 450
-    }).addTo(map);
-  }
-  return store[key];
-}
 function showFrame(i){
   if(!map) return;
   radarIdx = i;
   if(radarMode === 'rainviewer'){
     if(!radarFrames.length) return;
-    radarFrames.forEach((f, k) => frameLayer(f, radarLayers, radarHost, 'r').setOpacity(k === i ? 0.72 : 0));
-    applySatelliteOverlay(i);
+    if(iemOverlayLayer && map.hasLayer(iemOverlayLayer)) map.removeLayer(iemOverlayLayer);
     const f = radarFrames[i];
     if(f){
+      const layer = ensureRadarOverlay();
+      layer.setUrl(radarHost + f.path + '/256/{z}/{x}/{y}/2/1_1.png');
+      layer.setOpacity(0.72);
       const t = new Date(f.time * 1000);
       const isFuture = i >= radarFrames.length - 3 && f.time * 1000 > Date.now();
       $('radarTime').textContent = t.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + (isFuture ? ' (nowcast)' : '');
     }
+    applySatelliteOverlay(i);
   }else if(IEM_TILES[radarMode]){
-    const mode = radarMode;
-    iemFrames.forEach((suffix, k) => {
-      const name = iemLayerName(mode, suffix);
-      if(!iemLayers[name]){
-        iemLayers[name] = L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png', {
-          opacity: 0, maxNativeZoom: RADAR_ZOOM.iem, maxZoom: RADAR_ZOOM.iem, zIndex: 450, attribution: 'IEM / NOAA NEXRAD'
-        }).addTo(map);
-      }
-      iemLayers[name].setOpacity(k === i ? 0.78 : 0);
-    });
-    Object.values(satLayers).forEach(l => l.setOpacity(0));
+    if(radarOverlayLayer && map.hasLayer(radarOverlayLayer)) map.removeLayer(radarOverlayLayer);
+    if(satOverlayLayer && map.hasLayer(satOverlayLayer)) map.removeLayer(satOverlayLayer);
     hideGoesSatellite();
+    const mode = radarMode;
+    const suffix = iemFrames[i];
+    const name = iemLayerName(mode, suffix);
+    const layer = ensureIemOverlay();
+    layer.setUrl('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png');
+    layer.setOpacity(0.78);
     $('radarTime').textContent = IEM_MINS[i] === 0 ? 'Live \u00B7 now' : IEM_MINS[i] + ' min ago';
   }
   if(basemapLayer) basemapLayer.bringToBack();
@@ -2442,7 +2495,7 @@ $('radarPlay').addEventListener('click', () => {
     radarTimer = setInterval(() => {
       radarIdx = (radarIdx + 1) % n;
       showFrame(radarIdx);
-    }, 550);
+    }, 700);
     $('radarPlay').textContent = '\u275A\u275A Pause';
   }
 });
