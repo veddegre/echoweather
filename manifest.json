@@ -4,8 +4,8 @@
   "description": "Personal weather app — forecasts, observations, radar, and atmosphere metrics",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#001845",
-  "theme_color": "#003875",
+  "background_color": "#12151a",
+  "theme_color": "#1a1f27",
   "orientation": "any",
   "icons": [
     {

@@ -48,26 +48,26 @@
 }
 html[data-theme="dark"] {
   color-scheme: dark;
-  --bg:#001845;--panel:#003875;--panel-2:#0A4480;--line:#2E6090;
-  --ink:#EAF4FF;--mut:#A8C8E8;--dim:#7A9EC0;
-  --accent:#5aa8f0;--accent-soft:#1E4A78;--sky:#8ec8ff;--beam:#7fffff;--cyan:#5aa8f0;
+  --bg:#12151a;--panel:#1a1f27;--panel-2:#222833;--line:#2f3640;
+  --ink:#e8edf4;--mut:#9aa5b5;--dim:#6b7585;
+  --accent:#5aa8f0;--accent-soft:#243044;--sky:#8ec8ff;--beam:#7fffff;--cyan:#5aa8f0;
   --sun:#FFC04A;--warm:#FFC04A;--good:#4EC992;--warn:#FF6B6B;
-  --overlay:rgba(0,24,69,.75);--legend-bg:rgba(0,56,117,.96);--card-shadow:0 4px 18px rgba(0,0,0,.42);
-  --toggle-shadow:0 1px 3px rgba(0,0,0,.45);
-  --lb-night:#00102A;--lb-blue:#5aa8f0;--lb-gold:#FFC04A;--lb-day:#8ec8ff;
+  --overlay:rgba(10,12,16,.78);--legend-bg:rgba(26,31,39,.96);--card-shadow:0 4px 18px rgba(0,0,0,.45);
+  --toggle-shadow:0 1px 3px rgba(0,0,0,.5);
+  --lb-night:#0a0c10;--lb-blue:#5aa8f0;--lb-gold:#FFC04A;--lb-day:#8ec8ff;
   --map-tiles:dark_all;
   --on-accent:#001845;
 }
 @media (prefers-color-scheme: dark) {
   html[data-theme="system"] {
     color-scheme: dark;
-    --bg:#001845;--panel:#003875;--panel-2:#0A4480;--line:#2E6090;
-    --ink:#EAF4FF;--mut:#A8C8E8;--dim:#7A9EC0;
-    --accent:#5aa8f0;--accent-soft:#1E4A78;--sky:#8ec8ff;--beam:#7fffff;--cyan:#5aa8f0;
+    --bg:#12151a;--panel:#1a1f27;--panel-2:#222833;--line:#2f3640;
+    --ink:#e8edf4;--mut:#9aa5b5;--dim:#6b7585;
+    --accent:#5aa8f0;--accent-soft:#243044;--sky:#8ec8ff;--beam:#7fffff;--cyan:#5aa8f0;
     --sun:#FFC04A;--warm:#FFC04A;--good:#4EC992;--warn:#FF6B6B;
-    --overlay:rgba(0,24,69,.75);--legend-bg:rgba(0,56,117,.96);--card-shadow:0 4px 18px rgba(0,0,0,.42);
-    --toggle-shadow:0 1px 3px rgba(0,0,0,.45);
-    --lb-night:#00102A;--lb-blue:#5aa8f0;--lb-gold:#FFC04A;--lb-day:#8ec8ff;
+    --overlay:rgba(10,12,16,.78);--legend-bg:rgba(26,31,39,.96);--card-shadow:0 4px 18px rgba(0,0,0,.45);
+    --toggle-shadow:0 1px 3px rgba(0,0,0,.5);
+    --lb-night:#0a0c10;--lb-blue:#5aa8f0;--lb-gold:#FFC04A;--lb-day:#8ec8ff;
     --map-tiles:dark_all;
     --on-accent:#001845;
   }
@@ -695,7 +695,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '72';
+const APP_VERSION = '73';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -729,7 +729,7 @@ function isDarkTheme(){
 }
 function updateThemeColorMeta(){
   const m = document.querySelector('meta[name="theme-color"]');
-  if(m) m.content = isDarkTheme() ? '#001845' : '#eaf4ff';
+  if(m) m.content = isDarkTheme() ? '#12151a' : '#eaf4ff';
 }
 let basemapLayer = null;
 function syncMapBasemap(){
