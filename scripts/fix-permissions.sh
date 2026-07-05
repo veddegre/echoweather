@@ -7,7 +7,7 @@
 #
 # Usage:
 #   ./scripts/fix-permissions.sh
-#   APP_DIR=/var/www/echoweather REPO_USER=veddegre ./scripts/fix-permissions.sh
+#   APP_DIR=/var/www/echoweather REPO_USER=your-user ./scripts/fix-permissions.sh
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/echoweather}"

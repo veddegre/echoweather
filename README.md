@@ -3,7 +3,7 @@
 Personal weather PWA with a small PHP integration layer for server-side
 secrets and CORS relief. No API keys required for core features.
 
-**Home:** [echoweather.com](https://echoweather.com) · **Source:** [github.com/veddegre/echoweather](https://github.com/veddegre/echoweather)
+**Home:** [echoweather.com](https://echoweather.com) · **Source:** [github.com/your-user/echoweather](https://github.com/your-user/echoweather)
 
 ```
   browser ──────────────▶  Apache (or php -S locally)
@@ -58,7 +58,8 @@ Production uses a **git clone directly in the web root** (e.g. `/var/www/echowea
 
 Deploy examples below use **`example.com`** as a placeholder — substitute your real
 hostname everywhere (Apache `ServerName`, Cloudflare Tunnel, `SMOKE_HOST`, and
-`cors_origins` in `config.local.php`).
+`cors_origins` in `config.local.php`). Clone URLs use **`your-user`** — substitute
+your GitHub username or org.
 
 ### 1. Install Apache + PHP (Debian / Ubuntu)
 
@@ -77,7 +78,7 @@ On the server:
 ```bash
 sudo mkdir -p /var/www/echoweather
 sudo chown $USER:www-data /var/www/echoweather
-git clone https://github.com/veddegre/echoweather.git /var/www/echoweather
+git clone https://github.com/your-user/echoweather.git /var/www/echoweather
 cd /var/www/echoweather
 
 cp config.example.php config.local.php
@@ -252,7 +253,7 @@ and use `update.sh` going forward.
 ## Local development
 
 ```bash
-git clone https://github.com/veddegre/echoweather.git
+git clone https://github.com/your-user/echoweather.git
 cd echoweather
 cp config.example.php config.local.php
 # Edit config.local.php — add airnow_api_key and/or google_pollen_api_key
@@ -375,16 +376,14 @@ git pull --ff-only
 If `fix-permissions.sh` is not on the server yet, run manually:
 
 ```bash
-sudo chown -R veddegre:veddegre /var/www/echoweather/.git
-sudo chown -R veddegre:www-data /var/www/echoweather
-sudo chown -R veddegre:veddegre /var/www/echoweather/.git
+sudo chown -R "$USER:$USER" /var/www/echoweather/.git
+sudo chown -R "$USER:www-data" /var/www/echoweather
+sudo chown -R "$USER:$USER" /var/www/echoweather/.git
 sudo chown -R www-data:www-data /var/www/echoweather/cache
 sudo chown root:www-data /var/www/echoweather/config.local.php
 sudo chmod 640 /var/www/echoweather/config.local.php
-sudo -u veddegre -H git config --global --add safe.directory /var/www/echoweather
+sudo -u "$USER" -H git config --global --add safe.directory /var/www/echoweather
 ```
-
-Replace `veddegre` with your SSH username.
 
 **`git pull` fails with permission errors (general).** The clone should be owned by your
 SSH user, not `www-data`. Only `cache/` and `config.local.php` need special
