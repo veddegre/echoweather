@@ -89,7 +89,21 @@ a{color:var(--sky)}
 button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .wrap{max-width:1120px;margin:0 auto;padding:0 20px 64px;min-width:0;overflow-x:clip}
-header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:24px 0 20px;border-bottom:1px solid var(--line)}
+.site-top{position:sticky;top:0;z-index:920;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border-color .2s}
+body.scrolled .site-top{border-bottom-color:var(--line)}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:24px 0 20px;transition:padding .2s}
+body.scrolled header{padding:10px 0 8px}
+.brand-icon{transition:width .2s,height .2s,border-radius .2s}
+body.scrolled .brand-icon{width:48px;height:48px;border-radius:14px}
+body.scrolled .brand-name{font-size:1.65rem}
+body.scrolled .tagline{display:none}
+body.scrolled .locbar{padding:10px 0}
+.ico{display:inline-flex;align-items:center;justify-content:center;line-height:0}
+.ico svg{display:block;width:1em;height:1em}
+.refresh-btn .ico{font-size:17px}
+.geo-btn .ico{font-size:16px}
+.tab-ico{display:inline-flex;align-items:center;justify-content:center;line-height:0}
+.tab-ico svg{width:1.125rem;height:1.125rem;display:block}
 .brand-block{display:flex;flex-direction:column;gap:8px}
 .brand-mark{display:flex;align-items:center;gap:16px}
 .brand-icon{width:72px;height:72px;flex-shrink:0;display:block;border-radius:18px}
@@ -138,8 +152,8 @@ header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:24px 0 20
 .nav-pills a:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
 .nav-pills a.on{color:var(--ink);background:var(--accent-soft);border-color:var(--accent);font-weight:600}
 .mobile-tab-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:950;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;box-sizing:border-box}
-.mobile-tab-bar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;border-radius:10px;color:var(--mut);font-size:.625rem;font-weight:600;padding:8px 4px;letter-spacing:.02em}
-.mobile-tab-bar button .tab-ico{font-size:1.125rem;line-height:1}
+.mobile-tab-bar button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:none;border-radius:10px;color:var(--mut);font-size:.5625rem;font-weight:600;padding:7px 2px;letter-spacing:.02em}
+.mobile-tab-bar button .tab-lbl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mobile-tab-bar button.on{color:var(--ink);background:var(--accent-soft)}
 .nav-target,[id].panel{scroll-margin-top:72px}
 .alert{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;background:var(--panel)}
@@ -152,20 +166,37 @@ header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:24px 0 20
 .alert .desc{font-size:.8125rem;color:var(--mut);padding:0 16px 14px;white-space:pre-wrap;max-height:260px;overflow-y:auto;line-height:1.5}
 .alert.watch{border-left-color:var(--warm)}.alert.watch .ev{color:var(--warm)}
 .alert.adv{border-left-color:var(--sky)}.alert.adv .ev{color:var(--sky)}
-.buoyrow{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
-.buoyrow .lbl{font-size:.75rem;color:var(--dim);font-weight:500}
-.buoyrow select,.buoyrow input{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:6px 10px;font-size:.8125rem;font-family:inherit}
-.buoyrow select{min-width:min(100%,240px);max-width:100%;flex:1 1 200px}
-.buoyrow input{width:90px;flex:0 0 auto}
-.buoyrow button{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:.75rem;font-weight:500}
-.buoyrow button:hover{border-color:var(--accent)}
-.buoy-find{font-size:.75rem;color:var(--sky);text-decoration:none;font-weight:500;white-space:nowrap}
-.buoy-find:hover{text-decoration:underline}
-.buoy-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
-.buoy-head .buoy-name{font-size:.875rem;font-weight:600;color:var(--ink)}
-.buoy-head .buoy-name small{font-size:.75rem;font-weight:500;color:var(--dim);margin-left:6px}
-.buoy-head a{font-size:.75rem;color:var(--sky);text-decoration:none;font-weight:500;white-space:nowrap}
-.buoy-head a:hover{text-decoration:underline}
+.panel-fold > .fold{border:none}
+.panel-fold > .fold > summary.fold-hd{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;margin:-4px 0 0;padding:0}
+.panel-fold > .fold > summary.fold-hd::-webkit-details-marker{display:none}
+.panel-fold > .fold > summary.fold-hd::after{content:'Show';margin-left:auto;font-size:.75rem;color:var(--sky);font-weight:600;flex-shrink:0}
+.panel-fold > .fold[open] > summary.fold-hd::after{content:'Hide'}
+.panel-fold > .fold > summary.fold-hd h2{margin:0;flex:1;min-width:0}
+.panel-fold .fold-bd{margin-top:14px}
+.buoy-card{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2);overflow:hidden}
+.buoy-card-main{padding:14px 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between}
+.buoy-card-main .lbl{font-size:.6875rem;color:var(--dim);font-weight:500;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;display:block}
+.buoy-card-title{font-size:.9375rem;font-weight:600;color:var(--ink);line-height:1.35}
+.buoy-card-meta{font-size:.75rem;color:var(--dim);margin-top:4px;line-height:1.45}
+.buoy-card-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.buoy-card-actions button,.buoy-picker-body button{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 12px;font-size:.75rem;font-weight:500;font-family:inherit;cursor:pointer}
+.buoy-card-actions button:hover,.buoy-picker-body button:hover{border-color:var(--accent)}
+.buoy-card-actions .buoy-primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.buoy-card-actions .buoy-primary:hover{filter:brightness(1.06)}
+.buoy-card-actions a{font-size:.75rem;color:var(--sky);text-decoration:none;font-weight:500;white-space:nowrap}
+.buoy-card-actions a:hover{text-decoration:underline}
+.buoy-card-picker{border-top:1px solid var(--line)}
+.buoy-card-picker > summary{padding:10px 16px;font-size:.75rem;font-weight:600;color:var(--sky);cursor:pointer;list-style:none}
+.buoy-card-picker > summary::-webkit-details-marker{display:none}
+.buoy-picker-body{padding:0 16px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.buoy-picker-body select,.buoy-picker-body input{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:6px 10px;font-size:.8125rem;font-family:inherit}
+.buoy-picker-body select{min-width:min(100%,220px);flex:1 1 180px}
+.buoy-picker-body input{width:90px;flex:0 0 auto}
+.buoy-card-metrics{padding:0 14px 10px}
+.buoy-picker-body .buoy-find{font-size:.75rem;color:var(--sky);text-decoration:none;font-weight:500;white-space:nowrap}
+.buoy-picker-body .buoy-find:hover{text-decoration:underline}
+.panel-fold:has(.fold:not([open])){padding-bottom:18px}
+.panel-fold > .fold > summary.fold-hd .panel-status{margin-left:0;margin-right:8px}
 .grid{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;margin-top:8px;min-width:0}
 .grid.adv-only{grid-template-columns:1fr}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:var(--card-shadow);transition:background .2s,border-color .2s;min-width:0;max-width:100%;overflow-wrap:break-word}
@@ -353,12 +384,46 @@ body.radar-expanded{overflow:hidden}
 .status{font-size:.75rem;color:var(--dim);padding:12px 2px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
 .loading{opacity:.5;pointer-events:none}
 footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-size:.6875rem;color:var(--dim);line-height:1.6}
-@media (max-width:860px){.grid{grid-template-columns:1fr}.big-temp{font-size:3.5rem}#radar{height:300px}.metrics{grid-template-columns:repeat(2,1fr)}.trends{grid-template-columns:repeat(2,1fr)}.header-controls{width:100%;justify-content:flex-end}.obs-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,max-content);grid-template-areas:"label label label" "obs fc badge"}.obs-row .obs-label{grid-area:label}.obs-row .obs-val:nth-of-type(2){grid-area:obs}.obs-row .obs-val:nth-of-type(3){grid-area:fc}.obs-badge{grid-area:badge;justify-self:end}.page-nav{display:none}.mobile-tab-bar{display:flex}html{scroll-padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}.wrap{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}footer{padding-bottom:8px}#content [data-tab]{display:none!important}body.mtab-now #content [data-tab="now"]{display:block!important}body.mtab-forecast #content [data-tab="forecast"]{display:block!important}body.mtab-radar #content [data-tab="radar"]{display:block!important}body.mtab-radar #stormLinks.visible{display:block!important}body.mtab-more #content [data-tab="more"]{display:block!important}body.mtab-more #advCollapse{display:grid!important}body.mtab-now #obsAfdGrid,body.mtab-now #airMoonGrid,body.mtab-radar #obsAfdGrid,body.mtab-radar #airMoonGrid,body.mtab-forecast #airMoonGrid{display:none!important}body:not(.mtab-now) #content>.grid:first-child{display:none!important}}
-@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(76px + env(safe-area-inset-bottom,0px))}.panel{padding:16px 14px}.brand-icon{width:58px;height:58px}.brand-name{font-size:1.75rem}.search input{width:140px;max-width:calc(100vw - 120px)}.day-row{grid-template-columns:70px 28px 1fr 58px;gap:8px}.day-row .pp{display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
+@media (max-width:860px){
+  .grid{grid-template-columns:1fr}
+  .big-temp{font-size:3.5rem}
+  #radar{height:300px}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .trends{grid-template-columns:repeat(2,1fr)}
+  .header-controls{width:100%;justify-content:flex-end}
+  .obs-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,max-content);grid-template-areas:"label label label" "obs fc badge"}
+  .obs-row .obs-label{grid-area:label}
+  .obs-row .obs-val:nth-of-type(2){grid-area:obs}
+  .obs-row .obs-val:nth-of-type(3){grid-area:fc}
+  .obs-badge{grid-area:badge;justify-self:end}
+  .page-nav{display:none}
+  .mobile-tab-bar{display:flex;gap:4px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+  html{scroll-padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  .wrap{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  footer{padding-bottom:8px}
+  #content [data-tab]{display:none!important}
+  body.mtab-now #content [data-tab="now"]{display:block!important}
+  body.mtab-forecast #content [data-tab="forecast"]{display:block!important}
+  body.mtab-radar #content [data-tab="radar"]{display:block!important}
+  body.mtab-radar #stormLinks.visible{display:block!important}
+  body.mtab-air #content [data-tab="air"]{display:block!important}
+  body.mtab-air #airMarineGrid{display:grid!important}
+  body.mtab-more #content [data-tab="more"]{display:block!important}
+  body.mtab-more #moonAdvGrid{display:grid!important}
+  body.mtab-more #afdPanelWrap{display:block!important}
+  body.mtab-now #obsAfdGrid,body.mtab-now #airMarineGrid,body.mtab-now #moonAdvGrid,body.mtab-now #afdPanelWrap,
+  body.mtab-radar #obsAfdGrid,body.mtab-radar #airMarineGrid,body.mtab-radar #moonAdvGrid,body.mtab-radar #afdPanelWrap,
+  body.mtab-forecast #airMarineGrid,body.mtab-forecast #moonAdvGrid,body.mtab-forecast #afdPanelWrap,
+  body.mtab-air #obsAfdGrid,body.mtab-air #moonAdvGrid,body.mtab-air #afdPanelWrap,
+  body.mtab-more #obsAfdGrid,body.mtab-more #airMarineGrid{display:none!important}
+  body:not(.mtab-now) #content>.grid:first-child{display:none!important}
+}
+@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(76px + env(safe-area-inset-bottom,0px))}.panel{padding:16px 14px}body.scrolled .brand-icon{width:40px;height:40px}body.scrolled .brand-name{font-size:1.35rem}.brand-icon{width:58px;height:58px}.brand-name{font-size:1.75rem}.search input{width:140px;max-width:calc(100vw - 120px)}.day-row{grid-template-columns:70px 28px 1fr 58px;gap:8px}.day-row .pp{display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="site-top" id="siteTop">
   <header>
     <div class="brand-block">
       <div class="brand-mark">
@@ -372,7 +437,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     </div>
     <div class="spacer"></div>
     <div class="header-controls">
-      <button class="refresh-btn" id="refreshBtn" type="button" title="Refresh weather data" aria-label="Refresh weather data">&#8635;</button>
+      <button class="refresh-btn" id="refreshBtn" type="button" title="Refresh weather data" aria-label="Refresh weather data"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></span></button>
       <div class="pill-toggle" role="group" aria-label="Color theme">
         <button type="button" id="themeLight">Light</button>
         <button type="button" id="themeDark">Dark</button>
@@ -391,7 +456,8 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
       <input id="searchInput" type="text" placeholder="Add location&hellip;" aria-label="Search for a location">
       <div class="search-results" id="searchResults"></div>
     </div>
-    <button class="geo-btn" id="geoBtn" title="Use my location" aria-label="Use my current location">&#128205;</button>
+    <button class="geo-btn" id="geoBtn" title="Use my location" aria-label="Use my current location"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span></button>
+  </div>
   </div>
 
   <div class="alerts" id="alerts"></div>
@@ -411,17 +477,19 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
       <a href="#radarPanel">Radar</a>
       <a href="#obsPanel">Obs</a>
       <a href="#airPanel">Air</a>
-      <a href="#afdPanel">Discussion</a>
+      <a href="#marinePanel">Lakes</a>
       <a href="#moonPanel">Moon</a>
-      <a href="#advCollapse">Advanced</a>
+      <a href="#afdPanel">Discussion</a>
+      <a href="#advPanel">Advanced</a>
     </div>
   </nav>
 
   <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Sections">
-    <button type="button" data-tab="now" aria-current="page"><span class="tab-ico" aria-hidden="true">&#9728;</span>Now</button>
-    <button type="button" data-tab="forecast"><span class="tab-ico" aria-hidden="true">&#128197;</span>Forecast</button>
-    <button type="button" data-tab="radar"><span class="tab-ico" aria-hidden="true">&#128752;</span>Radar</button>
-    <button type="button" data-tab="more"><span class="tab-ico" aria-hidden="true">&#8943;</span>More</button>
+    <button type="button" data-tab="now" aria-current="page"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="tab-lbl">Now</span></button>
+    <button type="button" data-tab="forecast"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tab-lbl">Forecast</span></button>
+    <button type="button" data-tab="radar"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M12 2a10 10 0 0 1 10 10M12 6a6 6 0 0 1 6 6"/><path d="M12 10a2 2 0 0 1 2 2"/></svg></span><span class="tab-lbl">Radar</span></button>
+    <button type="button" data-tab="air"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5 12 3l2.5 2.5"/><path d="M12 3v8"/><path d="M5 14h14"/><path d="M7 18h10"/></svg></span><span class="tab-lbl">Air</span></button>
+    <button type="button" data-tab="more"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></span><span class="tab-lbl">More</span></button>
   </nav>
 
   <div id="content">
@@ -529,24 +597,19 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
       </div>
     </section>
 
-    <div class="grid" id="obsAfdGrid" style="margin-top:16px">
+    <section class="storm-panel" id="stormLinks" data-tab="radar" aria-label="Convective outlook"></section>
+
+    <div class="grid adv-only" id="obsAfdGrid" style="margin-top:16px">
       <section class="panel nav-target" id="obsPanel" data-tab="forecast" aria-label="Observations vs forecast">
         <h2>Obs vs NWS Forecast <span class="panel-status" id="obsStatus"></span></h2>
         <div class="radar-note" id="obsStation"></div>
         <div class="obs-compare" id="obsMetrics"></div>
         <div class="radar-note" id="obsNote" style="margin-top:8px"></div>
       </section>
-
-      <section class="panel nav-target" id="afdPanel" data-tab="more" aria-label="Forecast discussion">
-        <h2>NWS Forecast Discussion <span class="panel-status" id="afdStatus"></span></h2>
-        <div class="afd-meta" id="afdMeta"></div>
-        <div class="afd-text" id="afdText">Loading discussion&hellip;</div>
-        <a id="afdLink" target="_blank" rel="noopener" style="display:none;margin-top:8px;font-size:12px"></a>
-      </section>
     </div>
 
-    <div class="grid" id="airMoonGrid" style="margin-top:16px">
-      <section class="panel nav-target" id="airPanel" data-tab="more" aria-label="Air quality and pollen">
+    <div class="grid" id="airMarineGrid" style="margin-top:16px">
+      <section class="panel nav-target" id="airPanel" data-tab="air" aria-label="Air quality and pollen">
         <h2>Air Quality &amp; Pollen <span class="panel-status" id="airStatus"></span></h2>
         <div class="outlook" style="margin-top:0">
           <div class="lbl">US AQI</div>
@@ -562,6 +625,45 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div class="airnow-row" id="airnowRow"></div>
       </section>
 
+      <section class="panel nav-target" id="marinePanel" data-tab="air" aria-label="Great Lakes">
+        <h2><span id="marineTitle">Great Lakes</span> <span class="panel-status" id="marineStatus"></span></h2>
+        <div class="outlook" id="lakeOutlook" style="margin-top:0;display:none">
+          <div class="lbl">Lake-air delta</div>
+          <div class="verdict" id="lakeVerdict">&mdash;</div>
+          <div class="detail" id="lakeDetail"></div>
+        </div>
+        <div class="radar-note" id="marineNws" style="margin-top:8px;white-space:pre-wrap;font-size:.8125rem;color:var(--mut)"></div>
+        <div class="metrics" id="marineMetrics"></div>
+        <div class="radar-note" id="marineNote" style="margin-top:8px"></div>
+        <div class="buoy-card" id="buoyCard">
+          <div class="buoy-card-main">
+            <div>
+              <span class="lbl">NDBC Buoy</span>
+              <div class="buoy-card-title" id="buoyCardTitle">Select a station</div>
+              <div class="buoy-card-meta" id="buoyCardMeta"></div>
+            </div>
+            <div class="buoy-card-actions">
+              <button type="button" class="buoy-primary" id="buoyRefresh" title="Reload buoy observations">Refresh</button>
+              <button type="button" id="buoyNearest" title="Use nearest station for this location">Nearest</button>
+              <a id="buoyPageLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">NDBC page ↗</a>
+            </div>
+          </div>
+          <details class="buoy-card-picker" id="buoyPicker">
+            <summary>Change station</summary>
+            <div class="buoy-picker-body">
+              <select id="buoySelect" aria-label="Select NDBC buoy station"></select>
+              <input id="buoyId" aria-label="Custom NDBC buoy station ID" placeholder="ID" style="display:none">
+              <button id="buoyGo" type="button">Load</button>
+              <a class="buoy-find" id="buoyFindLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">Find stations ↗</a>
+            </div>
+          </details>
+          <div class="buoy-card-metrics metrics" id="buoyMetrics"></div>
+          <div class="buoy-card-note" id="buoyNote"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid" id="moonAdvGrid" style="margin-top:16px">
       <section class="panel nav-target" id="moonPanel" data-tab="more" aria-label="Moon">
         <h2>Moon</h2>
         <div class="now-top">
@@ -574,40 +676,27 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div id="moonCompass"></div>
         <div class="metrics" id="moonMetrics" style="grid-template-columns:repeat(2,1fr)"></div>
       </section>
+
+      <section class="panel nav-target panel-fold" id="advPanel" data-tab="more" aria-label="Advanced atmosphere">
+        <details class="fold">
+          <summary class="fold-hd"><h2>Advanced Atmosphere</h2></summary>
+          <div class="fold-bd">
+            <div class="metrics" id="advMetrics"></div>
+          </div>
+        </details>
+      </section>
     </div>
 
-    <section class="storm-panel" id="stormLinks" data-tab="radar" aria-label="Convective outlook"></section>
-
-    <div class="grid nav-target" id="advCollapse" data-tab="more" style="margin-top:16px">
-      <section class="panel" aria-label="Advanced atmosphere" id="advPanel">
-        <h2>Advanced Atmosphere</h2>
-        <div class="metrics" id="advMetrics"></div>
-      </section>
-
-      <section class="panel" aria-label="Great Lakes" id="marinePanel">
-        <h2><span id="marineTitle">Great Lakes</span> <span class="panel-status" id="marineStatus"></span></h2>
-        <div class="outlook" id="lakeOutlook" style="margin-top:0;display:none">
-          <div class="lbl">Lake-air delta</div>
-          <div class="verdict" id="lakeVerdict">&mdash;</div>
-          <div class="detail" id="lakeDetail"></div>
-        </div>
-        <div class="radar-note" id="marineNws" style="margin-top:8px;white-space:pre-wrap;font-size:.8125rem;color:var(--mut)"></div>
-        <div class="metrics" id="marineMetrics"></div>
-        <div class="radar-note" id="marineNote" style="margin-top:8px"></div>
-        <div class="buoyrow">
-          <span class="lbl">NDBC Buoy</span>
-          <select id="buoySelect" aria-label="Select NDBC buoy station"></select>
-          <input id="buoyId" aria-label="Custom NDBC buoy station ID" placeholder="ID" style="display:none">
-          <button id="buoyGo" type="button">Load</button>
-          <button id="buoyNearest" type="button" title="Use nearest station for this location">Nearest</button>
-          <a class="buoy-find" id="buoyFindLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">Find stations ↗</a>
-        </div>
-        <div class="buoy-head" id="buoyHead" hidden>
-          <div class="buoy-name" id="buoyName"></div>
-          <a id="buoyPageLink" href="#" target="_blank" rel="noopener noreferrer">NDBC station page ↗</a>
-        </div>
-        <div class="metrics" id="buoyMetrics" style="margin-top:10px"></div>
-        <div class="radar-note" id="buoyNote" style="margin-top:8px"></div>
+    <div id="afdPanelWrap" style="margin-top:16px">
+      <section class="panel full nav-target panel-fold" id="afdPanel" data-tab="more" aria-label="Forecast discussion">
+        <details class="fold">
+          <summary class="fold-hd"><h2>NWS Forecast Discussion <span class="panel-status" id="afdStatus"></span></h2></summary>
+          <div class="fold-bd">
+            <div class="afd-meta" id="afdMeta"></div>
+            <div class="afd-text" id="afdText">Loading discussion&hellip;</div>
+            <a id="afdLink" target="_blank" rel="noopener" style="display:none;margin-top:8px;font-size:12px"></a>
+          </div>
+        </details>
       </section>
     </div>
 
@@ -636,7 +725,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '49';
+const APP_VERSION = '50';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -3046,6 +3135,8 @@ function userSelectBuoy(id){
   buoySyncedLocKey = locKey(loc);
   setBuoyId(st, true);
   updateBuoyNearestBtn(loc);
+  const picker = $('buoyPicker');
+  if(picker) picker.open = false;
 }
 function resetBuoyToNearest(){
   const loc = state.locations[state.active];
@@ -3117,18 +3208,24 @@ async function fetchBuoyStationName(st){
   }catch(e){}
   return null;
 }
-function updateBuoyHead(st, name){
+function updateBuoyCard(st, name, obsTime){
   const id = (st || '').trim().toUpperCase();
-  const head = $('buoyHead'), nameEl = $('buoyName'), link = $('buoyPageLink');
+  const titleEl = $('buoyCardTitle'), metaEl = $('buoyCardMeta'), link = $('buoyPageLink');
+  if(!titleEl) return;
   if(!id){
-    head.hidden = true;
+    titleEl.textContent = 'Select a station';
+    metaEl.textContent = 'Tap Nearest or change station below';
+    if(link) link.href = ndbcMapUrl(state.locations[state.active]);
     return;
   }
   const loc = state.locations[state.active];
   const dist = buoyDistanceLabel(id, loc);
-  nameEl.innerHTML = esc(name || 'NDBC station') + '<small>' + id + (dist ? ' \u00B7 ' + dist : '') + '</small>';
-  link.href = NDBC_STATION_URL + encodeURIComponent(id);
-  head.hidden = false;
+  titleEl.textContent = name || buoyPresetName(id) || 'NDBC station';
+  const parts = [id];
+  if(dist) parts.push(dist);
+  if(obsTime) parts.push('OBS ' + obsTime);
+  metaEl.textContent = parts.join(' \u00B7 ');
+  if(link) link.href = NDBC_STATION_URL + encodeURIComponent(id);
 }
 function trimGlfProduct(text){
   const lines = text.trim().split('\n');
@@ -3199,7 +3296,7 @@ let marineLoadGen = 0;
 async function loadMarine(loc){
   const gen = ++marineLoadGen;
   const panel = $('marinePanel');
-  const grid = $('advCollapse');
+  const grid = $('airMarineGrid');
   const lake = greatLakeName(loc.lat, loc.lon);
   if(!lake || !isLikelyUS(loc)){
     panel.style.display = 'none';
@@ -3373,12 +3470,12 @@ async function loadBuoy(allowFallback){
   const box = $('buoyMetrics'), note = $('buoyNote');
   box.innerHTML = ''; note.textContent = '';
   if(!st){
-    updateBuoyHead('', null);
+    updateBuoyCard('', null);
     return;
   }
   const id = st.toUpperCase();
   const stale = () => gen !== buoyLoadGen || ($('buoyId').value || '').trim().toUpperCase() !== id;
-  updateBuoyHead(id, buoyPresetName(id) || null);
+  updateBuoyCard(id, buoyPresetName(id) || null);
   note.textContent = 'Loading buoy\u2026';
   syncBuoySelect();
   try{
@@ -3409,7 +3506,7 @@ async function loadBuoy(allowFallback){
     if(stale()) return;
     const stationName = await fetchBuoyStationName(id);
     if(stale()) return;
-    updateBuoyHead(id, stationName);
+    updateBuoyCard(id, stationName, obsTime);
     if(!rows.length){
       const loc = state.locations[state.active];
       if(allowFallback && loc && !buoyPinForLocation(loc)){
@@ -3429,14 +3526,15 @@ async function loadBuoy(allowFallback){
     box.innerHTML = rows.map(r =>
       '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
     ).join('');
-    note.textContent = 'OBS ' + obsTime + (source ? ' \u00B7 ' + source : '');
+    note.textContent = source || '';
   }catch(e){
     if(stale()) return;
-    updateBuoyHead(id, await fetchBuoyStationName(id));
+    updateBuoyCard(id, await fetchBuoyStationName(id));
     note.textContent = 'Station unavailable — pick another station or enter a custom ID.';
     console.error('buoy', e);
   }
 }
+$('buoyRefresh').addEventListener('click', () => loadBuoy());
 $('buoyGo').addEventListener('click', () => userSelectBuoy($('buoyId').value));
 $('buoyNearest').addEventListener('click', resetBuoyToNearest);
 $('buoyId').addEventListener('keydown', e => { if(e.key === 'Enter') userSelectBuoy($('buoyId').value); });
@@ -3464,13 +3562,14 @@ function setUnits(u){
 $('refreshBtn').addEventListener('click', loadAll);
 
 // ---------- master load ----------
-let tabPanelsLoaded = { forecast: false, radar: false, more: false };
+let tabPanelsLoaded = { forecast: false, radar: false, air: false, more: false };
 function resetTabPanelsLoaded(){
-  tabPanelsLoaded = { forecast: false, radar: false, more: false };
+  tabPanelsLoaded = { forecast: false, radar: false, air: false, more: false };
 }
 function getMobileTab(){
   if(document.body.classList.contains('mtab-forecast')) return 'forecast';
   if(document.body.classList.contains('mtab-radar')) return 'radar';
+  if(document.body.classList.contains('mtab-air')) return 'air';
   if(document.body.classList.contains('mtab-more')) return 'more';
   return 'now';
 }
@@ -3494,14 +3593,17 @@ function ensureTabPanels(tab){
       loadRadar();
     }
   }
+  if((all || tab === 'air') && !tabPanelsLoaded.air){
+    tabPanelsLoaded.air = true;
+    loadAir(loc);
+    loadMarine(loc);
+    loadBuoy();
+  }
   if((all || tab === 'more') && !tabPanelsLoaded.more){
     tabPanelsLoaded.more = true;
     renderAdvanced(d);
     renderMoon(loc);
-    loadAir(loc);
     loadAFD(loc);
-    loadMarine(loc);
-    loadBuoy();
   }
 }
 function scheduleIdleForecastPrefetch(){
@@ -3526,14 +3628,14 @@ function ensureDesktopPanel(panelId, loc){
     loadRadar();
   }else if(panelId === 'stormLinks' && d) loadStormIntel(loc, d);
   else if(panelId === 'afdPanel') loadAFD(loc);
-  else if(panelId === 'advCollapse'){
+  else if(panelId === 'marinePanel'){
     loadMarine(loc);
     loadBuoy();
   }
 }
 function setupDesktopLazyPanels(loc){
   if(panelObserver){ panelObserver.disconnect(); panelObserver = null; }
-  const ids = ['obsPanel', 'airPanel', 'radarPanel', 'stormLinks', 'afdPanel', 'advCollapse'];
+  const ids = ['obsPanel', 'airPanel', 'marinePanel', 'radarPanel', 'stormLinks', 'afdPanel', 'advPanel', 'moonPanel'];
   panelObserver = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if(!entry.isIntersecting) return;
@@ -3551,7 +3653,7 @@ function isGreatLakesLoc(loc){
 }
 async function loadAll(){
   const loc = state.locations[state.active];
-  const reloadBuoy = desktopPanelsLoaded['advCollapse'] || tabPanelsLoaded.more;
+  const reloadBuoy = desktopPanelsLoaded['marinePanel'] || tabPanelsLoaded.air;
   resetTabPanelsLoaded();
   resetDesktopPanelsLoaded();
   syncBuoyForLocation(loc, reloadBuoy);
@@ -3756,11 +3858,12 @@ async function initServiceWorker(){
 migrateAppVersion().then(migrated => { if(!migrated) initServiceWorker(); });
 
 // ---------- in-page nav ----------
-const MOBILE_TABS = ['now', 'forecast', 'radar', 'more'];
+const MOBILE_TABS = ['now', 'forecast', 'radar', 'air', 'more'];
 
 function navRevealTarget(el){
   if(!el) return;
-  if(el.tagName === 'DETAILS') el.open = true;
+  const details = el.tagName === 'DETAILS' ? el : el.querySelector('details.fold');
+  if(details) details.open = true;
 }
 
 function isMobileTabLayout(){
@@ -3769,7 +3872,7 @@ function isMobileTabLayout(){
 
 function setMobileTab(tab, opts){
   if(!MOBILE_TABS.includes(tab)) tab = 'now';
-  document.body.classList.remove('mtab-now', 'mtab-forecast', 'mtab-radar', 'mtab-more');
+  document.body.classList.remove('mtab-now', 'mtab-forecast', 'mtab-radar', 'mtab-air', 'mtab-more');
   document.body.classList.add('mtab-' + tab);
   const bar = $('mobileTabBar');
   if(bar){
@@ -3796,7 +3899,8 @@ function mobileTabFromHash(){
   if(h === 'lightPanel' || h === 'hourlyPanel' || h === 'nowPanel') return 'now';
   if(h === 'dailyPanel' || h === 'forecastTextPanel' || h === 'obsPanel') return 'forecast';
   if(h === 'radarPanel' || h === 'stormLinks') return 'radar';
-  if(h === 'afdPanel' || h === 'airPanel' || h === 'moonPanel' || h === 'advCollapse') return 'more';
+  if(h === 'airPanel' || h === 'marinePanel') return 'air';
+  if(h === 'afdPanel' || h === 'moonPanel' || h === 'advPanel' || h === 'advCollapse') return 'more';
   return 'now';
 }
 
@@ -3852,20 +3956,31 @@ function initPageNav(){
     });
   };
 
+  let siteTopCompact = false;
+  const syncSiteTop = () => {
+    const compact = window.scrollY > 48;
+    if(compact !== siteTopCompact){
+      siteTopCompact = compact;
+      document.body.classList.toggle('scrolled', compact);
+    }
+  };
+
   let ticking = false;
   window.addEventListener('scroll', () => {
+    syncSiteTop();
     if(isMobileTabLayout()) return;
     if(!ticking){
       ticking = true;
       requestAnimationFrame(() => { pickActivePill(); ticking = false; });
     }
   }, {passive:true});
+  syncSiteTop();
 
   const syncLayout = () => {
     if(isMobileTabLayout()){
       setMobileTab(mobileTabFromHash(), { skipScroll: true, skipHash: true });
     }else{
-      document.body.classList.remove('mtab-now', 'mtab-forecast', 'mtab-radar', 'mtab-more');
+      document.body.classList.remove('mtab-now', 'mtab-forecast', 'mtab-radar', 'mtab-air', 'mtab-more');
       pickActivePill();
       if(location.hash){
         const target = document.querySelector(location.hash);
