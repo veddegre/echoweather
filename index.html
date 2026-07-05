@@ -797,7 +797,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '98';
+const APP_VERSION = '99';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -1565,6 +1565,7 @@ function buildHourlyFromNws(periods, om){
     wind_speed_10m: [], wind_direction_10m: [], shortForecast: [],
     dew_point_2m: [], pressure_msl: [], cape: [], cloud_cover_low: [], cloud_cover_mid: [], cloud_cover_high: [],
     precipitation: [], visibility: [], uv_index: [], freezing_level_height: [],
+    wet_bulb_temperature_2m: [], relative_humidity_2m: [],
     anchoredNow: true
   };
   for(let n = 0; n < slots; n++){
@@ -1593,6 +1594,8 @@ function buildHourlyFromNws(periods, om){
     hourly.visibility.push(omH.visibility[i] ?? 0);
     hourly.uv_index.push(omH.uv_index[i] ?? 0);
     hourly.freezing_level_height.push(omH.freezing_level_height[i] ?? 0);
+    hourly.wet_bulb_temperature_2m.push(omH.wet_bulb_temperature_2m[i] ?? null);
+    hourly.relative_humidity_2m.push(omH.relative_humidity_2m[i] ?? null);
   }
   return hourly;
 }
@@ -1838,7 +1841,7 @@ function uvExposureNote(u){
 function exposureVisibility(d, c, i){
   const visUnit = (d.om && d.om.hourly_units && d.om.hourly_units.visibility) || 'm';
   let visMeters = c.visibility_m;
-  if(visMeters == null) visMeters = d.hourly.visibility[i];
+  if(visMeters == null && d.hourly.visibility) visMeters = d.hourly.visibility[i];
   if(visUnit === 'ft' && visMeters != null) visMeters = visMeters * 0.3048;
   const visMiNum = visMeters != null
     ? (state.units === 'F' ? visMeters / 1609.34 : visMeters / 1000)
@@ -1849,18 +1852,21 @@ function exposureVisibility(d, c, i){
   return { vis, visMiNum };
 }
 function renderExposure(d){
-  if(!d || !d.hourly) return;
-  const c = d.current;
+  if(!d || !d.hourly || !d.hourly.time || !d.hourly.time.length) return;
+  const c = d.current || {};
   const i = nowIndex(d);
   const h = d.hourly;
-  const uvNow = h.uv_index[i] ?? 0;
-  const uvMax = d.daily.uv_index_max[0] ?? 0;
+  const uvSeries = h.uv_index || [];
+  const uvNow = uvSeries[i] ?? 0;
   const todayKey = h.time[i].slice(0, 10);
   let peakIdx = i, peakUv = uvNow;
   for(let j = i; j < h.time.length && h.time[j].slice(0, 10) === todayKey; j++){
-    const u = h.uv_index[j] ?? 0;
+    const u = uvSeries[j] ?? 0;
     if(u > peakUv){ peakUv = u; peakIdx = j; }
   }
+  const uvMax = (d.daily && d.daily.uv_index_max && d.daily.uv_index_max[0] != null)
+    ? d.daily.uv_index_max[0]
+    : peakUv;
   const uvV = $('uvVerdict');
   if(uvV){
     uvV.textContent = uvNow.toFixed(1) + ' \u2014 ' + uvCat(uvNow);
@@ -1870,15 +1876,16 @@ function renderExposure(d){
     ? 'Peak near ' + hourLabelCompact(h.time[peakIdx]) + ' (' + peakUv.toFixed(1) + ')'
     : 'Low sun angle today';
   const uvD = $('uvDetail');
-  if(uvD) uvD.textContent = 'Today\u2019s max ' + uvMax.toFixed(1) + ' \u00B7 ' + peakStr + ' \u00B7 ' + uvExposureNote(uvNow);
+  if(uvD) uvD.textContent = 'Today\u2019s max ' + Number(uvMax).toFixed(1) + ' \u00B7 ' + peakStr + ' \u00B7 ' + uvExposureNote(uvNow);
 
   const temp = c.temperature_2m ?? h.temperature_2m[i] ?? 0;
   const dewVal = c.dewpoint_c != null
     ? (state.units === 'F' ? Math.round(c.dewpoint_c * 9/5 + 32) : Math.round(c.dewpoint_c))
-    : Math.round(h.dew_point_2m[i] ?? 0);
-  const rh = rhDisp(c.relative_humidity_2m ?? h.relative_humidity_2m[i]);
+    : Math.round((h.dew_point_2m && h.dew_point_2m[i]) ?? 0);
+  const rh = rhDisp(c.relative_humidity_2m ?? (h.relative_humidity_2m && h.relative_humidity_2m[i]));
   const { vis, visMiNum } = exposureVisibility(d, c, i);
-  const wetBulb = Math.round(h.wet_bulb_temperature_2m[i] ?? temp);
+  const wetRaw = h.wet_bulb_temperature_2m && h.wet_bulb_temperature_2m[i];
+  const wetBulb = Math.round(wetRaw != null ? wetRaw : temp);
   const rows = [
     ['Humidity', rh + '<small>%</small>', dewPointNote(temp, dewVal)],
     ['Dew point', dewVal + '<small>' + degSym() + '</small>', dewPointNote(temp, dewVal)],
@@ -1897,8 +1904,7 @@ function renderExposure(d){
   if(!strip) return;
   const cells = [];
   for(let j = i; j < h.time.length && h.time[j].slice(0, 10) === todayKey; j++){
-    const uv = h.uv_index[j] ?? 0;
-    if(!(h.is_day[j]) && uv < 0.1) continue;
+    const uv = uvSeries[j] ?? 0;
     cells.push('<div class="hour uv-hour' + (j === i ? ' now-h' : '') + '">'
       + '<div class="t">' + (j === i ? 'Now' : hourLabelCompact(h.time[j])) + '</div>'
       + '<div class="uv-val ' + uvValCls(uv) + '">' + uv.toFixed(1) + '</div>'
