@@ -184,7 +184,7 @@ git push origin main
 
 ```bash
 cd /var/www/echoweather
-./update.sh --smoke
+./update.sh --smoke    # run as your SSH user, not sudo
 ```
 
 **From your laptop** (SSH in and update remotely):
@@ -369,6 +369,20 @@ answering `127.0.0.1` instead of Echo Weather. Disable it:
 `sudo a2dissite 000-default.conf && sudo systemctl reload apache2`. Smoke tests
 also send `Host: example.com` automatically — verify your vhost `ServerName`
 matches (`SMOKE_HOST` env var overrides the default).
+
+**`git pull` fails (local changes would be overwritten).** The server should not
+edit tracked files — only `config.local.php` and `cache/` are server-local
+(gitignored). Reset and update:
+
+```bash
+cd /var/www/echoweather
+git fetch origin
+git reset --hard origin/main
+./scripts/fix-permissions.sh
+```
+
+Or pull the latest `update-server.sh` and run `./update.sh --smoke` (it discards
+stray tracked-file edits automatically). **Do not use `sudo ./update.sh`.**
 
 **`git pull` fails (dubious ownership / `.git/FETCH_HEAD` permission denied).**
 Usually caused by `chown -R www-data:www-data` on the whole repo. **Do not use

@@ -8,6 +8,8 @@
 #   ./update.sh --smoke
 #
 # For first-time rsync installs without git on the server, use deploy.sh instead.
+#
+# Run as your SSH user (not sudo) — the script uses sudo internally for permissions.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"

@@ -59,9 +59,39 @@ fi
 
 run_git_safe_directory
 
+if [[ "$(id -un)" == "root" && -n "${SUDO_USER:-}" ]]; then
+  echo "Run ./update.sh as $SUDO_USER, not sudo — git pull needs your SSH user." >&2
+  exit 1
+fi
+
 echo "Updating Echo Weather in $APP_DIR (branch $GIT_BRANCH)..."
 git fetch origin
-git pull --ff-only origin "$GIT_BRANCH"
+
+REMOTE_REF="origin/$GIT_BRANCH"
+if ! git rev-parse --verify "$REMOTE_REF" >/dev/null 2>&1; then
+  echo "Remote branch $REMOTE_REF not found after fetch." >&2
+  exit 1
+fi
+
+DIRTY="$(git status --porcelain --untracked-files=no)"
+if [[ -n "$DIRTY" ]]; then
+  echo "Discarding local changes to tracked files (server should match git):"
+  echo "$DIRTY" | sed 's/^/  /'
+  git reset --hard HEAD
+fi
+
+LOCAL="$(git rev-parse HEAD)"
+REMOTE="$(git rev-parse "$REMOTE_REF")"
+if [[ "$LOCAL" == "$REMOTE" ]]; then
+  echo "Already up to date ($GIT_BRANCH @ ${REMOTE:0:7})."
+else
+  if git merge-base --is-ancestor "$LOCAL" "$REMOTE" 2>/dev/null; then
+    echo "Fast-forwarding to $REMOTE_REF (${REMOTE:0:7})..."
+  else
+    echo "Resetting to $REMOTE_REF (${REMOTE:0:7})..."
+  fi
+  git reset --hard "$REMOTE"
+fi
 
 APP_ROOT="$APP_DIR" bash "$APP_DIR/scripts/check-versions.sh"
 
