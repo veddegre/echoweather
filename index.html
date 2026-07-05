@@ -636,7 +636,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '43';
+const APP_VERSION = '44';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2955,11 +2955,11 @@ function buoyPinForLocation(loc){
   return id ? String(id).toUpperCase() : null;
 }
 function setBuoyPin(loc, id){
-  const pins = buoyPins();
   const key = locKey(loc);
+  const pins = buoyPins();
   if(id) pins[key] = String(id).trim().toUpperCase();
   else delete pins[key];
-  store.set('st_buoy_pins', pins);
+  store.set('st_buoy_pins', { ...pins });
 }
 function migrateBuoyPins(){
   const pins = buoyPins();
@@ -2984,11 +2984,26 @@ function applyBuoyForLocation(loc){
   const findLink = $('buoyFindLink');
   if(findLink) findLink.href = ndbcMapUrl(loc);
 }
+let buoySyncedLocKey = '';
+let buoyLoadGen = 0;
+function syncBuoyForLocation(loc, reloadData){
+  if(!isGreatLakesLoc(loc)) return;
+  const key = locKey(loc);
+  const needsResolve = key !== buoySyncedLocKey || !($('buoyId').value || '').trim();
+  if(needsResolve){
+    buoySyncedLocKey = key;
+    applyBuoyForLocation(loc);
+  } else {
+    updateBuoyNearestBtn(loc);
+  }
+  if(reloadData) loadBuoy();
+}
 function userSelectBuoy(id){
   const loc = state.locations[state.active];
   const st = (id || '').trim().toUpperCase();
   if(!st) return;
   setBuoyPin(loc, st);
+  buoySyncedLocKey = locKey(loc);
   setBuoyId(st, true);
   updateBuoyNearestBtn(loc);
 }
@@ -2996,6 +3011,7 @@ function resetBuoyToNearest(){
   const loc = state.locations[state.active];
   if(!loc) return;
   setBuoyPin(loc, null);
+  buoySyncedLocKey = locKey(loc);
   applyBuoyForLocation(loc);
   loadBuoy();
 }
@@ -3132,7 +3148,7 @@ async function loadMarine(loc){
   }
   panel.style.display = '';
   grid.classList.remove('adv-only');
-  applyBuoyForLocation(loc);
+  if(!($('buoyId').value || '').trim()) applyBuoyForLocation(loc);
   const buoyId = ($('buoyId').value || '').trim().toUpperCase();
   const buoyMeta = buoyCoords(buoyId);
   $('marineTitle').textContent = lake;
@@ -3290,6 +3306,7 @@ async function loadBuoyFromNws(st){
   return { rows, obsTime, note: 'NWS obs only (no wave data) \u2014 proxy /api/buoy/ on your server for full NDBC' };
 }
 async function loadBuoy(){
+  const gen = ++buoyLoadGen;
   const st = ($('buoyId').value || '').trim();
   const box = $('buoyMetrics'), note = $('buoyNote');
   box.innerHTML = ''; note.textContent = '';
@@ -3298,6 +3315,7 @@ async function loadBuoy(){
     return;
   }
   const id = st.toUpperCase();
+  const stale = () => gen !== buoyLoadGen || ($('buoyId').value || '').trim().toUpperCase() !== id;
   updateBuoyHead(id, buoyPresetName(id) || null);
   note.textContent = 'Loading buoy\u2026';
   syncBuoySelect();
@@ -3305,6 +3323,7 @@ async function loadBuoy(){
     let rows = [], obsTime = '', source = '';
     try{
       const got = await fetchBuoyRaw(st);
+      if(stale()) return;
       const parsed = parseNdbcBuoyText(got.text);
       if(!parsed) throw new Error('no data rows');
       const g = parsed.g;
@@ -3321,10 +3340,13 @@ async function loadBuoy(){
     }catch(ndbcErr){
       console.warn('NDBC buoy', ndbcErr);
       const nws = await loadBuoyFromNws(st);
+      if(stale()) return;
       if(nws){ rows = nws.rows; obsTime = nws.obsTime; source = nws.note; }
       else throw ndbcErr;
     }
+    if(stale()) return;
     const stationName = await fetchBuoyStationName(id);
+    if(stale()) return;
     updateBuoyHead(id, stationName);
     if(!rows.length){
       note.textContent = 'No current data — station may be offline or seasonal.';
@@ -3335,6 +3357,7 @@ async function loadBuoy(){
     ).join('');
     note.textContent = 'OBS ' + obsTime + (source ? ' \u00B7 ' + source : '');
   }catch(e){
+    if(stale()) return;
     updateBuoyHead(id, await fetchBuoyStationName(id));
     note.textContent = 'Station unavailable — pick another station or enter a custom ID.';
     console.error('buoy', e);
@@ -3451,11 +3474,6 @@ function setupDesktopLazyPanels(loc){
 }
 function isGreatLakesLoc(loc){
   return loc && isLikelyUS(loc) && !!greatLakeName(loc.lat, loc.lon);
-}
-function syncBuoyForLocation(loc, reloadData){
-  if(!isGreatLakesLoc(loc)) return;
-  applyBuoyForLocation(loc);
-  if(reloadData) loadBuoy();
 }
 async function loadAll(){
   const loc = state.locations[state.active];
@@ -3809,7 +3827,7 @@ if(urlLoc){
 }
 initBuoySelect();
 migrateBuoyPins();
-applyBuoyForLocation(state.locations[state.active]);
+syncBuoyForLocation(state.locations[state.active], false);
 try{ localStorage.removeItem('st_airnow_key'); }catch(e){}
 $('unitF').classList.toggle('on', state.units === 'F');
 $('unitC').classList.toggle('on', state.units === 'C');
