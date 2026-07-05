@@ -755,7 +755,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '87';
+const APP_VERSION = '88';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -4024,10 +4024,18 @@ function activateWaitingWorker(reg){
   return true;
 }
 
+function isPageAtTop(){
+  return window.scrollY <= 48;
+}
+
 function onSwUpdateReady(reg){
   prefetchShell();
   if(document.visibilityState === 'hidden'){
     activateWaitingWorker(reg);
+    return;
+  }
+  if(isPageAtTop()){
+    applySwUpdate(reg, true);
     return;
   }
   activateWaitingWorker(reg);
@@ -4132,7 +4140,6 @@ async function initServiceWorker(){
     });
   }catch(e){ console.warn('sw', e); }
 }
-migrateAppVersion().then(migrated => { if(!migrated) initServiceWorker(); });
 
 // ---------- in-page nav ----------
 const APP_TABS = ['now', 'forecast', 'radar', 'air', 'more'];
