@@ -635,7 +635,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '39';
+const APP_VERSION = '40';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2865,12 +2865,51 @@ const LAKE_GLF_CODE = {
   'Lake St Clair': 'GLFSC'
 };
 const BUOY_PRESETS = [
-  { id: '45029', name: 'Holland Buoy, MI', lake: 'Lake Michigan', lat: 42.900, lon: -86.272 },
-  { id: '45161', name: 'Muskegon Buoy, MI', lake: 'Lake Michigan', lat: 43.185, lon: -86.354 },
-  { id: '45006', name: 'West Superior — 30 NM NE of Outer Island, WI', lake: 'Lake Superior', lat: 47.335, lon: -89.793 },
+  // Lake Superior
+  { id: '45028', name: 'Western Lake Superior', lake: 'Lake Superior', lat: 46.814, lon: -91.829 },
+  { id: '45216', name: 'Ontonagon, MI', lake: 'Lake Superior', lat: 46.907, lon: -89.354 },
+  { id: '45025', name: 'South Entry, Keweenaw Peninsula', lake: 'Lake Superior', lat: 46.969, lon: -88.398 },
+  { id: '45219', name: 'Two Harbors Nearshore', lake: 'Lake Superior', lat: 47.021, lon: -91.625 },
+  { id: '45023', name: 'North Entry, Keweenaw Peninsula', lake: 'Lake Superior', lat: 47.270, lon: -88.607 },
+  { id: '45006', name: 'West Superior (30 NM NE Outer Island)', lake: 'Lake Superior', lat: 47.335, lon: -89.793 },
+  { id: '45004', name: 'East Superior (70 NM NE Marquette)', lake: 'Lake Superior', lat: 47.583, lon: -86.586 },
+  { id: '45001', name: 'Mid Superior (60 NM NNE Hancock)', lake: 'Lake Superior', lat: 48.061, lon: -87.793 },
+  // Lake Michigan
+  { id: '45170', name: 'Michigan City, IN', lake: 'Lake Michigan', lat: 41.755, lon: -86.968 },
+  { id: '45198', name: 'Chicago Buoy', lake: 'Lake Michigan', lat: 41.892, lon: -87.563 },
+  { id: '45026', name: 'Cook Nuclear Plant, Stevensville', lake: 'Lake Michigan', lat: 41.982, lon: -86.619 },
+  { id: '45168', name: 'South Haven, MI', lake: 'Lake Michigan', lat: 42.397, lon: -86.331 },
+  { id: '45174', name: 'Wilmette, IL', lake: 'Lake Michigan', lat: 42.135, lon: -87.655 },
+  { id: '45186', name: 'Waukegan, IL', lake: 'Lake Michigan', lat: 42.368, lon: -87.795 },
+  { id: '45029', name: 'Holland, MI', lake: 'Lake Michigan', lat: 42.900, lon: -86.272 },
+  { id: '45161', name: 'Muskegon, MI', lake: 'Lake Michigan', lat: 43.185, lon: -86.354 },
+  { id: '45024', name: 'Ludington, MI', lake: 'Lake Michigan', lat: 43.980, lon: -86.560 },
+  { id: '45183', name: 'Sleeping Bear Dunes', lake: 'Lake Michigan', lat: 44.982, lon: -85.831 },
+  { id: '45002', name: 'North Michigan (N Manitou / Washington Is.)', lake: 'Lake Michigan', lat: 45.344, lon: -86.411 },
+  { id: '45022', name: 'Little Traverse Bay', lake: 'Lake Michigan', lat: 45.404, lon: -85.088 },
+  // Lake Huron
+  { id: '45209', name: 'Lakeport, MI', lake: 'Lake Huron', lat: 43.129, lon: -82.391 },
   { id: '45149', name: 'Southern Lake Huron', lake: 'Lake Huron', lat: 43.540, lon: -82.080 },
-  { id: '45164', name: 'Cleveland Buoy, OH', lake: 'Lake Erie', lat: 41.748, lon: -81.698 },
-  { id: '45159', name: 'NW Lake Ontario Ajax', lake: 'Lake Ontario', lat: 43.770, lon: -78.980 },
+  { id: '45163', name: 'Saginaw Bay, MI', lake: 'Lake Huron', lat: 43.983, lon: -83.600 },
+  { id: '45003', name: 'North Huron (32 NM NE Alpena)', lake: 'Lake Huron', lat: 45.351, lon: -82.840 },
+  { id: '45194', name: 'McGulpin Point North', lake: 'Lake Huron', lat: 45.803, lon: -84.792 },
+  { id: '45175', name: 'Mackinac Straits West', lake: 'Lake Huron', lat: 45.825, lon: -84.772 },
+  // Lake Erie
+  { id: '45176', name: 'Cleveland Intake Crib, OH', lake: 'Lake Erie', lat: 41.550, lon: -81.765 },
+  { id: '45005', name: 'West Erie (16 NM NW Lorain)', lake: 'Lake Erie', lat: 41.677, lon: -82.398 },
+  { id: '45165', name: 'Toledo Water Intake, OH', lake: 'Lake Erie', lat: 41.704, lon: -83.264 },
+  { id: '45200', name: 'Maumee Bay', lake: 'Lake Erie', lat: 41.724, lon: -83.370 },
+  { id: '45164', name: 'Cleveland, OH', lake: 'Lake Erie', lat: 41.748, lon: -81.698 },
+  { id: '45167', name: 'Erie Nearshore, PA', lake: 'Lake Erie', lat: 42.185, lon: -80.135 },
+  { id: '45220', name: 'Dunkirk, NY', lake: 'Lake Erie', lat: 42.561, lon: -79.432 },
+  // Lake Ontario
+  { id: '45142', name: 'Port Colborne', lake: 'Lake Ontario', lat: 42.740, lon: -79.290 },
+  { id: '45139', name: 'West Lake Ontario — Grimsby', lake: 'Lake Ontario', lat: 43.250, lon: -79.530 },
+  { id: '45190', name: 'Sodus Point, NY', lake: 'Lake Ontario', lat: 43.282, lon: -76.961 },
+  { id: '45215', name: 'Oswego, NY', lake: 'Lake Ontario', lat: 43.501, lon: -76.539 },
+  { id: '45012', name: 'East Lake Ontario (20 NM NNE Rochester)', lake: 'Lake Ontario', lat: 43.621, lon: -77.401 },
+  { id: '45159', name: 'NW Lake Ontario — Ajax', lake: 'Lake Ontario', lat: 43.770, lon: -78.980 },
+  // Lake St Clair
   { id: '45147', name: 'Lake St Clair', lake: 'Lake St Clair', lat: 42.430, lon: -82.680 }
 ];
 const NDBC_STATION_URL = 'https://www.ndbc.noaa.gov/station_page.php?station=';
@@ -3254,7 +3293,7 @@ async function loadBuoy(){
     note.textContent = 'OBS ' + obsTime + (source ? ' \u00B7 ' + source : '');
   }catch(e){
     updateBuoyHead(id, await fetchBuoyStationName(id));
-    note.textContent = 'Station unavailable — check ID or try 45029 / 45161.';
+    note.textContent = 'Station unavailable — pick another station or enter a custom ID.';
     console.error('buoy', e);
   }
 }
