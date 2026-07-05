@@ -636,7 +636,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '34';
+const APP_VERSION = '35';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2598,20 +2598,13 @@ function renderPollenMeta(pollen){
   else if(pollen.quotaLimit > 0) note += ' \u00B7 ' + pollen.quotaCount + '/' + pollen.quotaLimit + ' API calls today';
   return note;
 }
-function renderAirnowKey(loc){
+let airLoadGen = 0;
+function renderAirnowKey(){
   const row = $('airnowRow');
-  if(!row) return;
-  if(!isLikelyUS(loc) || serverIntegrations.airnow){
-    row.style.display = 'none';
-    row.innerHTML = '';
-    return;
-  }
-  row.style.display = 'flex';
-  row.textContent = serverIntegrations.reachable
-    ? 'AirNow key not set in config.local.php on this server (proxied via /api/airnow).'
-    : '/api/status not reachable — serve the app with PHP (see README) or deploy config.local.php to production.';
+  if(row){ row.style.display = 'none'; row.textContent = ''; }
 }
 async function loadAir(loc){
+  const gen = ++airLoadGen;
   return panelTask('airPanel', 'airStatus', async () => {
     try{
       $('pollenNote').textContent = '';
@@ -2619,6 +2612,7 @@ async function loadAir(loc){
       $('pollenForecast').innerHTML = '';
       let aqi = null, source = '', detail = '', rows = [];
       const [airNow, pollen] = await Promise.all([fetchAirNow(loc), fetchPollen(loc)]);
+      if(airLoadGen !== gen) return;
       if(airNow){
         aqi = airNow.aqi;
         source = 'AirNow observation';
@@ -2636,15 +2630,14 @@ async function loadAir(loc){
       if(r && !r.ok && !airNow) throw new Error('AQ HTTP ' + r.status);
       const j = r && r.ok ? await r.json() : null;
       const c = j ? j.current : null;
+      if(airLoadGen !== gen) return;
       if(!aqi && c){
         aqi = c.us_aqi;
         source = 'Open-Meteo modeled';
         detail = isLikelyUS(loc)
           ? (serverIntegrations.airnow
-            ? 'Modeled AQI \u2014 no EPA monitor within 50 mi (AirNow proxy returned empty).'
-            : serverIntegrations.reachable
-              ? 'Modeled AQI \u2014 set airnow_api_key in config.local.php on this server.'
-              : 'Modeled AQI \u2014 /api/status not reachable from this host (PHP integration not wired).')
+            ? 'Modeled AQI \u2014 no EPA monitor within 50 mi.'
+            : 'Modeled AQI (Open-Meteo).')
           : 'Composite of PM, ozone, NO\u2082 and more (EPA scale).';
         rows = [
           ['PM2.5', c.pm2_5 + '<small> \u00B5g/m\u00B3</small>'],
@@ -2664,15 +2657,10 @@ async function loadAir(loc){
         ].filter(p => p[1] !== null && p[1] !== undefined);
         if(meteoPollen.length){
           meteoPollen.forEach(p => rows.push([p[0] + ' pollen', p[1] + '<small> gr/m\u00B3</small>']));
-          $('pollenNote').textContent = 'Pollen: Open-Meteo CAMS model';
-        } else if(isLikelyUS(loc)) {
-          $('pollenNote').textContent = serverIntegrations.reachable
-            ? 'Pollen: set google_pollen_api_key in config.local.php for US forecast'
-            : 'Pollen: Google Pollen API not configured';
+          $('pollenNote').textContent = 'Pollen: Open-Meteo modeled';
         }
-      } else if(isLikelyUS(loc) && serverIntegrations.reachable && !serverIntegrations.pollen) {
-        $('pollenNote').textContent = 'Pollen: set google_pollen_api_key in config.local.php for US forecast';
       }
+      if(airLoadGen !== gen) return;
       const cat = AQI_CATS.find(x => aqi <= x[0]) || AQI_CATS[AQI_CATS.length - 1];
       const v = $('aqiVerdict');
       v.textContent = aqi + ' \u2014 ' + cat[1];
@@ -2681,7 +2669,7 @@ async function loadAir(loc){
       $('airMetrics').innerHTML = rows.map(r =>
         '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
       ).join('');
-      renderAirnowKey(loc);
+      renderAirnowKey();
     }catch(e){
       $('aqiVerdict').textContent = 'unavailable';
       $('aqiDetail').textContent = '';
