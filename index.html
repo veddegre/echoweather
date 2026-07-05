@@ -778,7 +778,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '91';
+const APP_VERSION = '92';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -2029,9 +2029,10 @@ function conditionBucket(code){
   return 'clear';
 }
 function dayHourlyIndices(hourly, dateStr){
+  const key = String(dateStr).slice(0, 10);
   const out = [];
   for(let i = 0; i < hourly.time.length; i++){
-    if(hourly.time[i].slice(0, 10) === dateStr) out.push(i);
+    if(String(hourly.time[i]).slice(0, 10) === key) out.push(i);
   }
   return out;
 }
@@ -2055,7 +2056,7 @@ function buildConditionSegments(indices, hourly){
   return segs;
 }
 function dayExtrema(indices, hourly){
-  if(!indices.length) return { lo: null, hi: null, loAt: '', hiAt: '' };
+  if(!indices.length) return { avg: null, lo: null, hi: null, loAt: '', hiAt: '', rain: 0, wind: 0 };
   let loI = indices[0], hiI = indices[0];
   let lo = hourly.temperature_2m[loI], hi = hourly.temperature_2m[hiI];
   let sum = 0, rain = 0, wind = 0;
@@ -2082,16 +2083,18 @@ function fmtDayWeekday(iso){
   return new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { weekday:'long' });
 }
 function fmtPrecipSum(sum){
+  if(sum == null || isNaN(sum)) return null;
   if(sum < (state.units === 'F' ? 0.005 : 0.05)) return null;
   if(state.units === 'F') return (sum < 0.1 ? sum.toFixed(2) : sum.toFixed(1)) + ' in';
   return sum.toFixed(1) + ' mm';
 }
 function dayTempSparkline(temps, w, h){
-  if(!temps.length) return '';
-  const min = Math.min(...temps), max = Math.max(...temps);
+  const vals = temps.filter(v => v != null && !isNaN(v));
+  if(!vals.length) return '';
+  const min = Math.min(...vals), max = Math.max(...vals);
   const span = max - min || 1;
-  const pts = temps.map((v, i) => {
-    const x = temps.length < 2 ? w / 2 : (i / (temps.length - 1)) * w;
+  const pts = vals.map((v, i) => {
+    const x = vals.length < 2 ? w / 2 : (i / (vals.length - 1)) * w;
     const y = h - 2 - ((v - min) / span) * (h - 4);
     return x.toFixed(1) + ',' + y.toFixed(1);
   });
@@ -2103,9 +2106,15 @@ function dayTempSparkline(temps, w, h){
 }
 function renderDaily(d){
   const dd = d.daily;
-  const hh = d.om.hourly;
+  const hh = d.om && d.om.hourly;
+  if(!dd || !dd.time || !dd.time.length || !hh || !hh.time){
+    $('daily').innerHTML = '<p class="radar-note">Daily forecast unavailable.</p>';
+    $('dailySource').textContent = '';
+    return;
+  }
   const nowI = nowIndex(d);
   const nowHour = d.hourly.time[nowI] ? d.hourly.time[nowI].slice(0, 13) : '';
+  try{
   $('daily').innerHTML = dd.time.map((t, i) => {
     const cond = dd.shortForecast ? dd.shortForecast[i] : wmo(dd.weather_code[i])[0];
     const [ , icon] = wmo(dd.weather_code[i]);
@@ -2166,9 +2175,15 @@ function renderDaily(d){
       + '<div class="day-cond-strip">' + segHtml + nowMark + '</div>'
       + '<div class="day-temp-chart">'
       + '<div class="day-temp-line">' + dayTempSparkline(temps, 320, 36) + '</div>'
-      + '<div class="day-ticks" style="grid-template-columns:repeat(' + ticks.length + ',minmax(0,1fr))">' + ticks.join('') + '</div>'
+      + (ticks.length
+        ? '<div class="day-ticks" style="grid-template-columns:repeat(' + ticks.length + ',minmax(0,1fr))">' + ticks.join('') + '</div>'
+        : '')
       + '</div></article>';
   }).join('');
+  }catch(e){
+    console.error('renderDaily', e);
+    $('daily').innerHTML = '<p class="radar-note">Could not render daily forecast.</p>';
+  }
   $('dailySource').textContent = (d.sources && d.sources.forecast === 'nws') ? 'NWS' : 'Open-Meteo';
 }
 
@@ -4022,8 +4037,8 @@ function ensureTabPanels(tab){
   const all = tab === 'all';
   if((all || tab === 'forecast') && !tabPanelsLoaded.forecast){
     tabPanelsLoaded.forecast = true;
-    renderDaily(d);
-    renderForecastText(d);
+    try{ renderDaily(d); }catch(e){ console.error('renderDaily', e); }
+    try{ renderForecastText(d); }catch(e){ console.error('renderForecastText', e); }
     loadObs(loc);
   }
   if((all || tab === 'radar') && !tabPanelsLoaded.radar){
