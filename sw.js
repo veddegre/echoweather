@@ -1,4 +1,4 @@
-const CACHE = 'echo-weather-v83';
+const CACHE = 'echo-weather-v84';
 const ASSETS = ['./manifest.json', './icon.svg', './icon-maskable.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './logo.svg'];
 
 self.addEventListener('install', e => {

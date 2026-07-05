@@ -417,7 +417,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   body.scrolled .brand-name{font-size:1.2rem}
   .brand-mark{gap:10px;flex-shrink:0}
   .brand-block{flex-shrink:0;min-width:auto}
-  .site-top{position:static;background:transparent;border-bottom:none}
+  .site-top{position:static;background:transparent;border-bottom:none;backdrop-filter:none;-webkit-backdrop-filter:none}
   .site-top > header{
     flex-wrap:nowrap;align-items:center;
     margin:0 -20px;padding:calc(10px + env(safe-area-inset-top,0px)) 20px 10px;
@@ -452,9 +452,10 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 }
 @media (min-width:861px){
   .wrap{padding-bottom:64px}
-  .locbar{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
+  .locbar{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;padding:16px 0}
   .locbar-chips,.locbar-tools{display:contents}
   .locbar-tools .search{flex:1 1 100px}
+  .app-tab-bar{margin-top:4px}
 }
 @media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.day-row{grid-template-columns:70px 28px 1fr 58px;gap:8px}.day-row .pp{display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
@@ -501,6 +502,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     </div>
     <div class="loc-more-panel" id="locMorePanel" hidden></div>
   </div>
+  </div>
 
   <nav class="app-tab-bar" id="appTabBar" aria-label="Sections">
     <button type="button" data-tab="now" aria-current="page"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="tab-lbl">Now</span></button>
@@ -509,7 +511,6 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     <button type="button" data-tab="air"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5 12 3l2.5 2.5"/><path d="M12 3v8"/><path d="M5 14h14"/><path d="M7 18h10"/></svg></span><span class="tab-lbl">Air</span></button>
     <button type="button" data-tab="more"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></span><span class="tab-lbl">More</span></button>
   </nav>
-  </div>
 
   <div class="alerts" id="alerts"></div>
 
@@ -743,7 +744,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '83';
+const APP_VERSION = '84';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
