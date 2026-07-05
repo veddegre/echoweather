@@ -404,6 +404,13 @@ body.radar-expanded{overflow:hidden}
 .status{font-size:.75rem;color:var(--dim);padding:12px 2px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
 .loading{opacity:.5;pointer-events:none}
 footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-size:.6875rem;color:var(--dim);line-height:1.6}
+.install-hint{margin-top:10px;max-width:36rem}
+.install-hint summary{cursor:pointer;color:var(--mut);font-weight:500;list-style:none}
+.install-hint summary::-webkit-details-marker{display:none}
+.install-hint-body{margin-top:8px}
+.install-hint ol{margin:0;padding-left:1.2rem}
+.install-hint li+li{margin-top:4px}
+.install-hint-note{margin-top:8px;font-size:.625rem;color:var(--dim)}
 @media (max-width:860px){
   .grid{grid-template-columns:1fr}
   .big-temp{font-size:3.5rem}
@@ -734,6 +741,10 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     Echo Weather &middot; NWS &middot; METAR &middot; HRRR &middot; Open-Meteo &middot; IEM &middot; RainViewer &middot; NDBC
     &middot; <a href="#" id="installBtn" style="display:none">Install app</a>
     &middot; <a href="#" id="updateAppBtn">Update app</a>
+    <details class="install-hint" id="installHint" hidden>
+      <summary id="installHintSummary">Add to home screen</summary>
+      <div class="install-hint-body" id="installHintBody"></div>
+    </details>
   </footer>
 </div>
 
@@ -744,7 +755,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '86';
+const APP_VERSION = '87';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -3913,14 +3924,71 @@ let swReg = null;
 const SW_RELOAD_KEY = 'sw-reload';
 const SW_BG_READY = 'sw-bg-ready';
 
+function isStandalonePwa(){
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
+function isIosDevice(){
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isAndroidDevice(){
+  return /Android/i.test(navigator.userAgent);
+}
+
+function setupInstallHint(){
+  const hint = $('installHint');
+  const body = $('installHintBody');
+  const summary = $('installHintSummary');
+  if(!hint || !body) return;
+  if(isStandalonePwa()){
+    hint.hidden = true;
+    return;
+  }
+  let html = '';
+  let title = 'Add to home screen';
+  if(isIosDevice()){
+    title = 'Add to iPhone or iPad home screen';
+    html = '<ol>'
+      + '<li>Open this page in <strong>Safari</strong> (other browsers cannot add home screen icons on iOS).</li>'
+      + '<li>Tap the <strong>Share</strong> button <span aria-hidden="true">(□↑)</span> at the bottom of the screen.</li>'
+      + '<li>Scroll the sheet and tap <strong>Add to Home Screen</strong>.</li>'
+      + '<li>Tap <strong>Add</strong> in the top corner.</li>'
+      + '</ol>'
+      + '<p class="install-hint-note">If the icon looks wrong, remove the old shortcut first, then add it again.</p>';
+  } else if(isAndroidDevice()){
+    title = 'Add to Android home screen';
+    html = '<ol>'
+      + '<li>Tap <strong>Install app</strong> above if Chrome offers it.</li>'
+      + '<li>Otherwise open the browser menu <span aria-hidden="true">(⋮)</span> and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>'
+      + '<li>Confirm when prompted.</li>'
+      + '</ol>';
+  } else {
+    title = 'Install on this device';
+    html = '<ol>'
+      + '<li>Tap <strong>Install app</strong> above if your browser shows it.</li>'
+      + '<li>In Chrome or Edge, you can also use the install icon in the address bar.</li>'
+      + '<li>On mobile, use your browser menu to add the site to your home screen.</li>'
+      + '</ol>';
+  }
+  if(summary) summary.textContent = title;
+  body.innerHTML = html;
+  hint.hidden = false;
+}
+
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredInstall = e;
   const btn = $('installBtn');
   btn.style.display = 'inline';
+  const hint = $('installHint');
+  if(hint) hint.hidden = true;
   btn.onclick = ev => {
     ev.preventDefault();
-    if(deferredInstall){ deferredInstall.prompt(); deferredInstall = null; btn.style.display = 'none'; }
+    if(deferredInstall){ deferredInstall.prompt(); deferredInstall = null; btn.style.display = 'none'; setupInstallHint(); }
   };
 });
 
@@ -4197,6 +4265,8 @@ $('unitF').classList.toggle('on', state.units === 'F');
 $('unitC').classList.toggle('on', state.units === 'C');
 applyTheme(state.theme);
 initPageNav();
+setupInstallHint();
+migrateAppVersion().then(migrated => { if(!migrated) initServiceWorker(); });
 probeServerIntegrations().then(async () => {
   await initFirstLocation();
   renderChips();
