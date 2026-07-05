@@ -278,25 +278,37 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .sky-compass-meta{font-size:.8125rem;color:var(--mut);line-height:1.45}
 .sky-compass-meta strong{color:var(--ink);font-weight:600}
 .glance .g .gv.dir-row{display:flex;align-items:center;gap:8px}
-.daily{display:flex;flex-direction:column;gap:2px}
-.daily-scale{display:grid;grid-template-columns:minmax(4.5rem,auto) 2rem 1fr;gap:10px 12px;align-items:center;padding:0 0 6px}
-.daily-scale-range{display:flex;align-items:center;margin:0 1.5rem}
-.daily-scale-lo,.daily-scale-hi{font-size:.6875rem;color:var(--dim);font-variant-numeric:tabular-nums;flex-shrink:0}
-.daily-scale-lo{margin-right:8px}
-.daily-scale-hi{margin-left:8px}
-.daily-scale-track{flex:1;height:3px;background:var(--line);border-radius:2px}
-.day-row{display:grid;grid-template-columns:minmax(4.5rem,auto) 2rem 1fr;gap:10px 12px;align-items:center;padding:9px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
-.day-row:last-child{border-bottom:none;padding-bottom:0}
-.day-row .dn{font-family:var(--serif);font-size:.9375rem;font-weight:600;line-height:1.2}
-.day-row .ic{font-size:1.25rem;text-align:center;line-height:1}
-.day-temps{display:flex;flex-direction:column;gap:3px;min-width:0}
-.temp-track{position:relative;height:32px;margin:0 1.5rem;background:color-mix(in srgb,var(--line) 70%,transparent);border-radius:16px}
-.temp-pill{position:absolute;top:5px;bottom:5px;border-radius:12px;background:linear-gradient(90deg,var(--sky),var(--warm));min-width:6px;box-shadow:0 1px 2px rgba(0,24,69,.12)}
-.temp-lo,.temp-hi{position:absolute;top:50%;font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);line-height:1;white-space:nowrap}
-.temp-lo{left:0;transform:translate(-100%,-50%);padding-right:6px}
-.temp-hi{right:0;transform:translate(100%,-50%);padding-left:6px}
-.temp-same{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:.8125rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
-.day-pp{font-size:.6875rem;color:var(--sky);font-weight:500;margin-left:1.5rem}
+.daily{display:flex;flex-direction:column;gap:14px}
+.day-card{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.day-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.day-card-title{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.day-card-title .day-ic{font-size:1.35rem;line-height:1}
+.day-card-title .day-dn{font-family:var(--serif);font-size:1rem;font-weight:600;color:var(--ink);line-height:1.2}
+.day-card-title .day-date{font-size:.75rem;color:var(--dim);font-weight:500}
+.day-card-title .day-cond{font-size:.75rem;color:var(--mut);font-weight:500}
+.day-card-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:.6875rem;color:var(--mut);font-variant-numeric:tabular-nums;flex-shrink:0}
+.day-card-meta .day-rain{color:var(--sky);font-weight:600}
+.day-summary{font-size:.75rem;color:var(--mut);margin-bottom:10px;line-height:1.45}
+.day-summary strong{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.day-cond-strip{position:relative;display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
+.day-seg{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden}
+.day-seg span{font-size:.5625rem;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:color-mix(in srgb,var(--ink) 72%,transparent);padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-seg.dc-clear{background:color-mix(in srgb,var(--sky) 18%,var(--panel))}
+.day-seg.dc-partly{background:color-mix(in srgb,var(--sky) 10%,var(--panel-2))}
+.day-seg.dc-cloudy{background:color-mix(in srgb,var(--dim) 22%,var(--panel-2))}
+.day-seg.dc-fog{background:color-mix(in srgb,var(--dim) 14%,var(--panel))}
+.day-seg.dc-rain{background:color-mix(in srgb,var(--sky) 42%,var(--panel))}
+.day-seg.dc-snow{background:color-mix(in srgb,var(--sky) 24%,var(--panel))}
+.day-seg.dc-storm{background:color-mix(in srgb,var(--warn) 32%,var(--panel))}
+.day-now{position:absolute;top:0;bottom:0;width:2px;background:var(--warn);transform:translateX(-50%);z-index:2;pointer-events:none;box-shadow:0 0 0 1px color-mix(in srgb,var(--warn) 35%,transparent)}
+.day-temp-chart{margin-top:10px}
+.day-temp-line{height:36px;color:var(--accent)}
+.day-temp-line svg{display:block;width:100%;height:100%}
+.day-ticks{display:grid;gap:2px;margin-top:6px}
+.day-tick{text-align:center;min-width:0}
+.day-tick .day-tick-t{font-size:.5625rem;color:var(--dim);line-height:1.2}
+.day-tick .day-tick-v{font-size:.6875rem;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3}
+.day-tick.now .day-tick-t,.day-tick.now .day-tick-v{color:var(--warn)}
 #radar{width:100%;height:380px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
 #radar .leaflet-container{width:100%;height:100%;border-radius:inherit}
 .radar-stage{display:flex;flex-direction:column;gap:10px}
@@ -475,7 +487,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   .locbar-tools .search{flex:1 1 100px}
   .app-tab-bar{margin-top:4px}
 }
-@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.daily-scale{grid-template-columns:3.25rem 1.75rem 1fr;gap:8px}.daily-scale-range{margin:0 1rem}.day-row{grid-template-columns:3.25rem 1.75rem 1fr;gap:8px;padding:8px 0}.day-row .dn{font-size:.8125rem}.temp-track{margin:0 1rem}.temp-lo,.temp-hi{font-size:.75rem}.day-pp{margin-left:1rem}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
+@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.day-card{padding:10px 12px}.day-card-title .day-dn{font-size:.9375rem}.day-tick:nth-child(odd){display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
 </head>
 <body class="mtab-now">
@@ -766,7 +778,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '89';
+const APP_VERSION = '90';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -1987,45 +1999,160 @@ function renderHourly(d){
 }
 
 // ---------- render: daily ----------
+const COND_BUCKETS = {
+  clear:'Clear', partly:'Partly', cloudy:'Cloudy', fog:'Fog', rain:'Rain', snow:'Snow', storm:'Storm'
+};
+function conditionBucket(code){
+  const c = code ?? 2;
+  if(c >= 95) return 'storm';
+  if(c >= 85 || (c >= 71 && c <= 77)) return 'snow';
+  if((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) return 'rain';
+  if(c >= 45 && c <= 48) return 'fog';
+  if(c === 3) return 'cloudy';
+  if(c === 2) return 'partly';
+  return 'clear';
+}
+function dayHourlyIndices(hourly, dateStr){
+  const out = [];
+  for(let i = 0; i < hourly.time.length; i++){
+    if(hourly.time[i].slice(0, 10) === dateStr) out.push(i);
+  }
+  return out;
+}
+function buildConditionSegments(indices, hourly){
+  if(!indices.length) return [];
+  const segs = [];
+  let start = 0;
+  let bucket = conditionBucket(hourly.weather_code[indices[0]]);
+  for(let j = 1; j <= indices.length; j++){
+    const next = j < indices.length ? conditionBucket(hourly.weather_code[indices[j]]) : null;
+    if(next !== bucket){
+      segs.push({
+        bucket,
+        label: COND_BUCKETS[bucket],
+        pct: ((j - start) / indices.length) * 100
+      });
+      start = j;
+      bucket = next;
+    }
+  }
+  return segs;
+}
+function dayExtrema(indices, hourly){
+  if(!indices.length) return { lo: null, hi: null, loAt: '', hiAt: '' };
+  let loI = indices[0], hiI = indices[0];
+  let lo = hourly.temperature_2m[loI], hi = hourly.temperature_2m[hiI];
+  let sum = 0, rain = 0, wind = 0;
+  for(const i of indices){
+    const t = hourly.temperature_2m[i];
+    sum += t;
+    if(t < lo){ lo = t; loI = i; }
+    if(t > hi){ hi = t; hiI = i; }
+    rain += hourly.precipitation[i] ?? 0;
+    wind = Math.max(wind, hourly.wind_speed_10m[i] ?? 0);
+  }
+  return {
+    avg: sum / indices.length,
+    lo, hi,
+    loAt: hourLabel(hourly.time[loI]),
+    hiAt: hourLabel(hourly.time[hiI]),
+    rain, wind: Math.round(wind)
+  };
+}
+function fmtDayDate(iso){
+  return new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { month:'long', day:'numeric' });
+}
+function fmtDayWeekday(iso){
+  return new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { weekday:'long' });
+}
+function fmtPrecipSum(sum){
+  if(sum < (state.units === 'F' ? 0.005 : 0.05)) return null;
+  if(state.units === 'F') return (sum < 0.1 ? sum.toFixed(2) : sum.toFixed(1)) + ' in';
+  return sum.toFixed(1) + ' mm';
+}
+function dayTempSparkline(temps, w, h){
+  if(!temps.length) return '';
+  const min = Math.min(...temps), max = Math.max(...temps);
+  const span = max - min || 1;
+  const pts = temps.map((v, i) => {
+    const x = temps.length < 2 ? w / 2 : (i / (temps.length - 1)) * w;
+    const y = h - 2 - ((v - min) / span) * (h - 4);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  });
+  const line = pts.join(' ');
+  const area = '0,' + h + ' ' + line + ' ' + w + ',' + h;
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true">'
+    + '<polygon points="' + area + '" fill="currentColor" opacity=".14"/>'
+    + '<polyline points="' + line + '" fill="none" stroke="currentColor" stroke-width="1.75" vector-effect="non-scaling-stroke"/></svg>';
+}
 function renderDaily(d){
   const dd = d.daily;
-  const weekMin = Math.min(...dd.temperature_2m_min);
-  const weekMax = Math.max(...dd.temperature_2m_max);
-  const span = Math.max(1, weekMax - weekMin);
-  const scale = '<div class="daily-scale" aria-hidden="true">'
-    + '<span></span><span></span>'
-    + '<div class="daily-scale-range">'
-    + '<span class="daily-scale-lo">' + Math.round(weekMin) + '°</span>'
-    + '<div class="daily-scale-track"></div>'
-    + '<span class="daily-scale-hi">' + Math.round(weekMax) + '°</span>'
-    + '</div></div>';
-  const rows = dd.time.map((t, i) => {
+  const hh = d.om.hourly;
+  const nowI = nowIndex(d);
+  const nowHour = d.hourly.time[nowI] ? d.hourly.time[nowI].slice(0, 13) : '';
+  $('daily').innerHTML = dd.time.map((t, i) => {
     const cond = dd.shortForecast ? dd.shortForecast[i] : wmo(dd.weather_code[i])[0];
     const [ , icon] = wmo(dd.weather_code[i]);
-    const lo = dd.temperature_2m_min[i], hi = dd.temperature_2m_max[i];
-    const left = ((lo - weekMin) / span * 100).toFixed(1);
-    const width = Math.max(((hi - lo) / span * 100), 1.2).toFixed(1);
-    const sameTemp = Math.round(lo) === Math.round(hi);
-    const pillLabels = sameTemp
-      ? '<span class="temp-same">' + Math.round(lo) + '°</span>'
-      : '<span class="temp-lo">' + Math.round(lo) + '°</span>'
-        + '<span class="temp-hi">' + Math.round(hi) + '°</span>';
+    const indices = dayHourlyIndices(hh, t);
+    const stats = dayExtrema(indices, hh);
+    const lo = Math.round(dd.temperature_2m_min[i]);
+    const hi = Math.round(dd.temperature_2m_max[i]);
+    const loAt = stats.loAt || '';
+    const hiAt = stats.hiAt || '';
     const pop = dd.precipitation_probability_max[i] ?? 0;
-    const popHtml = pop > 0 ? '<div class="day-pp">' + pop + '% rain</div>' : '';
+    const rainAmt = fmtPrecipSum(stats.rain);
+    const rainMeta = rainAmt
+      ? 'Rain ' + rainAmt
+      : (pop > 0 ? pop + '% rain' : '');
+    const windMeta = stats.wind ? 'Wind ~' + stats.wind + ' ' + windUnit() : '';
+    const metaParts = [rainMeta, windMeta].filter(Boolean);
+    const title = i === 0
+      ? '<span class="day-dn">Today</span> <span class="day-date">' + fmtDayDate(t) + '</span>'
+      : '<span class="day-dn">' + fmtDayWeekday(t) + '</span> <span class="day-date">' + fmtDayDate(t) + '</span>';
+    const summary = 'Low <strong>' + lo + '°</strong>'
+      + (loAt ? ' at ' + loAt : '')
+      + ' · High <strong>' + hi + '°</strong>'
+      + (hiAt ? ' at ' + hiAt : '');
+    const segs = buildConditionSegments(indices, hh);
+    const segHtml = segs.map(s =>
+      '<div class="day-seg dc-' + s.bucket + '" style="width:' + s.pct.toFixed(2) + '%" title="' + esc(s.label) + '">'
+      + (s.pct >= 9 ? '<span>' + esc(s.label) + '</span>' : '')
+      + '</div>'
+    ).join('');
+    const nowPct = i === 0 ? (nowMinsInTz(d.timezone) / 1440) * 100 : null;
+    const nowMark = nowPct != null
+      ? '<div class="day-now" style="left:' + nowPct.toFixed(2) + '%" title="Now"></div>'
+      : '';
+    const temps = indices.map(j => hh.temperature_2m[j]);
+    const tickStep = Math.max(1, Math.floor(indices.length / 12));
+    const ticks = [];
+    for(let j = 0; j < indices.length; j += tickStep){
+      const idx = indices[j];
+      const hrKey = hh.time[idx].slice(0, 13);
+      const isNow = hrKey === nowHour;
+      ticks.push('<div class="day-tick' + (isNow ? ' now' : '') + '">'
+        + '<div class="day-tick-t">' + hourLabel(hh.time[idx]) + '</div>'
+        + '<div class="day-tick-v">' + Math.round(hh.temperature_2m[idx]) + '°</div>'
+        + '</div>');
+    }
     const gust = Math.round(dd.wind_gusts_10m_max[i]);
     const uv = (dd.uv_index_max[i] ?? 0).toFixed(0);
-    return '<div class="day-row" title="' + esc(cond) + ' \u00B7 gusts ' + gust + ' ' + windUnit() + ' \u00B7 UV ' + uv + '">'
-      + '<div class="dn">' + (i === 0 ? 'Today' : dayName(t)) + '</div>'
-      + '<div class="ic" aria-hidden="true">' + icon + '</div>'
-      + '<div class="day-temps">'
-      + '<div class="temp-track" role="img" aria-label="Low ' + Math.round(lo) + ' degrees, high ' + Math.round(hi) + ' degrees">'
-      + '<div class="temp-pill" style="left:' + left + '%;width:' + width + '%">'
-      + pillLabels
-      + '</div></div>'
-      + popHtml
-      + '</div></div>';
+    return '<article class="day-card" title="' + esc(cond) + ' · gusts ' + gust + ' ' + windUnit() + ' · UV ' + uv + '">'
+      + '<div class="day-card-head">'
+      + '<div class="day-card-title"><span class="day-ic" aria-hidden="true">' + icon + '</span>' + title
+      + '<span class="day-cond">' + esc(cond) + '</span></div>'
+      + (metaParts.length ? '<div class="day-card-meta">' + metaParts.map(p => {
+        const cls = /rain/i.test(p) ? ' class="day-rain"' : '';
+        return '<span' + cls + '>' + esc(p) + '</span>';
+      }).join('') + '</div>' : '')
+      + '</div>'
+      + '<div class="day-summary">' + summary + '</div>'
+      + '<div class="day-cond-strip">' + segHtml + nowMark + '</div>'
+      + '<div class="day-temp-chart">'
+      + '<div class="day-temp-line">' + dayTempSparkline(temps, 320, 36) + '</div>'
+      + '<div class="day-ticks" style="grid-template-columns:repeat(' + ticks.length + ',minmax(0,1fr))">' + ticks.join('') + '</div>'
+      + '</div></article>';
   }).join('');
-  $('daily').innerHTML = scale + rows;
   $('dailySource').textContent = (d.sources && d.sources.forecast === 'nws') ? 'NWS' : 'Open-Meteo';
 }
 
