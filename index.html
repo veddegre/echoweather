@@ -304,10 +304,10 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-temp-chart{margin-top:10px}
 .day-temp-line{height:36px;color:var(--accent)}
 .day-temp-line svg{display:block;width:100%;height:100%}
-.day-ticks{display:grid;gap:2px;margin-top:6px}
-.day-tick{text-align:center;min-width:0}
-.day-tick .day-tick-t{font-size:.5625rem;color:var(--dim);line-height:1.2}
-.day-tick .day-tick-v{font-size:.6875rem;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3}
+.day-ticks{display:flex;justify-content:space-between;align-items:flex-end;gap:2px;margin-top:6px}
+.day-tick{flex:1 1 0;min-width:0;text-align:center}
+.day-tick .day-tick-t{font-size:.5625rem;color:var(--dim);line-height:1.2;white-space:nowrap}
+.day-tick .day-tick-v{font-size:.6875rem;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3;margin-top:2px}
 .day-tick.now .day-tick-t,.day-tick.now .day-tick-v{color:var(--warn)}
 #radar{width:100%;height:380px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
 #radar .leaflet-container{width:100%;height:100%;border-radius:inherit}
@@ -487,7 +487,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   .locbar-tools .search{flex:1 1 100px}
   .app-tab-bar{margin-top:4px}
 }
-@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.day-card{padding:10px 12px}.day-card-title .day-dn{font-size:.9375rem}.day-tick:nth-child(odd){display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
+@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.day-card{padding:10px 12px}.day-card-title .day-dn{font-size:.9375rem}.day-tick .day-tick-t{font-size:.5rem}.day-tick .day-tick-v{font-size:.625rem}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
 </head>
 <body class="mtab-now">
@@ -778,7 +778,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '92';
+const APP_VERSION = '93';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -1124,6 +1124,12 @@ function hourLabel(iso){
   const h = Number(iso.slice(11,13));
   const ap = h >= 12 ? 'PM' : 'AM';
   return (h % 12 === 0 ? 12 : h % 12) + ' ' + ap;
+}
+function hourLabelCompact(iso){
+  const h = Number(iso.slice(11,13));
+  const suffix = h >= 12 ? 'p' : 'a';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return h12 + suffix;
 }
 const minsOfDay = iso => Number(iso.slice(11,13))*60 + Number(iso.slice(14,16));
 function shiftMins(iso, delta){ // returns minutes-of-day clamped 0..1439
@@ -2149,14 +2155,17 @@ function renderDaily(d){
       ? '<div class="day-now" style="left:' + nowPct.toFixed(2) + '%" title="Now"></div>'
       : '';
     const temps = indices.map(j => hh.temperature_2m[j]);
-    const tickStep = Math.max(1, Math.floor(indices.length / 12));
+    const compactTicks = window.matchMedia('(max-width:860px)').matches;
+    const maxTicks = compactTicks ? 6 : 12;
+    const tickStep = Math.max(1, Math.ceil(indices.length / maxTicks));
     const ticks = [];
     for(let j = 0; j < indices.length; j += tickStep){
       const idx = indices[j];
       const hrKey = hh.time[idx].slice(0, 13);
       const isNow = hrKey === nowHour;
+      const tickLbl = compactTicks ? hourLabelCompact(hh.time[idx]) : hourLabel(hh.time[idx]);
       ticks.push('<div class="day-tick' + (isNow ? ' now' : '') + '">'
-        + '<div class="day-tick-t">' + hourLabel(hh.time[idx]) + '</div>'
+        + '<div class="day-tick-t">' + tickLbl + '</div>'
         + '<div class="day-tick-v">' + Math.round(hh.temperature_2m[idx]) + '°</div>'
         + '</div>');
     }
@@ -2176,7 +2185,7 @@ function renderDaily(d){
       + '<div class="day-temp-chart">'
       + '<div class="day-temp-line">' + dayTempSparkline(temps, 320, 36) + '</div>'
       + (ticks.length
-        ? '<div class="day-ticks" style="grid-template-columns:repeat(' + ticks.length + ',minmax(0,1fr))">' + ticks.join('') + '</div>'
+        ? '<div class="day-ticks">' + ticks.join('') + '</div>'
         : '')
       + '</div></article>';
   }).join('');
