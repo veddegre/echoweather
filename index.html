@@ -131,7 +131,16 @@ body.scrolled .locbar{padding:10px 0}
 .pill-toggle{display:flex;background:var(--panel-2);border-radius:999px;padding:3px;border:1px solid var(--line)}
 .pill-toggle button{background:transparent;color:var(--mut);border:none;padding:6px 12px;font-size:.75rem;border-radius:999px;font-weight:500;white-space:nowrap}
 .pill-toggle button.on{background:var(--panel);color:var(--ink);box-shadow:var(--toggle-shadow)}
-.locbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:16px 0}
+.locbar{display:flex;flex-direction:column;gap:0;padding:16px 0}
+.locbar-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0}
+.locbar-row .chip.active{flex:0 1 auto;min-width:0;max-width:min(46vw,240px)}
+.locbar-row .chip.active .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.locbar-row .search{flex:1 1 100px;min-width:0}
+.locbar-row .search input{width:100%;max-width:none}
+.loc-more-btn{flex-shrink:0;background:var(--panel);border:1px solid var(--line);border-radius:999px;color:var(--mut);padding:5px 10px;font-size:.75rem;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap}
+.loc-more-btn:hover{border-color:var(--accent);color:var(--ink)}
+.loc-more-panel{display:flex;flex-wrap:wrap;gap:8px;padding-top:8px}
+.loc-more-panel[hidden]{display:none!important}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 12px;font-size:.8125rem;color:var(--mut);box-shadow:var(--card-shadow)}
 .chip.active{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
 .chip .name{cursor:pointer;background:none;border:none;color:inherit;font-size:inherit;padding:0;font-weight:500}
@@ -408,28 +417,26 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   body.scrolled .brand-name{font-size:1.2rem}
   .brand-mark{gap:10px;flex-shrink:0}
   .brand-block{flex-shrink:0;min-width:auto}
-  .site-top{
-    position:sticky;top:0;z-index:945;
-    background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;
-    border-bottom:none;
-  }
+  .site-top{position:static;background:transparent;border-bottom:none}
   .site-top > header{
     flex-wrap:nowrap;align-items:center;
-    margin:0 -20px;padding:calc(10px + env(safe-area-inset-top,0px)) max(20px, env(safe-area-inset-right,0px)) 10px max(20px, env(safe-area-inset-left,0px));
+    margin:0 -20px;padding:calc(10px + env(safe-area-inset-top,0px)) 20px 10px;
     background:color-mix(in srgb,var(--bg) 96%,transparent);
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     border-bottom:1px solid var(--line);
   }
-  body.scrolled .site-top > header{padding-top:calc(8px + env(safe-area-inset-top,0px));padding-bottom:8px}
-  body.scrolled header{padding:0}
+  body.scrolled .site-top > header,
+  body.scrolled header{padding:calc(10px + env(safe-area-inset-top,0px)) 20px 10px}
+  body.scrolled .brand-icon-wrap{width:40px;height:40px}
+  body.scrolled .brand-name{font-size:1.35rem}
   .header-controls{width:auto;margin-left:auto;flex:1;justify-content:flex-end;min-width:0}
   .locbar{
-    position:static;margin:0 -20px;padding:8px 20px 10px;
+    position:sticky;top:env(safe-area-inset-top,0px);z-index:945;
+    margin:0 -20px;padding:8px 20px 10px;
     background:color-mix(in srgb,var(--bg) 96%,transparent);
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    border-bottom:1px solid var(--line);
   }
-  body.scrolled .locbar{padding:8px 20px 10px}
   .obs-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,max-content);grid-template-areas:"label label label" "obs fc badge"}
   .obs-row .obs-label{grid-area:label}
   .obs-row .obs-val:nth-of-type(2){grid-area:obs}
@@ -437,14 +444,14 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   .obs-badge{grid-area:badge;justify-self:end}
   .app-tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:950;margin-top:0;padding:10px 10px calc(8px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);border-bottom:none}
   .app-tab-bar button{flex-direction:column;gap:2px;font-size:.5625rem;padding:7px 2px;border:none}
-  html{scroll-padding-bottom:calc(var(--tab-bar-h) + env(safe-area-inset-bottom,0px))}
+  html{scroll-padding-top:calc(var(--chrome-h) + 8px);scroll-padding-bottom:calc(var(--tab-bar-h) + env(safe-area-inset-bottom,0px))}
   .wrap{padding-bottom:calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}
   footer{padding-bottom:8px}
 }
 @media (min-width:861px){
   .wrap{padding-bottom:64px}
 }
-@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:max(14px, env(safe-area-inset-left,0px));padding-right:max(14px, env(safe-area-inset-right,0px))}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.search input{width:140px;max-width:calc(100vw - 120px)}.day-row{grid-template-columns:70px 28px 1fr 58px;gap:8px}.day-row .pp{display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
+@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}.panel{padding:16px 14px}.day-row{grid-template-columns:70px 28px 1fr 58px;gap:8px}.day-row .pp{display:none}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
 </head>
 <body class="mtab-now">
@@ -477,12 +484,15 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   </header>
 
   <div class="locbar" id="locbar">
-    <!-- chips injected -->
-    <div class="search">
-      <input id="searchInput" type="text" placeholder="Add location&hellip;" aria-label="Search for a location">
-      <div class="search-results" id="searchResults"></div>
+    <div class="locbar-row">
+      <button type="button" class="loc-more-btn" id="locMoreBtn" hidden aria-expanded="false" aria-controls="locMorePanel">More</button>
+      <div class="search">
+        <input id="searchInput" type="text" placeholder="Add location&hellip;" aria-label="Search for a location">
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      <button class="geo-btn" id="geoBtn" title="Use my location" aria-label="Use my current location"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span></button>
     </div>
-    <button class="geo-btn" id="geoBtn" title="Use my location" aria-label="Use my current location"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span></button>
+    <div class="loc-more-panel" id="locMorePanel" hidden></div>
   </div>
 
   <nav class="app-tab-bar" id="appTabBar" aria-label="Sections">
@@ -726,7 +736,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '78';
+const APP_VERSION = '80';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
 const _mem = {};
@@ -1083,30 +1093,84 @@ function cssColor(v){
 }
 
 // ---------- location chips ----------
+let locMoreOpen = false;
+
+function closeLocMore(){
+  locMoreOpen = false;
+  const panel = $('locMorePanel');
+  const btn = $('locMoreBtn');
+  if(panel) panel.hidden = true;
+  if(btn) btn.setAttribute('aria-expanded', 'false');
+  syncChromeHeight();
+}
+
+function toggleLocMore(){
+  locMoreOpen = !locMoreOpen;
+  const panel = $('locMorePanel');
+  const btn = $('locMoreBtn');
+  if(panel) panel.hidden = !locMoreOpen;
+  if(btn) btn.setAttribute('aria-expanded', String(locMoreOpen));
+  syncChromeHeight();
+}
+
+function createLocationChip(loc, i){
+  const chip = document.createElement('div');
+  chip.className = 'chip' + (i === state.active ? ' active' : '');
+  const nameBtn = document.createElement('button');
+  nameBtn.className = 'name';
+  nameBtn.textContent = loc.name + (loc.admin1 ? ', ' + shortAdmin(loc.admin1) : '');
+  nameBtn.onclick = () => {
+    state.active = i;
+    persist();
+    closeLocMore();
+    renderChips();
+    loadAll();
+  };
+  chip.appendChild(nameBtn);
+  if(state.locations.length > 1){
+    const rm = document.createElement('button');
+    rm.className = 'rm'; rm.textContent = '\u00D7'; rm.title = 'Remove';
+    rm.onclick = e => {
+      e.stopPropagation();
+      const wasActive = i === state.active;
+      state.locations.splice(i, 1);
+      if(state.active >= state.locations.length) state.active = state.locations.length - 1;
+      else if(i < state.active) state.active--;
+      if(wasActive) closeLocMore();
+      persist(); renderChips(); loadAll();
+    };
+    chip.appendChild(rm);
+  }
+  return chip;
+}
+
 function renderChips(){
-  const bar = $('locbar');
-  bar.querySelectorAll('.chip').forEach(c => c.remove());
-  const search = bar.querySelector('.search');
-  state.locations.forEach((loc, i) => {
-    const chip = document.createElement('div');
-    chip.className = 'chip' + (i === state.active ? ' active' : '');
-    const nameBtn = document.createElement('button');
-    nameBtn.className = 'name';
-    nameBtn.textContent = loc.name + (loc.admin1 ? ', ' + shortAdmin(loc.admin1) : '');
-    nameBtn.onclick = () => { state.active = i; persist(); renderChips(); loadAll(); };
-    chip.appendChild(nameBtn);
-    if(state.locations.length > 1){
-      const rm = document.createElement('button');
-      rm.className = 'rm'; rm.textContent = '\u00D7'; rm.title = 'Remove';
-      rm.onclick = () => {
-        state.locations.splice(i,1);
-        if(state.active >= state.locations.length) state.active = state.locations.length - 1;
-        persist(); renderChips(); loadAll();
-      };
-      chip.appendChild(rm);
-    }
-    bar.insertBefore(chip, search);
-  });
+  const row = $('locbar')?.querySelector('.locbar-row');
+  const panel = $('locMorePanel');
+  const moreBtn = $('locMoreBtn');
+  if(!row || !panel) return;
+
+  row.querySelectorAll('.chip').forEach(c => c.remove());
+  panel.innerHTML = '';
+
+  const anchor = moreBtn || row.querySelector('.search');
+  const active = state.locations[state.active];
+  if(active){
+    row.insertBefore(createLocationChip(active, state.active), anchor);
+  }
+
+  const others = state.locations.map((loc, i) => ({ loc, i })).filter(x => x.i !== state.active);
+  if(others.length && moreBtn){
+    moreBtn.hidden = false;
+    moreBtn.textContent = others.length === 1 ? '1 more' : others.length + ' more';
+    others.forEach(({ loc, i }) => panel.appendChild(createLocationChip(loc, i)));
+    panel.hidden = !locMoreOpen;
+    moreBtn.setAttribute('aria-expanded', String(locMoreOpen));
+  } else {
+    closeLocMore();
+    if(moreBtn) moreBtn.hidden = true;
+  }
+
   syncChromeHeight();
 }
 const US_STATES = {'Michigan':'MI','Illinois':'IL','Wisconsin':'WI','Indiana':'IN','Ohio':'OH','Minnesota':'MN','California':'CA','New York':'NY','Florida':'FL','Texas':'TX','Colorado':'CO','Arizona':'AZ','Washington':'WA','Oregon':'OR'};
@@ -1121,6 +1185,7 @@ function persist(){
 // ---------- geocoding search ----------
 let searchTimer = null;
 $('searchInput').addEventListener('input', e => {
+  closeLocMore();
   clearTimeout(searchTimer);
   const q = e.target.value.trim();
   if(q.length < 2){ $('searchResults').style.display = 'none'; return; }
@@ -1128,6 +1193,11 @@ $('searchInput').addEventListener('input', e => {
 });
 document.addEventListener('click', e => {
   if(!e.target.closest('.search')) $('searchResults').style.display = 'none';
+  if(locMoreOpen && !e.target.closest('#locMorePanel') && !e.target.closest('#locMoreBtn')) closeLocMore();
+});
+$('locMoreBtn')?.addEventListener('click', e => {
+  e.stopPropagation();
+  toggleLocMore();
 });
 function addLocation(loc){
   // if it's essentially an existing saved location, just switch to it
@@ -3956,9 +4026,14 @@ const APP_TABS = ['now', 'forecast', 'radar', 'air', 'more'];
 
 function syncChromeHeight(){
   const top = $('siteTop');
+  const loc = $('locbar');
   const tabs = $('appTabBar');
   const mobile = isMobileTabLayout();
-  if(top) document.documentElement.style.setProperty('--chrome-h', top.offsetHeight + 'px');
+  if(mobile && loc){
+    document.documentElement.style.setProperty('--chrome-h', loc.offsetHeight + 'px');
+  } else if(top){
+    document.documentElement.style.setProperty('--chrome-h', top.offsetHeight + 'px');
+  }
   if(tabs && mobile) document.documentElement.style.setProperty('--tab-bar-h', tabs.offsetHeight + 'px');
 }
 
