@@ -56,6 +56,10 @@ and more, mostly fetched client-side from public APIs.
 Production uses a **git clone directly in the web root** (e.g. `/var/www/echoweather`).
 `config.local.php` and `cache/` are gitignored and stay on the server across updates.
 
+Deploy examples below use **`example.com`** as a placeholder — substitute your real
+hostname everywhere (Apache `ServerName`, Cloudflare Tunnel, `SMOKE_HOST`, and
+`cors_origins` in `config.local.php`).
+
 ### 1. Install Apache + PHP (Debian / Ubuntu)
 
 ```bash
@@ -95,7 +99,7 @@ Create `/etc/apache2/sites-available/echoweather.conf`:
 
 ```apache
 <VirtualHost *:80>
-    ServerName echoweather.com
+    ServerName example.com
     DocumentRoot /var/www/echoweather
     DirectoryIndex index.html
 
@@ -126,12 +130,12 @@ sudo apachectl configtest && sudo systemctl reload apache2
 ```
 
 Disable the default site so `http://127.0.0.1` is not served from `/var/www/html`.
-Smoke tests still send `Host: echoweather.com` when using `127.0.0.1`, but removing
+Smoke tests still send `Host: example.com` when using `127.0.0.1`, but removing
 the default site avoids confusion and matches production (only your vhost on port 80).
 
 ### 4. Smoke test
 
-On the server (hits `127.0.0.1` with `Host: echoweather.com`):
+On the server (hits `127.0.0.1` with `Host: example.com`):
 
 ```bash
 cd /var/www/echoweather
@@ -141,13 +145,13 @@ cd /var/www/echoweather
 Or against the public URL from any machine:
 
 ```bash
-BASE_URL=https://echoweather.com ./scripts/smoke.sh
+BASE_URL=https://example.com ./scripts/smoke.sh
 ```
 
 Manual check:
 
 ```bash
-curl -s -H "Host: echoweather.com" http://127.0.0.1/api/status
+curl -s -H "Host: example.com" http://127.0.0.1/api/status
 ```
 
 ### Cloudflare Tunnel
@@ -156,7 +160,7 @@ Point the public hostname at Apache on port 80:
 
 ```yaml
 ingress:
-  - hostname: echoweather.com
+  - hostname: example.com
     service: http://localhost:80
   - service: http_status:404
 ```
@@ -204,7 +208,7 @@ Smoke test only (no pull):
 # or: DEPLOY_HOST=user@your-server ./update.sh --smoke-only
 ```
 
-Server-side smoke tests use `http://127.0.0.1` with `Host: echoweather.com` (override
+Server-side smoke tests use `http://127.0.0.1` with `Host: example.com` (override
 with `SMOKE_HOST` if your vhost uses a different `ServerName`).
 
 After updates with new config keys, merge additions from `config.example.php`
@@ -350,12 +354,12 @@ details are logged server-side only.
 **`/api/status` returns 404.** Enable `mod_rewrite`, set `AllowOverride All` on
 `/var/www/echoweather/api`, confirm `api/.htaccess` is deployed. When testing on
 the server with curl, include the vhost:
-`curl -H "Host: echoweather.com" http://127.0.0.1/api/status`.
+`curl -H "Host: example.com" http://127.0.0.1/api/status`.
 
 **Smoke tests fail on the server.** Apache's default site (`000-default`) may be
 answering `127.0.0.1` instead of Echo Weather. Disable it:
 `sudo a2dissite 000-default.conf && sudo systemctl reload apache2`. Smoke tests
-also send `Host: echoweather.com` automatically — verify your vhost `ServerName`
+also send `Host: example.com` automatically — verify your vhost `ServerName`
 matches (`SMOKE_HOST` env var overrides the default).
 
 **`git pull` fails (dubious ownership / `.git/FETCH_HEAD` permission denied).**
@@ -387,11 +391,11 @@ SSH user, not `www-data`. Only `cache/` and `config.local.php` need special
 ownership — see the install steps above.
 
 **Air Quality hint still shows.** Set `airnow_api_key` in `config.local.php`.
-Verify `curl -H "Host: echoweather.com" http://127.0.0.1/api/status` shows `"airnow":true`.
+Verify `curl -H "Host: example.com" http://127.0.0.1/api/status` shows `"airnow":true`.
 
 **Pollen panel empty.** Set `google_pollen_api_key` in `config.local.php`.
 Enable Pollen API in Google Cloud Console. Verify
-`curl -H "Host: echoweather.com" http://127.0.0.1/api/status` shows `"pollen":true`.
+`curl -H "Host: example.com" http://127.0.0.1/api/status` shows `"pollen":true`.
 
 **503 on `/api/pollen`.** Key not set — configure `google_pollen_api_key`.
 
@@ -403,7 +407,7 @@ be reached with no stale cache for that grid cell. Check Apache error log and
 `config.local.php` or wait until the next hour.
 
 **Buoy panel unavailable.** Confirm
-`curl -H "Host: echoweather.com" http://127.0.0.1/api/buoy/45029` returns JSON.
+`curl -H "Host: example.com" http://127.0.0.1/api/buoy/45029` returns JSON.
 
 **500 / 502 with generic message.** Check Apache error log for details:
 `sudo tail -f /var/log/apache2/error.log`

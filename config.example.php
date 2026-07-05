@@ -78,8 +78,9 @@ return [
     // -------------------------------------------------------------------------
     // CORS — browser access to /api/*
     // -------------------------------------------------------------------------
+    // Replace example.com with your public hostname when copying to config.local.php.
     'cors_origins' => [
-        'https://echoweather.com',
+        'https://example.com',
         'http://127.0.0.1:8080',
         'http://localhost:8080',
     ],

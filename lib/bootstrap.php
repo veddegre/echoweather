@@ -15,7 +15,7 @@ function default_config(): array
         'rate_limit_pollen' => 60,
         'rate_limit_buoy' => 120,
         'cors_origins' => [
-            'https://echoweather.com',
+            'https://example.com',
             'http://127.0.0.1:8080',
             'http://localhost:8080',
         ],
