@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Rasterize icon.svg → PWA / Apple touch PNGs.
+# Headless Chrome must screenshot a sized HTML wrapper — opening the SVG file
+# directly mis-centers the 512×512 canvas in small viewports (clipped icons).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -25,9 +27,18 @@ fi
 
 render(){
   local size="$1" out="$2"
+  local tmp_html="$ROOT/.render-icon-$$-${size}.html"
   local tmp="${out}.tmp.png"
+  {
+    printf '%s\n' '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+    printf 'html,body{margin:0;width:%spx;height:%spx;overflow:hidden}\n' "$size" "$size"
+    printf '%s\n' 'svg{width:100%;height:100%;display:block}' '</style></head><body>'
+    sed '/^<?xml/d' "$SVG"
+    printf '%s\n' '</body></html>'
+  } > "$tmp_html"
   "$CHROME" --headless=new --disable-gpu --hide-scrollbars \
-    --window-size="${size},${size}" --screenshot="$tmp" "file://$SVG" >/dev/null 2>&1
+    --window-size="${size},${size}" --screenshot="$tmp" "file://$tmp_html" >/dev/null 2>&1
+  rm -f "$tmp_html"
   mv -f "$tmp" "$out"
   echo "Wrote $out (${size}×${size})"
 }
