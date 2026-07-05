@@ -47,6 +47,7 @@ RSYNC_FILES=(
   icon-maskable.svg
   icon-192.png
   icon-512.png
+  apple-touch-icon.png
   og-image.png
   og-image.svg
   api
