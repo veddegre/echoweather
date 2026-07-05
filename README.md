@@ -124,7 +124,7 @@ From your dev machine (recommended):
 Or manually:
 
 ```bash
-cd /Users/veddegre/skytrace
+cd /Users/veddegre/echoweather
 rsync -avz \
   index.html manifest.json sw.js logo.svg icon.svg og-image.png \
   api lib router.php .htaccess config.example.php \
@@ -311,7 +311,7 @@ Visitors' browsers call open-meteo, api.weather.gov, etc. directly. Only
 One command — static files and API routes:
 
 ```bash
-cd /path/to/skytrace
+cd /path/to/echoweather
 cp config.example.php config.local.php
 # Edit config.local.php — add airnow_api_key and/or google_pollen_api_key
 mkdir -p cache/pollen
@@ -360,7 +360,7 @@ Every key is optional.
 Full app + PHP update:
 
 ```bash
-cd /Users/veddegre/skytrace
+cd /Users/veddegre/echoweather
 rsync -avz \
   index.html manifest.json sw.js logo.svg icon.svg og-image.png \
   api lib router.php .htaccess config.example.php \
