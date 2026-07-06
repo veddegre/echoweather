@@ -537,8 +537,8 @@ panels appear in one scrollable page with a compacting sticky header.
   Quick actions: **Open radar**, **Severe window on timeline** (scrubs animated
   radar to the best storm window), **Nearest SPC report**, **Warning polygon**, and
   **Watch polygon** (centers radar on alert geometry; enables the matching layer).
-  Storm mode auto-enables **storm reports** and **SPC Day 1 categorical** layers
-  when they were off.
+  Storm mode auto-enables **storm reports**, **SPC Day 1 categorical**, and **warnings** or
+  **watches** layers (watch-only when inside a watch with no warning) when they were off.
 - **Chase-mode radar** — When storm mode is active, MRMS users see a **Site
   radar** button to switch to animated NEXRAD; reflectivity/velocity toggle
   promoted on IEM modes.

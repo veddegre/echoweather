@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '164';
+const APP_VERSION = '165';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -197,7 +197,8 @@ const PANEL_UNAVAIL_MSG = {
   radar_vel_unavail: 'Nearest NEXRAD velocity tile failed — showing reflectivity instead.',
   radar_vel_site: 'No radar site resolved for this pin — velocity needs a US location.',
   radar_load: 'Radar tiles could not be loaded — try another source or refresh.',
-  radar_rainviewer: 'RainViewer rate limited — switched to IEM NEXRAD reflectivity.'
+  radar_rainviewer: 'RainViewer rate limited — switched to IEM NEXRAD reflectivity.',
+  metar_history: 'METAR observation history could not be loaded for this station.'
 };
 function panelUnavail(code, extra){
   const msg = PANEL_UNAVAIL_MSG[code] || 'Unavailable for this location.';
@@ -3906,9 +3907,9 @@ async function loadAir(loc){
       if(aqi == null){
         v.textContent = 'No data';
         v.className = 'verdict';
-        $('aqiDetail').textContent = source
-          ? (detail || source)
-          : 'Air quality unavailable from AirNow and Open-Meteo.';
+        $('aqiDetail').innerHTML = source
+          ? esc(detail || source)
+          : panelUnavail('air_api');
       }else{
         const cat = AQI_CATS.find(x => aqi <= x[0]) || AQI_CATS[AQI_CATS.length - 1];
         v.textContent = aqi + ' \u2014 ' + cat[1];
@@ -4106,10 +4107,13 @@ async function renderMetarTrace(stationId){
     }
     wrap.hidden = false;
   }catch(e){
-    wrap.hidden = true;
+    wrap.hidden = false;
     if(summary){ summary.hidden = true; summary.innerHTML = ''; }
+    box.className = 'trends metar-trends';
+    box.innerHTML = '';
     const foot = $('metarTraceFoot');
     if(foot){ foot.hidden = true; foot.textContent = ''; }
+    setPanelUnavail(box, 'metar_history');
   }
 }
 function metarHistorySummary(feats, temps, pressures){

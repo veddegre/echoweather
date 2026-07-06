@@ -781,6 +781,9 @@ function nearestWatchPolygon(){
 }
 function autoEnableStormThreatLayers(){
   if(!stormState.stormMode) return;
+  const alerts = stormState.alertFeatures || [];
+  const hasWarning = alerts.some(f => isNwsWarningEvent(f.properties?.event || ''));
+  const hasWatch = alerts.some(f => isNwsWatchEvent(f.properties?.event || ''));
   let changed = false;
   if(!threatLayerOpts.stormReports){
     threatLayerOpts.stormReports = true;
@@ -788,6 +791,14 @@ function autoEnableStormThreatLayers(){
   }
   if(!threatLayerOpts.spcCat && stormState.maxDn >= 2){
     threatLayerOpts.spcCat = true;
+    changed = true;
+  }
+  if(!threatLayerOpts.warnings && hasWarning){
+    threatLayerOpts.warnings = true;
+    changed = true;
+  }
+  if(!threatLayerOpts.watches && hasWatch && !hasWarning){
+    threatLayerOpts.watches = true;
     changed = true;
   }
   if(!changed) return;
@@ -799,6 +810,7 @@ function autoEnableStormThreatLayers(){
   if(isRadarTabVisible()){
     syncThreatOverlays();
     syncStormReportMarkers();
+    if(hasWarning || hasWatch) syncAlertPolygons(alerts.filter(f => f.geometry));
   }
 }
 async function fetchSwoProducts(limit){
