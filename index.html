@@ -96,7 +96,7 @@ a{color:var(--sky)}
 button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .wrap{max-width:1120px;margin:0 auto;padding:0 20px 64px;min-width:0}
-#content{min-width:0;overflow-x:clip}
+#content{min-width:0;overflow-x:clip;overflow-anchor:auto}
 .site-top{position:sticky;top:0;z-index:920;background:color-mix(in srgb,var(--bg) 96%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);transition:border-color .2s}
 header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:24px 0 20px;transition:padding .2s}
 body.scrolled header{padding:10px 0 8px}
@@ -2293,6 +2293,18 @@ function activityOverallGrade(def, eligible, d){
   if(nowAlert.notes.length){
     return activityGrade(nowH.score);
   }
+  const alertHours = eligible.filter(h => {
+    const imp = activityAlertImpact(def, h.time, tz);
+    return imp.notes.length && imp.cap < 70;
+  });
+  if(alertHours.length){
+    const peak = Math.max(...eligible.map(h => h.score));
+    const alertPeak = Math.max(...alertHours.map(h => h.score));
+    if(def.id === 'beach'){
+      return activityGrade(Math.min(peak, Math.max(alertPeak, 55)));
+    }
+    return activityGrade(Math.min(peak, alertPeak));
+  }
   return activityGrade(Math.max(...eligible.map(h => h.score)));
 }
 function activityGradeLabel(g){
@@ -2345,6 +2357,37 @@ function activityHourContext(d, i){
       : null
   };
 }
+function alertEndIso(p){
+  return p.ends || p.parameters?.eventEndingTime?.[0] || p.expires;
+}
+function alertStartIso(p){
+  return p.onset || p.effective || p.sent;
+}
+function alertInEffectStartIso(p){
+  return p.effective || p.sent || p.onset;
+}
+function formatAlertUntil(p){
+  const end = alertEndIso(p);
+  if(!end) return '';
+  return ' \u00B7 until ' + new Date(end).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+}
+function formatAlertWindow(p){
+  const end = alertEndIso(p);
+  if(!end) return '';
+  const now = Date.now();
+  const endMs = Date.parse(end);
+  const liveStart = alertInEffectStartIso(p);
+  const liveMs = liveStart ? Date.parse(liveStart) : NaN;
+  if(!isNaN(liveMs) && liveMs <= now && endMs > now){
+    return formatAlertUntil(p);
+  }
+  const hazardStart = alertStartIso(p);
+  if(hazardStart){
+    const fmt = { weekday: 'short', hour: 'numeric', minute: '2-digit' };
+    return ' \u00B7 ' + new Date(hazardStart).toLocaleString([], fmt) + '\u2013' + new Date(end).toLocaleString([], fmt);
+  }
+  return formatAlertUntil(p);
+}
 function wallPartsFromForecastIso(iso){
   if(!iso || iso.length < 13) return null;
   return {
@@ -2379,13 +2422,13 @@ function alertActiveAtHour(feature, hourIso, timezone){
   const p = feature.properties || {};
   const hour = wallPartsFromForecastIso(hourIso);
   if(!hour) return true;
-  const startIso = p.onset || p.effective;
+  const startIso = alertInEffectStartIso(p);
   if(startIso){
-    const onset = wallPartsInTz(startIso, timezone);
-    if(onset && wallPartsCmp(hour, onset) < 0) return false;
+    const start = wallPartsInTz(startIso, timezone);
+    if(start && wallPartsCmp(hour, start) < 0) return false;
   }
   // NWS `expires` is often the message expiry (can equal onset); `ends` is when the hazard ends.
-  const endIso = p.ends || p.parameters?.eventEndingTime?.[0] || p.expires;
+  const endIso = alertEndIso(p);
   if(endIso){
     const end = wallPartsInTz(endIso, timezone);
     if(end && wallPartsCmp(hour, end) >= 0) return false;
@@ -2409,7 +2452,7 @@ function activityAlertImpact(def, hourIso, timezone){
     const ev = f.properties?.event || '';
     const evL = ev.toLowerCase();
     if(actId === 'beach' && /beach hazards|beach hazard|lakeshore hazard|rip current|high surf|rough surf|swim advisory|surf zone|dangerous rip/i.test(evL)){
-      apply(45, ev);
+      apply(40, ev);
       return;
     }
     if((actId === 'beach' || actId === 'hiking') && /coastal flood|high surf|lakeshore flood/i.test(evL)){
@@ -2606,13 +2649,21 @@ const ACTIVITY_SCORERS = {
     let s = 100;
     const reasons = [];
     s -= penalizeRain(ctx, reasons, 40, 20);
-    if(ctx.temp >= 85){ s -= 35; reasons.push('Hot pavement risk for paws'); }
-    else if(ctx.temp >= 78){ s -= 15; reasons.push('Warm — short walks'); }
-    s -= penalizeAfternoonHeat(ctx, reasons, {
-      start: 11, end: 19, hot: 80, extreme: 86,
-      hotPenalty: 14, extremePenalty: 28,
-      hotNote: 'Warm midday — short walks', extremeNote: 'Hot pavement risk — walk early morning'
-    });
+    const hr = new Date(ctx.time).getHours();
+    const warmAfternoon = ctx.isDay && hr >= 12 && hr < 19;
+    if(ctx.temp >= 90 || (ctx.temp >= 88 && warmAfternoon)){
+      s -= 32;
+      reasons.push('Very hot — avoid hot pavement, walk early or on grass');
+    }else if(ctx.temp >= 85){
+      s -= warmAfternoon ? 18 : 10;
+      reasons.push(warmAfternoon ? 'Hot afternoon — short walks on grass' : 'Warm — shorter walks');
+    }else if(ctx.temp >= 78 && warmAfternoon){
+      s -= 10;
+      reasons.push('Warm afternoon — keep walks brief');
+    }else if(ctx.temp >= 78){
+      s -= 5;
+      reasons.push('Warm — short walks');
+    }
     if(ctx.temp <= 15){ s -= 25; reasons.push('Very cold for pets'); }
     s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, true);
@@ -2782,9 +2833,11 @@ function summarizeActivityWindows(windows, hours, def){
   };
   const good = windows.filter(w => w.grade === 'good').sort(windowSort);
   const fair = windows.filter(w => w.grade === 'fair').sort(windowSort);
+  const poor = windows.filter(w => w.grade === 'poor').sort(windowSort);
   const parts = [];
   if(good.length) parts.push('Best ' + good.slice(0, 2).map(fmtActWindow).join(', '));
   if(fair.length) parts.push('Fair ' + fair.slice(0, 2).map(fmtActWindow).join(', '));
+  if(poor.length) parts.push('Poor ' + poor.slice(0, 2).map(fmtActWindow).join(', '));
   if(!parts.length) return 'Poor conditions during recommended hours';
   return parts.join(' \u00B7 ');
 }
@@ -2811,7 +2864,7 @@ function buildActivityWhyList(def, hours, windows, d, extra){
   const alert = activityAlertCap(def, d.timezone, hours);
   const peakAlert = activityAlertImpact(def, peakHour.time, d.timezone);
   if(peakAlert.notes.length && peakAlert.cap < 70){
-    items.push('NWS alert during peak window: ' + peakAlert.notes[0] + '.');
+    items.push(peakAlert.notes[0] + ' in effect — lake swimming and piers unsafe.');
   }else if(alert.notes.length && !peakAlert.notes.length){
     items.push('NWS alert active earlier in the window: ' + alert.notes[0] + ' — clears before peak.');
   }
@@ -2868,6 +2921,7 @@ function buildActivityWhyList(def, hours, windows, d, extra){
     else if(temp < 68) items.push('Water may feel chilly');
     if(ctx.uv >= 7) items.push('Strong sun — shade and sunscreen');
     if(extra.coastal) items.push('Near the coast — check surf and rip-current alerts');
+    if(peakAlert.notes.length) items.push('Lake beach unsafe during advisory — pool OK inland');
   }else if(def.id === 'cycling'){
     if(wind < 12) items.push('Low wind resistance on the road');
     else if(wind >= 16) items.push('Headwinds may slow your ride noticeably');
@@ -3898,7 +3952,7 @@ function renderAlertsBox(feats){
     const p = f.properties;
     const ev = p.event || 'Alert';
     const cls = /warning/i.test(ev) ? '' : /watch/i.test(ev) ? ' watch' : ' adv';
-    const until = p.expires ? ' \u00B7 until ' + new Date(p.expires).toLocaleString([], {weekday:'short', hour:'numeric', minute:'2-digit'}) : '';
+    const until = formatAlertWindow(p);
     const desc = ((p.description || '') + (p.instruction ? '\n\nPRECAUTIONARY ACTIONS:\n' + p.instruction : ''))
       .replace(/&/g,'&amp;').replace(/</g,'&lt;');
     return '<details class="alert' + cls + '"><summary>'
@@ -4514,8 +4568,8 @@ function buildStormBannerText(){
   const watches = stormState.alertFeatures.filter(f => /watch/i.test(f.properties.event));
   if(warns.length){
     const p = warns[0].properties;
-    const until = p.expires
-      ? ' until ' + new Date(p.expires).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })
+    const until = alertEndIso(p)
+      ? ' until ' + new Date(alertEndIso(p)).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
       : '';
     parts.push('<strong>' + esc(p.event) + '</strong>' + esc(until));
   } else if(watches.length){
@@ -7459,8 +7513,8 @@ function initPageNav(){
   });
 
   let siteTopCompact = false;
-  const SCROLL_COMPACT_AT = 72;
-  const SCROLL_EXPAND_AT = 16;
+  const SCROLL_COMPACT_AT = 88;
+  const SCROLL_EXPAND_AT = 24;
   const syncSiteTop = () => {
     if(isMobileTabLayout()) return;
     const y = window.scrollY;
@@ -7468,9 +7522,16 @@ function initPageNav(){
     if(!siteTopCompact && y > SCROLL_COMPACT_AT) compact = true;
     else if(siteTopCompact && y < SCROLL_EXPAND_AT) compact = false;
     if(compact !== siteTopCompact){
+      const top = $('siteTop');
+      const beforeH = top ? top.offsetHeight : 0;
       siteTopCompact = compact;
       document.body.classList.toggle('scrolled', compact);
       scheduleSyncChromeHeight();
+      requestAnimationFrame(() => {
+        const afterH = top ? top.offsetHeight : 0;
+        const delta = afterH - beforeH;
+        if(delta) window.scrollBy(0, delta);
+      });
     }
   };
 
