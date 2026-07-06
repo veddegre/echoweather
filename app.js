@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '159';
+const APP_VERSION = '160';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -4728,6 +4728,7 @@ const LAKE_NEARSHORE = [
   { lake: 'Lake Michigan', lat: 45.10, lon: -87.60 }
 ];
 const GLAKE_MAX_NM = 50;
+const WATER_LAKE_INLAND_NM = 12;
 const NDBC_STATION_URL = 'https://www.ndbc.noaa.gov/station_page.php?station=';
 const NDBC_MAP_BASE = 'https://www.ndbc.noaa.gov/';
 function ndbcMapUrl(loc){
@@ -4760,6 +4761,15 @@ function lakeProximityNm(lat, lon){
     if(s.lake === lake) check(s.lat, s.lon);
   }
   return bestD;
+}
+function nearestLakeNearshore(lat, lon, lake){
+  let best = null, bestD = Infinity;
+  for(const s of LAKE_NEARSHORE){
+    if(s.lake !== lake) continue;
+    const d = distNm(lat, lon, s.lat, s.lon);
+    if(d < bestD){ bestD = d; best = s; }
+  }
+  return best;
 }
 function buoyCoords(id){
   return BUOY_PRESETS.find(b => b.id === (id || '').toUpperCase()) || null;
@@ -5018,7 +5028,7 @@ function buildWaterVerdictAttribution(loc, marine, coastal, isLake, isCoast){
     parts.push('Waves modeled at your pin');
   }
   if(loc?.name){
-    parts.push('Wind at ' + loc.name);
+    parts.push('Wind at ' + (marine?.windAt || coastal?.windAt || loc.name));
   }
   if(isCoast && coastal?.tideStation){
     parts.push('Tides: ' + coastal.tideStation);
@@ -5043,10 +5053,10 @@ function renderWaterVerdict(){
   }
   const d = state.data;
   const wi = d ? nowIndex(d) : 0;
-  const wind = d?.current?.wind_speed_10m ?? d?.hourly?.wind_speed_10m?.[wi] ?? 0;
-  const gust = d?.current?.wind_gusts_10m ?? d?.hourly?.wind_gusts_10m?.[wi] ?? 0;
   const marine = waterVerdictState.marine;
   const coastal = waterVerdictState.coastal;
+  const wind = marine?.wind ?? coastal?.wind ?? d?.current?.wind_speed_10m ?? d?.hourly?.wind_speed_10m?.[wi] ?? 0;
+  const gust = marine?.gust ?? coastal?.gust ?? d?.current?.wind_gusts_10m ?? d?.hourly?.wind_gusts_10m?.[wi] ?? 0;
   const waveM = marine?.waveHeight ?? coastal?.waveHeight ?? null;
   const waveFt = waveHeightFt(waveM);
   const nwsText = marine?.nwsText || coastal?.nwsText || '';
@@ -5130,6 +5140,19 @@ function extractGlfSection(text, code){
   const section = next >= 0 ? tail.slice(0, next + 1) : tail;
   return trimGlfProduct(section);
 }
+async function glfCandidatesFromItems(items, code){
+  const results = await Promise.all(items.map(async item => {
+    try{
+      const pr = await nwsFetch('https://api.weather.gov/products/' + item.id);
+      if(!pr.ok) return null;
+      const prod = await pr.json();
+      const section = extractGlfSection(prod.productText || '', code);
+      if(!section) return null;
+      return { office: item.issuingOffice, section };
+    }catch(e){ return null; }
+  }));
+  return results.filter(Boolean);
+}
 async function fetchGlfLakeProduct(lake, preferOffice, lat, lon){
   const code = LAKE_GLF_CODE[lake];
   if(!code) return null;
@@ -5138,6 +5161,17 @@ async function fetchGlfLakeProduct(lake, preferOffice, lat, lon){
   const items = ((await lr.json())['@graph'] || []).slice(0, 48);
   const prefer = normalizeNwsOffice(preferOffice);
   const offices = lakeGlfOfficesForLoc(lake, lat, lon);
+  if(prefer){
+    const preferItems = items.filter(item => item.issuingOffice === prefer);
+    const preferCandidates = await glfCandidatesFromItems(preferItems.slice(0, 4), code);
+    const preferHit = pickGlfCandidate(preferCandidates, prefer, offices);
+    if(preferHit){
+      return {
+        source: 'NWS Great Lakes \u2014 ' + lake + ' (' + prefer.replace(/^K/, '') + ' WFO)',
+        text: preferHit.section
+      };
+    }
+  }
   let pool = items;
   if(offices.length || prefer){
     const officeHits = items.filter(item =>
@@ -5153,17 +5187,7 @@ async function fetchGlfLakeProduct(lake, preferOffice, lat, lon){
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
   });
   const toFetch = pool.slice(0, 8);
-  const results = await Promise.all(toFetch.map(async item => {
-    try{
-      const pr = await nwsFetch('https://api.weather.gov/products/' + item.id);
-      if(!pr.ok) return null;
-      const prod = await pr.json();
-      const section = extractGlfSection(prod.productText || '', code);
-      if(!section) return null;
-      return { office: item.issuingOffice, section };
-    }catch(e){ return null; }
-  }));
-  const candidates = results.filter(Boolean);
+  const candidates = await glfCandidatesFromItems(toFetch, code);
   if(!candidates.length) return null;
   const hit = pickGlfCandidate(candidates, prefer, offices);
   const officeLabel = hit && hit.office
@@ -5210,6 +5234,43 @@ async function fetchMarineCurrent(lat, lon){
   if(!r.ok) throw new Error('marine HTTP ' + r.status);
   return (await r.json()).current || {};
 }
+async function fetchWindCurrent(lat, lon){
+  const windU = state.units === 'F' ? 'mph' : 'kmh';
+  const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon
+    + '&current=wind_speed_10m,wind_gusts_10m&wind_speed_unit=' + windU + '&timezone=auto';
+  try{
+    const r = await fetch(url);
+    if(!r.ok) return { wind: 0, gust: 0 };
+    const cur = (await r.json()).current || {};
+    return { wind: cur.wind_speed_10m ?? 0, gust: cur.wind_gusts_10m ?? 0 };
+  }catch(e){
+    return { wind: 0, gust: 0 };
+  }
+}
+function waterWindSample(loc, lake, waveLat, waveLon, waveAt){
+  let windLat = waveLat, windLon = waveLon, windAt = waveAt;
+  if(waveAt === 'your location'){
+    const prox = lake ? lakeProximityNm(loc.lat, loc.lon) : null;
+    if(prox != null && prox > WATER_LAKE_INLAND_NM){
+      const buoy = nearestBuoyForLoc(loc.lat, loc.lon);
+      if(buoy){
+        windLat = buoy.lat;
+        windLon = buoy.lon;
+        windAt = (buoyPresetName(buoy.id) || buoy.id) + ' buoy';
+      }else{
+        const shore = nearestLakeNearshore(loc.lat, loc.lon, lake);
+        if(shore){
+          windLat = shore.lat;
+          windLon = shore.lon;
+          windAt = lake + ' nearshore';
+        }
+      }
+    }else{
+      windAt = loc.name || 'your location';
+    }
+  }
+  return { windLat, windLon, windAt };
+}
 let marineLoadGen = 0;
 async function loadMarine(loc){
   const gen = ++marineLoadGen;
@@ -5237,15 +5298,21 @@ async function loadMarine(loc){
         + (buoyPresetName(buoyId) || buoyId) + ' is on ' + buoyMeta.lake + '.';
     }
     try{
-      let c = await fetchMarineCurrent(loc.lat, loc.lon);
+      let waveLat = loc.lat, waveLon = loc.lon;
+      let c = await fetchMarineCurrent(waveLat, waveLon);
       let waveAt = 'your location';
       if((c.wave_height === null || c.wave_height === undefined) && buoyMeta){
-        c = await fetchMarineCurrent(buoyMeta.lat, buoyMeta.lon);
+        waveLat = buoyMeta.lat;
+        waveLon = buoyMeta.lon;
+        c = await fetchMarineCurrent(waveLat, waveLon);
         waveAt = (buoyPresetName(buoyId) || buoyId) + ' buoy';
       }
       const nwsMarine = await nwsP;
       if(gen !== marineLoadGen) return;
       if(nwsMarine) nwsBox.textContent = nwsMarine.source.toUpperCase() + '\n' + nwsMarine.text;
+      const windPt = waterWindSample(loc, lake, waveLat, waveLon, waveAt);
+      const windObs = await fetchWindCurrent(windPt.windLat, windPt.windLon);
+      if(gen !== marineLoadGen) return;
       let airDeltaC = null;
       if(state.data && c.sea_surface_temperature != null){
         airDeltaC = (state.units === 'F'
@@ -5258,7 +5325,10 @@ async function loadMarine(loc){
         nwsText: nwsMarine?.text || '',
         nwsSource: nwsMarine?.source || '',
         lake,
-        waveAt
+        waveAt,
+        wind: windObs.wind,
+        gust: windObs.gust,
+        windAt: windPt.windAt
       });
       if(c.wave_height === null || c.wave_height === undefined){
         const extra = note.textContent ? note.textContent + ' ' : '';
@@ -5919,6 +5989,12 @@ async function loadCoastal(loc){
       const nwsBox = $('coastalNws');
       const nwsMarine = await nwsMarineP;
       if(gen !== coastalLoadGen) return;
+      let windObs = { wind: 0, gust: 0 };
+      let windAt = loc.name || 'your location';
+      if(st.lat != null && st.lng != null){
+        windObs = await fetchWindCurrent(st.lat, st.lng);
+        windAt = st.name + ' (tide station)';
+      }
       if(nwsMarine && nwsBox){
         nwsBox.hidden = false;
         nwsBox.innerHTML = '<strong>' + esc(nwsMarine.source) + '</strong>\n' + esc(nwsMarine.text);
@@ -5936,7 +6012,10 @@ async function loadCoastal(loc){
           ? (upcoming[0].type === 'H' ? 'Next high' : 'Next low') + ' ' + new Date(upcoming[0].t).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })
           : '',
         tideStation: st.name + ' (' + st.id + ')',
-        waveAt: c?.wave_height != null ? 'your location' : (st.lat != null ? 'nearest tide station' : '')
+        waveAt: c?.wave_height != null ? 'your location' : (st.lat != null ? 'nearest tide station' : ''),
+        wind: windObs.wind,
+        gust: windObs.gust,
+        windAt
       });
     }catch(e){
       setPanelUnavail($('coastalNote'), 'no_tides');
