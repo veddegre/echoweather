@@ -2479,8 +2479,8 @@ async function renderLocCompare(){
   if(!panel || !box) return;
   if(state.locations.length < 2){ panel.hidden = true; return; }
   panel.hidden = false;
-  box.className = 'radar-note';
-  box.textContent = 'Loading saved locations\u2026';
+  box.className = 'loc-compare';
+  box.innerHTML = '<div class="radar-note" style="grid-column:1/-1">Loading saved locations\u2026</div>';
   try{
     const spcGeo = await getSpcDay1Geo();
     const cards = await Promise.all(state.locations.map(async (loc, i) => {
@@ -2517,6 +2517,7 @@ async function renderLocCompare(){
       return { loc, i, temp: null, wind: null, icon: '', active: i === state.active, badges: locCompareBadges(loc, alerts, spcGeo) };
     }
   }));
+    box.className = 'loc-compare';
     box.innerHTML = cards.map(c =>
       '<div class="lc-card"' + (c.active ? ' style="border-color:var(--accent)"' : '') + '>'
       + '<div class="lc-name">' + esc(c.loc.name) + (c.active ? ' \u00B7 active' : '') + '</div>'
