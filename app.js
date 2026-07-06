@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '139';
+const APP_VERSION = '140';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -4952,45 +4952,6 @@ function setCachedMode(on){
   document.body.classList.toggle('data-cached', cached);
   document.querySelectorAll('.panel-status').forEach(el => el.classList.toggle('is-cached', cached));
 }
-function updateRadarStormMark(){
-  const mark = $('radarStormMark'), scrub = $('radarScrub');
-  if(!mark || !scrub || !stormState.severeWindow || !state.data){
-    if(mark) mark.hidden = true;
-    return;
-  }
-  const d = state.data;
-  const winStart = stormState.severeWindow.start;
-  const winEnd = stormState.severeWindow.end;
-  const n = radarFrameCount();
-  if(!n){ mark.hidden = true; return; }
-  let i0 = -1, i1 = -1;
-  if(radarMode === 'rainviewer' && radarFrames.length){
-    const t0 = new Date(winStart).getTime() / 1000;
-    const t1 = new Date(winEnd).getTime() / 1000;
-    radarFrames.forEach((f, i) => {
-      if(f.time >= t0 - 1800 && i0 < 0) i0 = i;
-      if(f.time <= t1 + 1800) i1 = i;
-    });
-  }else if(iemFrames.length){
-    const now = Date.now();
-    const ws = new Date(winStart).getTime();
-    const we = new Date(winEnd).getTime();
-    iemFrames.forEach((suffix, i) => {
-      const mins = IEM_MINS[i] || 0;
-      const ft = now - mins * 60000;
-      if(ft >= ws - 900000 && i0 < 0) i0 = i;
-      if(ft <= we + 900000) i1 = i;
-    });
-  }
-  if(i0 < 0 || i1 < i0){ mark.hidden = true; return; }
-  const max = Math.max(1, n - 1);
-  const left = (i0 / max) * 100;
-  const width = ((i1 - i0) / max) * 100;
-  mark.style.left = left + '%';
-  mark.style.width = Math.max(4, width) + '%';
-  mark.hidden = false;
-  mark.title = 'Severe window ' + stormState.severeWindow.label;
-}
 function isGreatLakesLoc(loc){
   if(!loc || !isLikelyUS(loc)) return false;
   const d = lakeProximityNm(loc.lat, loc.lon);
@@ -5451,47 +5412,3 @@ function initPageNav(){
   syncLayout();
 }
 
-const radarCenterBtn = $('radarCenterBtn');
-if(radarCenterBtn) radarCenterBtn.addEventListener('click', centerRadarMap);
-const radarExpandBtn = $('radarExpandBtn');
-if(radarExpandBtn) radarExpandBtn.addEventListener('click', toggleRadarExpand);
-
-// ---------- boot ----------
-const urlLoc = parseUrlLoc();
-if(urlLoc){
-  urlLocPinned = true;
-  const idx = state.locations.findIndex(l =>
-    Math.abs(l.lat - urlLoc.lat) < 0.02 && Math.abs(l.lon - urlLoc.lon) < 0.02);
-  if(idx >= 0) state.active = idx;
-  else { state.locations.push(urlLoc); state.active = state.locations.length - 1; persist(); }
-}
-initBuoySelect();
-migrateBuoyPins();
-syncBuoyForLocation(state.locations[state.active], false);
-syncMarinePanelVisibility(state.locations[state.active]);
-getTideStations().then(() => syncCoastalPanelVisibility(state.locations[state.active]));
-try{ localStorage.removeItem('st_airnow_key'); }catch(e){}
-$('unitF').classList.toggle('on', state.units === 'F');
-$('unitC').classList.toggle('on', state.units === 'C');
-applyTheme(state.theme);
-initPageNav();
-setupInstallHint();
-migrateAppVersion().then(() => initServiceWorker());
-probeServerIntegrations().then(async () => {
-  await initFirstLocation();
-  renderChips();
-  syncUrl();
-  loadAll();
-  setTimeout(() => syncLocationOnOpen({ silent: true }), 1200);
-});
-window.addEventListener('pageshow', e => {
-  if(e.persisted) syncLocationOnOpen({ silent: true });
-});
-document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'hidden'){
-    lastHiddenAt = Date.now();
-    return;
-  }
-  if(lastHiddenAt && Date.now() - lastHiddenAt > 120000)
-    syncLocationOnOpen({ silent: true });
-});

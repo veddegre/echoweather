@@ -619,3 +619,45 @@ if(radarVelBtn){
 }
 loadThreatLayerPrefs();
 
+function updateRadarStormMark(){
+  const mark = $('radarStormMark'), scrub = $('radarScrub');
+  if(!mark || !scrub || !stormState.severeWindow || !state.data){
+    if(mark) mark.hidden = true;
+    return;
+  }
+  const winStart = stormState.severeWindow.start;
+  const winEnd = stormState.severeWindow.end;
+  const n = radarFrameCount();
+  if(!n){ mark.hidden = true; return; }
+  let i0 = -1, i1 = -1;
+  if(radarMode === 'rainviewer' && radarFrames.length){
+    const t0 = new Date(winStart).getTime() / 1000;
+    const t1 = new Date(winEnd).getTime() / 1000;
+    radarFrames.forEach((f, i) => {
+      if(f.time >= t0 - 1800 && i0 < 0) i0 = i;
+      if(f.time <= t1 + 1800) i1 = i;
+    });
+  }else if(iemFrames.length){
+    const now = Date.now();
+    const ws = new Date(winStart).getTime();
+    const we = new Date(winEnd).getTime();
+    iemFrames.forEach((suffix, i) => {
+      const mins = IEM_MINS[i] || 0;
+      const ft = now - mins * 60000;
+      if(ft >= ws - 900000 && i0 < 0) i0 = i;
+      if(ft <= we + 900000) i1 = i;
+    });
+  }
+  if(i0 < 0 || i1 < i0){ mark.hidden = true; return; }
+  const max = Math.max(1, n - 1);
+  mark.style.left = (i0 / max) * 100 + '%';
+  mark.style.width = Math.max(4, ((i1 - i0) / max) * 100) + '%';
+  mark.hidden = false;
+  mark.title = 'Severe window ' + stormState.severeWindow.label;
+}
+
+const radarCenterBtn = $('radarCenterBtn');
+if(radarCenterBtn) radarCenterBtn.addEventListener('click', centerRadarMap);
+const radarExpandBtn = $('radarExpandBtn');
+if(radarExpandBtn) radarExpandBtn.addEventListener('click', toggleRadarExpand);
+
