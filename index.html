@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=167">
+<link rel="stylesheet" href="app.css?v=168">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -275,7 +275,13 @@
     </div>
 
     <div class="outdoor-layout" id="outdoorGrid" style="margin-top:16px">
-      <div class="outdoor-group outdoor-group-plan">
+      <nav class="outdoor-section-nav" id="outdoorSectionNav" aria-label="Impacts sections" hidden>
+        <button type="button" class="on" data-outdoor-section="plan">Plan</button>
+        <button type="button" data-outdoor-section="air">Air</button>
+        <button type="button" data-outdoor-section="water" hidden>Water</button>
+        <button type="button" data-outdoor-section="sky" hidden>Sky</button>
+      </nav>
+      <div class="outdoor-group outdoor-group-plan" id="outdoorGroupPlan">
         <section class="panel nav-target" id="activityPanel" data-tab="outdoor" aria-label="Outdoor activity forecast">
           <h2>Activity planner</h2>
           <p class="activity-lede" id="activityLede">Best times in the next 24 hours — rain, wind, heat, UV, air quality, and active NWS advisories. Gray = after dark or outside usual hours; bar labels show clock times.</p>
@@ -292,7 +298,7 @@
         </section>
       </div>
 
-      <div class="outdoor-group outdoor-group-impacts">
+      <div class="outdoor-group outdoor-group-impacts" id="outdoorGroupAir">
         <p class="outdoor-group-lbl">Air &amp; exposure</p>
         <div class="outdoor-impacts-grid">
           <section class="panel nav-target" id="airPanel" data-tab="outdoor" aria-label="Air quality and pollen">
@@ -498,9 +504,9 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=167"></script>
-<script src="storm.js?v=167"></script>
-<script src="radar.js?v=167"></script>
-<script src="boot.js?v=167"></script>
+<script src="app.js?v=168"></script>
+<script src="storm.js?v=168"></script>
+<script src="radar.js?v=168"></script>
+<script src="boot.js?v=168"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '167';
+const APP_VERSION = '168';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2863,6 +2863,94 @@ function syncOutdoorSkyGroup(){
   const panel = $('auroraPanel');
   if(grp && panel) grp.hidden = panel.hidden;
 }
+const OUTDOOR_SECTION_MAP = {
+  plan: 'outdoorGroupPlan',
+  air: 'outdoorGroupAir',
+  water: 'outdoorWaterGroup',
+  sky: 'outdoorSkyGroup'
+};
+let outdoorSectionObs = null;
+function outdoorGroupVisible(id){
+  const el = $(id);
+  return !!(el && getComputedStyle(el).display !== 'none' && !el.hidden);
+}
+function setOutdoorSectionActive(key){
+  const nav = $('outdoorSectionNav');
+  if(!nav) return;
+  nav.querySelectorAll('[data-outdoor-section]').forEach(btn => {
+    btn.classList.toggle('on', btn.getAttribute('data-outdoor-section') === key);
+  });
+}
+function scrollToOutdoorSection(key){
+  const id = OUTDOOR_SECTION_MAP[key];
+  const el = id && $(id);
+  if(!el || !outdoorGroupVisible(id)) return;
+  setOutdoorSectionActive(key);
+  const chrome = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--chrome-h')) || 128;
+  const nav = $('outdoorSectionNav');
+  const navH = nav && !nav.hidden ? nav.offsetHeight : 0;
+  const top = el.getBoundingClientRect().top + window.scrollY - chrome - navH - 6;
+  window.scrollTo({ top: Math.max(0, top), behavior: isMobileTabLayout() ? 'auto' : 'smooth' });
+}
+function bindOutdoorSectionNav(){
+  const nav = $('outdoorSectionNav');
+  if(!nav || nav.dataset.bound) return;
+  nav.dataset.bound = '1';
+  nav.querySelectorAll('[data-outdoor-section]').forEach(btn => {
+    btn.addEventListener('click', () => scrollToOutdoorSection(btn.getAttribute('data-outdoor-section')));
+  });
+}
+function restartOutdoorSectionObserver(){
+  if(outdoorSectionObs){
+    outdoorSectionObs.disconnect();
+    outdoorSectionObs = null;
+  }
+  if(!isMobileTabLayout() || getAppTab() !== 'outdoor' || typeof IntersectionObserver === 'undefined') return;
+  const nav = $('outdoorSectionNav');
+  if(!nav || nav.hidden) return;
+  const chrome = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--chrome-h')) || 128;
+  const navH = nav.offsetHeight || 44;
+  outdoorSectionObs = new IntersectionObserver(entries => {
+    const vis = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+    if(!vis.length) return;
+    const key = Object.entries(OUTDOOR_SECTION_MAP).find(([, id]) => id === vis[0].target.id)?.[0];
+    if(key) setOutdoorSectionActive(key);
+  }, { root: null, rootMargin: '-' + (chrome + navH + 8) + 'px 0px -58% 0px', threshold: [0, 0.08, 0.2, 0.35] });
+  Object.values(OUTDOOR_SECTION_MAP).forEach(id => {
+    const el = $(id);
+    if(el && outdoorGroupVisible(id)) outdoorSectionObs.observe(el);
+  });
+}
+function syncOutdoorSectionNav(){
+  const nav = $('outdoorSectionNav');
+  if(!nav) return;
+  const show = isMobileTabLayout() && getAppTab() === 'outdoor';
+  nav.hidden = !show;
+  if(!show){
+    if(outdoorSectionObs){
+      outdoorSectionObs.disconnect();
+      outdoorSectionObs = null;
+    }
+    return;
+  }
+  Object.entries(OUTDOOR_SECTION_MAP).forEach(([key, id]) => {
+    const btn = nav.querySelector('[data-outdoor-section="' + key + '"]');
+    if(btn) btn.hidden = !outdoorGroupVisible(id);
+  });
+  const firstVisible = Object.keys(OUTDOOR_SECTION_MAP).find(key => {
+    const btn = nav.querySelector('[data-outdoor-section="' + key + '"]');
+    return btn && !btn.hidden;
+  });
+  if(firstVisible){
+    const on = nav.querySelector('[data-outdoor-section].on:not([hidden])');
+    if(!on) setOutdoorSectionActive(firstVisible);
+  }
+  requestAnimationFrame(() => restartOutdoorSectionObserver());
+}
+function syncOutdoorTabChrome(){
+  syncOutdoorSkyGroup();
+  syncOutdoorSectionNav();
+}
 async function renderAuroraHint(loc, d){
   const box = $('auroraOutdoor');
   const ovationBox = $('auroraOvation');
@@ -2871,7 +2959,7 @@ async function renderAuroraHint(loc, d){
     if(box){ box.hidden = true; box.innerHTML = ''; }
     if(ovationBox){ ovationBox.hidden = true; ovationBox.innerHTML = ''; }
     if(panel) panel.hidden = true;
-    syncOutdoorSkyGroup();
+    syncOutdoorTabChrome();
   };
   if(!box || !panel || !loc || !d){ hide(); return; }
   if(loc.lat < 40){ hide(); return; }
@@ -2914,7 +3002,7 @@ async function renderAuroraHint(loc, d){
       ovationBox.hidden = false;
       ovationBox.innerHTML = renderOvationStrip(loc, kp, ovationScore, ovationCoords);
     }
-    syncOutdoorSkyGroup();
+    syncOutdoorTabChrome();
   }catch(e){
     if(panel) panel.hidden = false;
     if(ovationBox){ ovationBox.hidden = true; ovationBox.innerHTML = ''; }
@@ -2922,7 +3010,7 @@ async function renderAuroraHint(loc, d){
       box.hidden = false;
       setPanelUnavail(box, 'aurora_api');
     }
-    syncOutdoorSkyGroup();
+    syncOutdoorTabChrome();
   }
 }
 function renderOvationStrip(loc, kp, ovationScore, coords){
@@ -5083,6 +5171,7 @@ function renderWaterVerdict(){
   const isCoast = loc && isCoastalLoc(loc);
   if(!isLake && !isCoast){
     panel.hidden = true;
+    syncOutdoorTabChrome();
     return;
   }
   const d = state.data;
@@ -5128,6 +5217,7 @@ function renderWaterVerdict(){
     srcEl.hidden = !attr;
   }
   panel.hidden = false;
+  syncOutdoorTabChrome();
 }
 function renderNearshoreSummary(lake, c, nwsMarine, buoyId, airDeltaC){
   const box = $('nearshoreSummary'), head = $('nearshoreHeadline'), stats = $('nearshoreStats');
@@ -5529,7 +5619,7 @@ let streamLoadGen = 0;
 async function loadStreamGauges(loc){
   const panel = $('streamPanel'), list = $('streamList');
   if(!panel || !list) return;
-  if(!isLikelyUS(loc)){ panel.hidden = true; return; }
+  if(!isLikelyUS(loc)){ panel.hidden = true; syncOutdoorTabChrome(); return; }
   const gen = ++streamLoadGen;
   panel.hidden = false;
   list.className = 'radar-note is-loading';
@@ -5588,6 +5678,7 @@ async function loadStreamGauges(loc){
     list.className = 'radar-note';
     setPanelUnavail(list, 'api_error');
   }
+  if(gen === streamLoadGen) syncOutdoorTabChrome();
 }
 
 // ---------- saved location comparison ----------
@@ -5962,6 +6053,7 @@ function syncCoastalPanelVisibility(loc){
   panel.style.display = show ? '' : 'none';
   if(!show) waterVerdictState.coastal = null;
   renderWaterVerdict();
+  syncOutdoorTabChrome();
 }
 let coastalLoadGen = 0;
 async function loadCoastal(loc){
@@ -6153,6 +6245,7 @@ function syncMarinePanelVisibility(loc){
   panel.style.display = show ? '' : 'none';
   if(!show) waterVerdictState.marine = null;
   renderWaterVerdict();
+  syncOutdoorTabChrome();
 }
 function renderWeatherUi(d){
   renderCurrent(d);
@@ -6586,6 +6679,11 @@ function setAppTab(tab, opts){
   }
   ensureTabPanels(tab);
   syncChromeHeight();
+  if(tab === 'outdoor') syncOutdoorTabChrome();
+  else if(outdoorSectionObs){
+    outdoorSectionObs.disconnect();
+    outdoorSectionObs = null;
+  }
 }
 
 function tabFromHash(){
@@ -6619,6 +6717,8 @@ function initPageNav(){
       navigateToNavTarget(href.slice(1));
     }
   }, true);
+
+  bindOutdoorSectionNav();
 
   $('smokeRadarBtn')?.addEventListener('click', () => {
     enableHmsSmokeLayer();
@@ -6672,6 +6772,7 @@ function initPageNav(){
   window.addEventListener('resize', () => {
     syncChromeHeight();
     syncLayout();
+    syncOutdoorTabChrome();
     positionSearchResults();
     if(isRadarTabVisible() && map) refreshRadarMapSize();
   });
