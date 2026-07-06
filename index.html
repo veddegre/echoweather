@@ -962,7 +962,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '125';
+const APP_VERSION = '126';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2179,12 +2179,12 @@ function activityLocalMonth(d){
 }
 function getActivitySeason(loc, d){
   const month = activityLocalMonth(d);
-  const nh = !loc || loc.lat >= 0;
-  const warmHighF = 62, coldHighF = 45, coldLowF = 28;
-  const warmHighC = 17, coldHighC = 7, coldLowC = -2;
-  const warmHigh = state.units === 'F' ? warmHighF : warmHighC;
-  const coldHigh = state.units === 'F' ? coldHighF : coldHighC;
-  const coldLow = state.units === 'F' ? coldLowF : coldLowC;
+  const lat = loc?.lat ?? 42;
+  const nh = lat >= 0;
+  const warmHigh = state.units === 'F' ? 62 : 17;
+  const coldHigh = state.units === 'F' ? 45 : 7;
+  const coldLow = state.units === 'F' ? 28 : -2;
+  const mildHigh = state.units === 'F' ? 55 : 13;
   let avgHigh = null, avgLow = null;
   if(d?.daily?.temperature_2m_max?.length){
     const highs = d.daily.temperature_2m_max.slice(0, 5);
@@ -2195,23 +2195,30 @@ function getActivitySeason(loc, d){
   const i0 = d?.hourly?.time?.length ? nowIndex(d) : 0;
   const snowDepth = d?.hourly?.snow_depth?.[i0] ?? d?.om?.hourly?.snow_depth?.[i0] ?? 0;
   const snowfallToday = d?.daily?.snowfall_sum?.[0] ?? 0;
-  let warm = avgHigh != null ? avgHigh >= warmHigh : false;
-  let cold = avgHigh != null ? (avgHigh < coldHigh || avgLow < coldLow) : false;
-  if(snowDepth > 0.02 || snowfallToday > (state.units === 'F' ? 0.1 : 0.3)) cold = true;
-  if(nh){
-    if([5, 6, 7, 8].includes(month)) warm = true;
-    if([11, 0, 1, 2].includes(month) && (avgHigh == null || avgHigh < (state.units === 'F' ? 50 : 10))) cold = true;
-    if([3, 4, 9, 10].includes(month) && avgHigh != null && avgHigh >= (state.units === 'F' ? 55 : 13)) warm = true;
+  const hasSnow = snowDepth > 0.02 || snowfallToday > (state.units === 'F' ? 0.1 : 0.3);
+  let warm = false, cold = false;
+
+  if(avgHigh != null){
+    warm = avgHigh >= warmHigh || (avgHigh >= mildHigh && avgLow >= (state.units === 'F' ? 38 : 3));
+    cold = avgHigh < coldHigh || avgLow < coldLow;
+    if(hasSnow) cold = true;
+    // Trust the local forecast: mild/warm locations stay warm-season even in winter months.
+    if(avgHigh >= mildHigh && avgLow >= (state.units === 'F' ? 40 : 4)) cold = false;
+    if(avgHigh >= warmHigh) warm = true;
   }else{
-    if([11, 0, 1, 2].includes(month)) warm = true;
-    if([5, 6, 7, 8].includes(month) && (avgHigh == null || avgHigh < warmHigh)) cold = true;
+    const winterMonth = nh ? [11, 0, 1, 2].includes(month) : [5, 6, 7, 8].includes(month);
+    const summerMonth = nh ? [5, 6, 7, 8].includes(month) : [11, 0, 1, 2].includes(month);
+    if(Math.abs(lat) < 32 && winterMonth) warm = true;
+    else if(Math.abs(lat) > 40 && winterMonth) cold = true;
+    else if(summerMonth) warm = true;
+    else if(winterMonth) cold = true;
   }
-  if(warm && cold) cold = avgHigh != null && avgHigh < coldHigh;
+
   const shoulder = !warm && !cold;
-  let note = 'Year-round activities always shown. ';
-  if(cold && !warm) note += 'Winter mode — skiing and shoveling replace golf, yard work, and beach/pool.';
-  else if(warm && !cold) note += 'Warm season — winter-only activities hidden.';
-  else note += 'Shoulder season — summer sports hidden if it stays cold.';
+  let note = 'Based on the forecast at this location. ';
+  if(cold && !warm) note += 'Winter conditions here — skiing and shoveling replace golf, yard work, and beach/pool.';
+  else if(warm && !cold) note += 'Warm conditions here — winter-only activities hidden.';
+  else note += 'Mild shoulder season at this location.';
   return { warm, cold, shoulder, note };
 }
 function activitiesForSeason(season){

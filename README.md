@@ -8,7 +8,7 @@ secrets and CORS relief. No API keys required for core features.
 ```
   browser ──────────────▶  Apache (or php -S locally)
                               ├─ index.html, sw.js, …        (static PWA)
-                              └─ /api/status|airnow|pollen|buoy (PHP proxies)
+                              └─ /api/status|airnow|pollen|buoy|taf (PHP proxies)
 ```
 
 `index.html` is the entire weather app — forecasts, radar, storm tracking, outdoor
@@ -19,6 +19,7 @@ conditions, marine, alerts, and more, mostly fetched client-side from public API
 - Proxies **AirNow** (keeps your API key off the browser)
 - Proxies **NDBC buoys** (NDBC has no browser CORS)
 - Proxies **Google Pollen** (3-day tree/grass/weed forecast in the app; server-side cache)
+- Proxies **Aviation TAF** (AviationWeather.gov blocks browser CORS)
 - Exposes `/api/status` so the app knows what's configured
 
 ## Files
@@ -29,7 +30,7 @@ conditions, marine, alerts, and more, mostly fetched client-side from public API
 | `manifest.json` | PWA install manifest |
 | `sw.js` | Service worker |
 | `logo.svg`, `icon.svg`, `og-image.png` | Branding |
-| `api/` | Integration endpoints (`status`, `airnow`, `pollen`, `buoy`) |
+| `api/` | Integration endpoints (`status`, `airnow`, `pollen`, `buoy`, `taf`) |
 | `lib/` | Shared PHP helpers (not web-accessible in production) |
 | `router.php` | URL router for `php -S` local dev only |
 | `update.sh` | **Primary update path** — `git pull` on the server |
@@ -39,7 +40,7 @@ conditions, marine, alerts, and more, mostly fetched client-side from public API
 | `scripts/check-versions.sh` | Verify `APP_VERSION` and `sw.js` `CACHE` stay in sync |
 | `scripts/render-icons.sh` | Regenerate PWA PNG icons from `icon.svg` |
 | `scripts/render-og-image.sh` | Regenerate `og-image.png` for social previews |
-| `scripts/smoke.sh` | Post-deploy health checks |
+| `scripts/smoke.sh` | Post-deploy health checks (`/`, `/api/status`, `/api/taf`) |
 | `config.example.php` | Config template — merge new keys into `config.local.php` on the server |
 | `config.local.php` | Server secrets (gitignored — lives only on the server) |
 | `cache/` | Server-side pollen cache and rate-limit counters (gitignored, auto-created) |
@@ -222,7 +223,7 @@ into `config.local.php` by hand.
 When you change `index.html` or `sw.js`, bump **both**:
 
 - `APP_VERSION` in `index.html`
-- `CACHE` name in `sw.js` (e.g. `echo-weather-v102` → `echo-weather-v103`)
+- `CACHE` name in `sw.js` (e.g. `echo-weather-v126` → `echo-weather-v127`)
 
 Verify before deploy:
 
@@ -348,7 +349,7 @@ per-IP rate limits and `pollen_daily_limit`; tune both for public traffic.
 
 | Route | Auth | Purpose |
 |---|---|---|
-| `GET /api/status` | none | Reports which integrations are configured (`airnow`, `pollen`, `buoy`) |
+| `GET /api/status` | none | Reports which integrations are configured (`airnow`, `pollen`, `buoy`, `taf`) |
 | `GET /api/airnow?latitude=&longitude=&distance=` | none | AirNow lat/long proxy (distance 1–100 mi, default 50) |
 | `GET /api/pollen?latitude=&longitude=&days=` | none | Google Pollen forecast (days 1–5, default 3; server-cached) |
 | `GET /api/buoy/{id}` | none | NDBC buoy text proxy |
@@ -422,6 +423,16 @@ be reached with no stale cache for that grid cell. Check Apache error log and
 **Buoy panel unavailable.** Confirm
 `curl -H "Host: example.com" http://127.0.0.1/api/buoy/45029` returns JSON.
 
+**TAF shows “unavailable” in the browser.** The app fetches TAF via `/api/taf` (not AviationWeather.gov directly). Confirm `api/.htaccess` includes the `taf` rewrite rule and smoke passes:
+`curl -H "Host: example.com" "http://127.0.0.1/api/taf?ids=KGRR"`.
+Stations without a TAF return an empty array (`[]`), not 502. The client tries up to three nearby airports per request.
+
+**502 on `/api/taf`.** Usually an upstream AviationWeather.gov issue or an outdated fire/TAF GeoJSON URL — check Apache error log. Empty TAF (HTTP 204 upstream) should return `200` with `[]`.
+
+**Fire weather layer 404 in console.** SPC fire outlook GeoJSON must use `day1fw_windrh.lyr.geojson` (older `fwdy1otlk_*` URLs are dead). Pull latest `index.html` if you still see 404s.
+
+**Activity planner shows wrong season.** Season follows the **local forecast** for the active location (5-day highs/lows, snow depth), not a national calendar — Florida in January can still show golf; Michigan shows ski/shovel when cold or snowy.
+
 **500 / 502 with generic message.** Check Apache error log for details:
 `sudo tail -f /var/log/apache2/error.log`
 
@@ -436,9 +447,9 @@ Echo Weather is a single-page PWA (`index.html`). On phones and narrow screens (
 | Tab | Panels |
 |---|---|
 | **Now** | Current conditions, storm setup (when relevant), Sun & Light, next 24 hours |
-| **Forecast** | 5-day visual forecast, detailed NWS text, obs vs forecast |
+| **Forecast** | 5-day visual forecast, detailed NWS text, observations vs forecast |
 | **Radar** | Animated radar (RainViewer / MRMS / IEM), threat layers, storm & fire banners, convective outlook |
-| **Outdoor** | Air quality & pollen, UV & exposure, coastal tides, Great Lakes (basin only) |
+| **Outdoor** | Air quality & pollen, UV & exposure, **activity planner**, coastal tides, Great Lakes (basin only) |
 | **More** | Moon, advanced atmosphere (HRRR), aviation TAF, NWS forecast discussion |
 
 The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works. Radar deep links use `#radar?mode=iem-n0q&frame=8`.
@@ -449,14 +460,14 @@ The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works. Rada
 - **Storm setup** *(conditional)* — CAPE, freezing level, wind shear, moisture, and Day 1 SPC probabilistic risks when convective weather is possible.
 - **Sun & Light** — Sun arc, golden/blue hour bar, sky compass, twilight/darkness estimate, sunset outlook.
 - **Aurora hint** *(northern latitudes)* — When planetary Kp is elevated and tonight’s skies are relatively clear.
-- **Next 24 Hours** — Hourly strip anchored at *now* (NWS periods overlaid on Open-Meteo timing); correct day/night icons; source labels on hover.
+- **Next 24 Hours** — Hourly strip anchored at *now* (NWS periods overlaid on Open-Meteo timing); correct day/night icons; source labels on hover. Mini sparklines (pressure, temp, dew point, CAPE) show **low–high range** and **Now → Later** axis labels.
 
 ### Forecast
 
 - **5-Day Forecast** — Visual day cards with condition strip, temperature sparkline, and hourly ticks; thunderstorm hours highlighted in red; “now” marker on Today.
 - **Winter weather outlook** *(conditional)* — Snowfall, ice/freezing-rain signals, wind chill, and lake-effect wording when relevant.
 - **Detailed Forecast** — NWS zone periods (US): days 1–3 inline, days 4–7 expandable.
-- **Obs vs NWS Forecast** — METAR vs NWS hourly for temp, wind, and pressure; 24h station trace when available.
+- **Observations vs NWS Forecast** — Latest station reading compared to the NWS hourly forecast for temp, dew point, wind, and pressure; plain-language bias badges. **Station history** sparklines (temp, wind) with range and Older → Latest labels.
 
 ### Radar & storm tracking
 
@@ -474,6 +485,7 @@ The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works. Rada
 
 - **Air Quality & Pollen** — AirNow (via PHP proxy) or Open-Meteo modeled AQI; pollutant breakdown; smoke/haze row when PM2.5 is high; **year-round** 3-day pollen forecast.
 - **UV & Exposure** — Current UV, humidity, dew point, visibility, wet bulb; **outdoor rest-of-today** hourly strip (UV, RH, comfort).
+- **Activity planner** — Best times in the next 24 hours for golf, hiking, yard work, running, beach/pool, cycling, dog walks, stargazing, and (when the **local forecast** is cold or snowy) skiing/sledding and snow shoveling. Per-hour scores use rain, wind, heat, UV, AQI, wind chill, ice, and snow; **daytime-only** activities skip after-dark hours (gray bar on timeline). Warm-season activities (golf, yard, beach) hide when winter conditions apply at **this location**; winter activities hide when it is warm (e.g. golf in Florida in January). Expandable **Why** explains top window and conditions.
 - **Coastal tides** *(coastal US)* — NOAA CO-OPS tide predictions for the nearest station.
 - **Great Lakes** *(basin only)* — NWS GLF or marine zone text, wave model, lake–air delta outlook, NDBC buoy picker with live obs.
 
@@ -481,16 +493,16 @@ The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works. Rada
 
 - **Moon** — Phase, illumination, rise/set, compass.
 - **Advanced Atmosphere** — HRRR fields: wet bulb, boundary layer, soil, upper winds.
-- **Aviation TAF** — Nearest airport terminal forecast (raw + decoded periods) from AviationWeather.gov.
+- **Aviation TAF** — Nearest airport(s) with a TAF (up to three ICAO codes per request); **decoded** periods (wind, visibility, weather, clouds) plus collapsible raw aviation code. Proxied at `/api/taf` because AviationWeather.gov blocks browser CORS.
 - **NWS Forecast Discussion** — Full AFD text for the forecast office.
 
 ### Alerts & global UX
 
 - **NWS alerts** — Warnings, watches, and advisories in a top banner (US point lookup).
-- **Offline cache** — Last good weather snapshot (3 h) in localStorage; tab dots and panel labels show **cached** when serving stored data.
+- **Offline cache** — Last good weather snapshot in localStorage; tab dots and panel labels show **cached** when serving stored data. Fetch and render errors are handled separately so a render bug does not falsely trigger offline mode.
 - **Locations** — Geolocation, search (Open-Meteo geocoding), multiple saved chips; shareable URLs: `?lat=42.97&lon=-85.92&name=Allendale`.
 - **Themes** — Light / Dark / System; °F / °C.
-- **PWA** — Installable; service worker caches shell assets; in-app **Update app** link; footer shows app version (e.g. `v114`).
+- **PWA** — Installable; service worker caches shell assets; in-app **Update app** link; footer shows app version (e.g. `v126`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on first visit or idle prefetch.
 
 ---
