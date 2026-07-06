@@ -361,6 +361,10 @@ body.radar-expanded{overflow:hidden}
 .activity-bar-lbl{display:flex;justify-content:space-between;font-size:.5625rem;color:var(--dim);margin-top:4px;letter-spacing:.03em}
 .activity-why{margin-top:8px;font-size:.72rem;color:var(--mut);line-height:1.45}
 .activity-why summary{cursor:pointer;color:var(--acc);user-select:none}
+#activityList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#activityList .activity-card{margin-top:0}
+.activity-bar span.na{background:var(--line);opacity:.45}
+@media (max-width:720px){#activityList{grid-template-columns:1fr}}
 footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .radar-mode{grid-column:1/-1;width:100%;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 10px;font-size:.8125rem;font-weight:500}
 .radar-anim-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;grid-column:1/-1;width:100%;min-width:0}
@@ -825,12 +829,6 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div class="airnow-row" id="airnowRow"></div>
       </section>
 
-      <section class="panel nav-target outdoor-wide" id="activityPanel" data-tab="outdoor" aria-label="Outdoor activity forecast">
-        <h2>Activity planner</h2>
-        <p class="activity-lede">Best times in the next 24 hours for popular outdoor plans — based on rain, wind, heat, UV, and air quality. Bar: green = good, amber = fair, red = poor.</p>
-        <div id="activityList" class="radar-note">Loading activity forecast&hellip;</div>
-      </section>
-
       <section class="panel nav-target" id="exposurePanel" data-tab="outdoor" aria-label="UV and outdoor exposure">
         <h2>UV &amp; Exposure</h2>
         <div class="outlook" style="margin-top:0">
@@ -842,6 +840,12 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div class="metrics-lbl">Outdoor rest of today</div>
         <div class="exposure-strip-note">UV, humidity, and comfort each hour</div>
         <div class="hourly-strip" id="exposureUvStrip"></div>
+      </section>
+
+      <section class="panel nav-target outdoor-wide" id="activityPanel" data-tab="outdoor" aria-label="Outdoor activity forecast">
+        <h2>Activity planner</h2>
+        <p class="activity-lede">Best times in the next 24 hours for popular outdoor plans — rain, wind, heat, UV, and air quality. Daytime activities ignore after-dark hours (gray bar). Green = good, amber = fair, red = poor.</p>
+        <div id="activityList" class="radar-note">Loading activity forecast&hellip;</div>
       </section>
 
       <section class="panel nav-target outdoor-wide" id="coastalPanel" data-tab="outdoor" aria-label="Coastal tides" hidden>
@@ -958,7 +962,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '122';
+const APP_VERSION = '123';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2330,46 +2334,61 @@ const ACTIVITY_SCORERS = {
   }
 };
 const ACTIVITY_DEFS = [
-  { id: 'golf', name: 'Golf', icon: '\u26F3' },
-  { id: 'hiking', name: 'Hiking', icon: '\uD83E\uDDF7' },
-  { id: 'yard', name: 'Yard work', icon: '\uD83C\uDF3F' },
-  { id: 'running', name: 'Running', icon: '\uD83C\uDFC3' },
-  { id: 'beach', name: 'Beach / pool', icon: '\uD83C\uDFD6\uFE0F' },
-  { id: 'cycling', name: 'Cycling', icon: '\uD83D\uDEB4' },
-  { id: 'dog', name: 'Dog walk', icon: '\uD83D\uDC36' },
-  { id: 'stars', name: 'Stargazing', icon: '\uD83C\uDF19' }
+  { id: 'golf', name: 'Golf', icon: '\u26F3', dayOnly: true },
+  { id: 'hiking', name: 'Hiking', icon: '\uD83E\uDDF7', dayOnly: true },
+  { id: 'yard', name: 'Yard work', icon: '\uD83C\uDF3F', dayOnly: true },
+  { id: 'running', name: 'Running', icon: '\uD83C\uDFC3', daylight: true },
+  { id: 'beach', name: 'Beach / pool', icon: '\uD83C\uDFD6\uFE0F', dayOnly: true, hourMin: 9, hourMax: 20 },
+  { id: 'cycling', name: 'Cycling', icon: '\uD83D\uDEB4', daylight: true },
+  { id: 'dog', name: 'Dog walk', icon: '\uD83D\uDC36', daylight: true },
+  { id: 'stars', name: 'Stargazing', icon: '\uD83C\uDF19', nightOnly: true }
 ];
-function buildActivityHours(d, scorerId, extra){
-  const scorer = ACTIVITY_SCORERS[scorerId];
+function activityHourEligible(def, ctx){
+  if(def.nightOnly) return !ctx.isDay;
+  if(def.dayOnly) return !!ctx.isDay;
+  if(def.daylight && !ctx.isDay) return false;
+  if(def.hourMin != null || def.hourMax != null){
+    const hr = new Date(ctx.time).getHours();
+    const min = def.hourMin ?? 0, max = def.hourMax ?? 24;
+    if(hr < min || hr >= max) return false;
+  }
+  return true;
+}
+function activityIneligibleNote(def){
+  if(def.nightOnly) return 'Daylight';
+  if(def.dayOnly || def.daylight) return 'After dark';
+  if(def.hourMin != null) return 'Outside usual hours';
+  return 'Not recommended';
+}
+function buildActivityHours(d, def, extra){
+  const scorer = ACTIVITY_SCORERS[def.id];
   if(!scorer || !d?.hourly?.time?.length) return [];
   const alert = activityAlertCap();
   const i0 = nowIndex(d);
   const hours = [];
   for(let j = i0; j < d.hourly.time.length && hours.length < HOURLY_HOURS; j++){
     const ctx = activityHourContext(d, j);
-    if(scorerId === 'stars' && ctx.isDay) continue;
+    if(!activityHourEligible(def, ctx)){
+      hours.push({
+        time: ctx.time, score: 0, grade: 'na', ineligible: true,
+        reasons: [activityIneligibleNote(def)]
+      });
+      continue;
+    }
     let { score, reasons } = scorer(ctx, extra);
     score = Math.min(score, alert.cap);
     if(alert.notes.length && score <= alert.cap) reasons = alert.notes.slice(0, 1).concat(reasons);
-    hours.push({ time: ctx.time, score, grade: activityGrade(score), reasons: reasons.slice(0, 5) });
-  }
-  if(scorerId === 'stars' && !hours.length){
-    for(let j = i0; j < d.hourly.time.length && hours.length < 8; j++){
-      const ctx = activityHourContext(d, j);
-      if(ctx.isDay) continue;
-      let { score, reasons } = scorer(ctx, extra);
-      score = Math.min(score, alert.cap);
-      hours.push({ time: ctx.time, score, grade: activityGrade(score), reasons: reasons.slice(0, 5) });
-    }
+    hours.push({ time: ctx.time, score, grade: activityGrade(score), reasons: reasons.slice(0, 5), ineligible: false });
   }
   return hours;
 }
 function mergeActivityWindows(hours){
-  if(!hours.length) return [];
+  const eligible = hours.filter(h => !h.ineligible);
+  if(!eligible.length) return [];
   const out = [];
-  let cur = { start: hours[0].time, end: hours[0].time, grade: hours[0].grade, reasons: hours[0].reasons.slice() };
-  for(let i = 1; i < hours.length; i++){
-    const h = hours[i];
+  let cur = { start: eligible[0].time, end: eligible[0].time, grade: eligible[0].grade, reasons: eligible[0].reasons.slice() };
+  for(let i = 1; i < eligible.length; i++){
+    const h = eligible[i];
     if(h.grade === cur.grade){
       cur.end = h.time;
       h.reasons.forEach(r => { if(cur.reasons.length < 4 && !cur.reasons.includes(r)) cur.reasons.push(r); });
@@ -2385,35 +2404,47 @@ function fmtActWindow(w){
   const a = hourLabelCompact(w.start), b = hourLabelCompact(w.end);
   return a === b ? a : a + '\u2013' + b;
 }
-function summarizeActivityWindows(windows){
+function summarizeActivityWindows(windows, hours, def){
+  const eligible = hours.filter(h => !h.ineligible);
+  if(!eligible.length){
+    if(def.nightOnly) return 'Waiting for darkness in the forecast window';
+    if(def.dayOnly || def.daylight) return 'Best during daylight — check again tomorrow morning';
+    return 'No suitable hours in the forecast window';
+  }
   const good = windows.filter(w => w.grade === 'good');
   const fair = windows.filter(w => w.grade === 'fair');
   const parts = [];
   if(good.length) parts.push('Best ' + good.slice(0, 2).map(fmtActWindow).join(', '));
   if(fair.length) parts.push('Fair ' + fair.slice(0, 2).map(fmtActWindow).join(', '));
-  if(!parts.length) return 'Poor conditions for the next 24 hours';
+  if(!parts.length) return 'Poor conditions during recommended hours';
   return parts.join(' \u00B7 ');
 }
 function renderActivityCard(def, hours){
   if(!hours.length){
     return '<article class="activity-card"><div class="activity-head"><span class="activity-ico" aria-hidden="true">' + def.icon
       + '</span><span class="activity-name">' + esc(def.name) + '</span><span class="activity-grade poor">Poor</span></div>'
-      + '<div class="activity-window">No suitable hours in the forecast window.</div></article>';
+      + '<div class="activity-window">No forecast hours available.</div></article>';
   }
-  const peak = Math.max(...hours.map(h => h.score));
-  const overall = activityGrade(peak);
+  const eligible = hours.filter(h => !h.ineligible);
+  const peak = eligible.length ? Math.max(...eligible.map(h => h.score)) : 0;
+  const overall = eligible.length ? activityGrade(peak) : 'poor';
   const windows = mergeActivityWindows(hours);
-  const why = hours.reduce((best, h) => h.score > best.score ? h : best, hours[0]);
-  const bar = hours.map(h => '<span class="' + (h.grade === 'good' ? 'g' : h.grade === 'fair' ? 'f' : 'p') + '" title="'
-    + esc(hourLabelCompact(h.time) + ': ' + activityGradeLabel(h.grade)) + '"></span>').join('');
+  const why = eligible.length
+    ? eligible.reduce((best, h) => h.score > best.score ? h : best, eligible[0])
+    : hours[0];
+  const bar = hours.map(h => {
+    const cls = h.ineligible ? 'na' : (h.grade === 'good' ? 'g' : h.grade === 'fair' ? 'f' : 'p');
+    const tip = hourLabelCompact(h.time) + ': ' + (h.ineligible ? activityIneligibleNote(def) : activityGradeLabel(h.grade));
+    return '<span class="' + cls + '" title="' + esc(tip) + '"></span>';
+  }).join('');
   const whyList = why.reasons.length
     ? why.reasons.map(r => '<li>' + esc(r) + '</li>').join('')
-    : '<li>' + esc(activityGradeLabel(why.grade) + ' conditions around ' + hourLabelCompact(why.time)) + '</li>';
+    : '<li>' + esc(activityGradeLabel(why.grade) + ' around ' + hourLabelCompact(why.time)) + '</li>';
   return '<article class="activity-card">'
     + '<div class="activity-head"><span class="activity-ico" aria-hidden="true">' + def.icon + '</span>'
     + '<span class="activity-name">' + esc(def.name) + '</span>'
     + '<span class="activity-grade ' + overall + '">' + activityGradeLabel(overall) + '</span></div>'
-    + '<div class="activity-window">' + esc(summarizeActivityWindows(windows)) + '</div>'
+    + '<div class="activity-window">' + esc(summarizeActivityWindows(windows, hours, def)) + '</div>'
     + '<div class="activity-bar" aria-hidden="true">' + bar + '</div>'
     + '<div class="activity-bar-lbl"><span>Now</span><span>+24h</span></div>'
     + '<details class="activity-why"><summary>Why</summary><ul style="margin:6px 0 0;padding-left:1.1em">' + whyList + '</ul></details>'
@@ -2433,7 +2464,7 @@ function renderActivityPlanner(d){
     coastal: loc && isCoastalLoc(loc)
   };
   box.innerHTML = ACTIVITY_DEFS.map(def =>
-    renderActivityCard(def, buildActivityHours(d, def.id, extra))
+    renderActivityCard(def, buildActivityHours(d, def, extra))
   ).join('');
 }
 function todayOutlook(d){
@@ -2706,7 +2737,7 @@ async function refreshFireWeather(loc, d){
   if(!isLikelyUS(loc) || !d) return;
   let spcLabel = '';
   try{
-    const geo = await fetchThreatGeo('fireCat', THREAT_LAYER_URLS.fireWx);
+    const geo = await fetchThreatGeo('fireWx', THREAT_LAYER_URLS.fireWx);
     if(geo){
       const risk = spcRiskAtPoint(loc.lon, loc.lat, geo);
       if(risk) spcLabel = risk.label2 || risk.label || '';
@@ -3126,7 +3157,7 @@ const THREAT_LAYER_URLS = {
   spcTorn: 'https://www.spc.noaa.gov/products/outlook/day1otlk_torn.lyr.geojson',
   spcHail: 'https://www.spc.noaa.gov/products/outlook/day1otlk_hail.lyr.geojson',
   spcWind: 'https://www.spc.noaa.gov/products/outlook/day1otlk_wind.lyr.geojson',
-  fireWx: 'https://www.spc.noaa.gov/products/fire_wx/fwdy1otlk_cat.lyr.geojson'
+  fireWx: 'https://www.spc.noaa.gov/products/fire_wx/day1fw_windrh.lyr.geojson'
 };
 const threatLayerOpts = {
   stormReports: true, wpcEro: false, fireWx: false,
