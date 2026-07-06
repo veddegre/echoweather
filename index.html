@@ -2335,9 +2335,54 @@ function activityHourContext(d, i){
       : null
   };
 }
-function activityAlertCap(def){
-  const feats = stormState.alertFeatures || [];
+function wallPartsFromForecastIso(iso){
+  if(!iso || iso.length < 13) return null;
+  return {
+    y: +iso.slice(0, 4), mo: +iso.slice(5, 7), d: +iso.slice(8, 10),
+    hr: +iso.slice(11, 13), mi: +(iso.slice(14, 16) || 0)
+  };
+}
+function wallPartsInTz(iso, timezone){
+  if(!iso) return null;
+  const t = Date.parse(iso);
+  if(isNaN(t)) return null;
+  const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  }).formatToParts(new Date(t));
+  const get = type => parts.find(p => p.type === type)?.value;
+  return {
+    y: +get('year'), mo: +get('month'), d: +get('day'),
+    hr: +get('hour'), mi: +get('minute')
+  };
+}
+function wallPartsCmp(a, b){
+  if(!a || !b) return 0;
+  for(const k of ['y', 'mo', 'd', 'hr', 'mi']){
+    if(a[k] < b[k]) return -1;
+    if(a[k] > b[k]) return 1;
+  }
+  return 0;
+}
+function alertActiveAtHour(feature, hourIso, timezone){
+  const p = feature.properties || {};
+  const hour = wallPartsFromForecastIso(hourIso);
+  if(!hour) return true;
+  if(p.onset){
+    const onset = wallPartsInTz(p.onset, timezone);
+    if(onset && wallPartsCmp(hour, onset) < 0) return false;
+  }
+  const endIso = p.expires || p.ends;
+  if(endIso){
+    const end = wallPartsInTz(endIso, timezone);
+    if(end && wallPartsCmp(hour, end) >= 0) return false;
+  }
+  return true;
+}
+function activityAlertImpact(def, hourIso, timezone){
   const actId = def?.id || '';
+  const feats = (stormState.alertFeatures || []).filter(f => alertActiveAtHour(f, hourIso, timezone));
   let cap = 100;
   const notes = [];
   const apply = (newCap, note) => {
@@ -2352,44 +2397,55 @@ function activityAlertCap(def){
     const ev = f.properties?.event || '';
     const evL = ev.toLowerCase();
     if(actId === 'beach' && /beach hazards|rip current|high surf|rough surf|swim advisory|surf zone|dangerous rip/i.test(evL)){
-      apply(20, ev);
+      apply(50, ev);
       return;
     }
     if((actId === 'beach' || actId === 'hiking') && /coastal flood|high surf|lakeshore flood/i.test(evL)){
-      apply(30, ev);
+      apply(55, ev);
       return;
     }
     if(['running', 'hiking', 'cycling', 'dog'].includes(actId) && /air quality|ozone|particle pollution|smoke/i.test(evL)){
-      apply(35, ev);
+      apply(60, ev);
       return;
     }
     if(['running', 'yard', 'dog', 'hiking', 'golf', 'cycling'].includes(actId) && /heat advisory|excessive heat/i.test(evL)){
-      apply(35, ev);
+      apply(58, ev);
       return;
     }
     if(actId === 'beach' && /heat advisory|excessive heat/i.test(evL)){
-      apply(45, ev);
+      apply(65, ev);
       return;
     }
     if(actId === 'dog' && /heat advisory|excessive heat/i.test(evL)){
-      apply(25, ev);
+      apply(50, ev);
       return;
     }
     if(['cycling', 'golf'].includes(actId) && /wind advisory|high wind|lake wind/i.test(evL)){
-      apply(40, ev);
+      apply(62, ev);
       return;
     }
     if(['hiking', 'yard', 'cycling'].includes(actId) && /red flag|fire weather/i.test(evL)){
-      apply(30, ev);
+      apply(55, ev);
       return;
     }
     if(/tornado|severe thunderstorm|flash flood|hurricane|blizzard|ice storm|winter storm/.test(evL)){
-      apply(20, ev);
+      apply(30, ev);
     }else if(/warning/.test(evL)){
-      apply(35, ev);
-    }else if(/advisory|statement/.test(evL) && cap === 100){
-      apply(55, ev);
+      apply(45, ev);
     }
+  });
+  return { cap, notes: notes.slice(0, 3) };
+}
+function activityAlertCap(def, timezone, hours){
+  const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const sample = (hours || []).filter(h => !h.ineligible).map(h => h.time);
+  if(!sample.length) sample.push(null);
+  let cap = 100;
+  const notes = [];
+  sample.forEach(hourIso => {
+    const hit = activityAlertImpact(def, hourIso, tz);
+    if(hit.cap < cap) cap = hit.cap;
+    hit.notes.forEach(n => { if(!notes.includes(n)) notes.push(n); });
   });
   return { cap, notes: notes.slice(0, 3) };
 }
@@ -2399,15 +2455,15 @@ function penalizeAfternoonHeat(ctx, reasons, opts){
   const hr = new Date(ctx.time).getHours();
   const start = opts.start ?? 13, end = opts.end ?? 18;
   if(hr < start || hr >= end) return 0;
-  const hot = opts.hot ?? (state.units === 'F' ? 82 : 28);
-  const extreme = opts.extreme ?? (state.units === 'F' ? 88 : 31);
+  const hot = opts.hot ?? (state.units === 'F' ? 84 : 29);
+  const extreme = opts.extreme ?? (state.units === 'F' ? 90 : 32);
   let s = 0;
   if(ctx.temp >= extreme || ctx.wetBulb >= (opts.wetBulbExtreme ?? 80)){
-    s += opts.extremePenalty ?? 25;
+    s += opts.extremePenalty ?? 18;
     reasons.push(opts.extremeNote || 'Afternoon heat peak');
   }else if(ctx.temp >= hot){
-    s += opts.hotPenalty ?? 14;
-    reasons.push(opts.hotNote || 'Hot afternoon');
+    s += opts.hotPenalty ?? 10;
+    reasons.push(opts.hotNote || 'Warm afternoon');
   }
   return s;
 }
@@ -2464,7 +2520,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 55, 28);
     s -= penalizeWind(ctx, reasons, 18, 10);
     s -= penalizeHeat(ctx, reasons, 85, 92);
-    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 80, extreme: 86 });
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 84, extreme: 90 });
     s -= penalizeWinter(ctx, reasons);
     if(ctx.uv >= 8 && ctx.isDay) reasons.push('High UV — seek shade');
     return { score: clampActScore(s), reasons };
@@ -2475,7 +2531,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 50, 25);
     s -= penalizeWind(ctx, reasons, 28, 16);
     s -= penalizeHeat(ctx, reasons, 86, 94);
-    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 82, extreme: 88 });
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 86, extreme: 92 });
     s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, true);
     if(ctx.uv >= 9 && ctx.isDay){ s -= 12; reasons.push('Very high UV'); }
@@ -2489,7 +2545,7 @@ const ACTIVITY_SCORERS = {
     if(ctx.precip > 0.02) s -= 25;
     s -= penalizeWind(ctx, reasons, 22, 14);
     s -= penalizeHeat(ctx, reasons, 88, 96);
-    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 84, extreme: 90, extremePenalty: 30 });
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 88, extreme: 94, extremePenalty: 22 });
     s -= penalizeWinter(ctx, reasons);
     if(ctx.wetBulb >= 80) reasons.push('Heavy work in heat — hydrate');
     return { score: clampActScore(s), reasons };
@@ -2501,7 +2557,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeWind(ctx, reasons, 24, 14);
     const heat = penalizeHeat(ctx, reasons, 82, 90);
     s -= heat + (heat > 0 ? 5 : 0);
-    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 78, extreme: 85, hotPenalty: 18, extremePenalty: 28 });
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 82, extreme: 88, hotPenalty: 12, extremePenalty: 20 });
     s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, true);
     if(ctx.temp >= 40 && ctx.temp <= 75 && ctx.pop < 25) reasons.push('Comfortable running temps');
@@ -2513,8 +2569,8 @@ const ACTIVITY_SCORERS = {
     if(ctx.temp < 68){ s -= 40; reasons.push('Cool for swimming (' + Math.round(ctx.temp) + degSym() + ')'); }
     else if(ctx.temp < 75){ s -= 15; reasons.push('Water may feel cool'); }
     s -= penalizeAfternoonHeat(ctx, reasons, {
-      hot: 84, extreme: 90, hotPenalty: 18, extremePenalty: 32,
-      hotNote: 'Hot afternoon sun', extremeNote: 'Afternoon heat — seek shade'
+      hot: 88, extreme: 94, hotPenalty: 12, extremePenalty: 22,
+      hotNote: 'Warm afternoon sun', extremeNote: 'Afternoon heat — seek shade'
     });
     s -= penalizeRain(ctx, reasons, 55, 30);
     s -= penalizeWind(ctx, reasons, 20, 12);
@@ -2528,7 +2584,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 50, 25);
     s -= penalizeWind(ctx, reasons, 16, 9);
     s -= penalizeHeat(ctx, reasons, 84, 92);
-    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 82, extreme: 88 });
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 86, extreme: 92 });
     s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, false);
     if(ctx.wind >= 20) s -= 15;
@@ -2541,8 +2597,8 @@ const ACTIVITY_SCORERS = {
     if(ctx.temp >= 85){ s -= 35; reasons.push('Hot pavement risk for paws'); }
     else if(ctx.temp >= 78){ s -= 15; reasons.push('Warm — short walks'); }
     s -= penalizeAfternoonHeat(ctx, reasons, {
-      start: 11, end: 19, hot: 75, extreme: 82,
-      hotPenalty: 20, extremePenalty: 35,
+      start: 11, end: 19, hot: 80, extreme: 86,
+      hotPenalty: 14, extremePenalty: 28,
       hotNote: 'Warm midday — short walks', extremeNote: 'Hot pavement risk — walk early morning'
     });
     if(ctx.temp <= 15){ s -= 25; reasons.push('Very cold for pets'); }
@@ -2630,7 +2686,7 @@ function activityIneligibleNote(def){
 function buildActivityHours(d, def, extra){
   const scorer = ACTIVITY_SCORERS[def.id];
   if(!scorer || !d?.hourly?.time?.length) return [];
-  const alert = activityAlertCap(def);
+  const tz = d.timezone;
   const i0 = nowIndex(d);
   const hours = [];
   for(let j = i0; j < d.hourly.time.length && hours.length < HOURLY_HOURS; j++){
@@ -2643,6 +2699,7 @@ function buildActivityHours(d, def, extra){
       continue;
     }
     let { score, reasons } = scorer(ctx, extra);
+    const alert = activityAlertImpact(def, ctx.time, tz);
     score = Math.min(score, alert.cap);
     if(alert.notes.length && score <= alert.cap){
       const note = alert.notes[0];
@@ -2732,10 +2789,6 @@ function activityLaterConcerns(eligible){
 }
 function buildActivityWhyList(def, hours, windows, d, extra){
   const items = [];
-  const alert = activityAlertCap(def);
-  if(alert.notes.length && alert.cap < 70){
-    items.push('Active NWS alert: ' + alert.notes[0] + ' — outdoor rating capped.');
-  }
   const eligible = hours.filter(h => !h.ineligible);
   if(!eligible.length){
     return [def.nightOnly
@@ -2743,6 +2796,13 @@ function buildActivityWhyList(def, hours, windows, d, extra){
       : 'Best in daylight; remaining hours are after dark.'];
   }
   const peakHour = eligible.reduce((a, h) => h.score > a.score ? h : a, eligible[0]);
+  const alert = activityAlertCap(def, d.timezone, hours);
+  const peakAlert = activityAlertImpact(def, peakHour.time, d.timezone);
+  if(peakAlert.notes.length && peakAlert.cap < 70){
+    items.push('NWS alert during peak window: ' + peakAlert.notes[0] + '.');
+  }else if(alert.notes.length && !peakAlert.notes.length){
+    items.push('NWS alert active earlier in the window: ' + alert.notes[0] + ' — clears before peak.');
+  }
   const peakIdx = d.hourly.time.indexOf(peakHour.time);
   if(peakIdx < 0) return items.length ? items : ['Forecast data unavailable for this period.'];
   const bestWin = windows.find(w => peakHour.time >= w.start && peakHour.time <= w.end)
