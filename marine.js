@@ -826,6 +826,7 @@ const NWPS_FLOOD_LABEL = {
   near_flood: 'Near flood',
   low_threshold: 'Low water'
 };
+const NWPS_FLOOD_SHOW = new Set(Object.keys(NWPS_FLOOD_LABEL));
 async function fetchNwpsGauge(usgsId){
   if(!usgsId) return null;
   try{
@@ -837,9 +838,11 @@ async function fetchNwpsGauge(usgsId){
   }catch(e){ return null; }
 }
 function nwpsFloodHtml(nwps){
-  const cat = nwps?.status?.observed?.floodCategory || nwps?.ObservedFloodCategory;
-  if(!cat || /^(no_flooding|fcst_not_current|obs_not_current|not_defined)$/.test(cat)) return '';
-  const lbl = NWPS_FLOOD_LABEL[cat] || String(cat).replace(/_/g, ' ');
+  const raw = nwps?.status?.observed?.floodCategory || nwps?.ObservedFloodCategory;
+  if(!raw) return '';
+  const cat = String(raw).toLowerCase().trim();
+  if(!NWPS_FLOOD_SHOW.has(cat)) return '';
+  const lbl = NWPS_FLOOD_LABEL[cat];
   const cls = /major|moderate/.test(cat) ? ' stream-flood-warn' : ' stream-flood-adv';
   return '<span class="stream-flood' + cls + '">' + esc(lbl) + '</span>';
 }
