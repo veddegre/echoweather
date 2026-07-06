@@ -2285,6 +2285,16 @@ function activityGrade(score){
   if(score >= 45) return 'fair';
   return 'poor';
 }
+function activityOverallGrade(def, eligible, d){
+  if(!eligible.length) return 'poor';
+  const tz = d.timezone;
+  const nowH = eligible[0];
+  const nowAlert = activityAlertImpact(def, nowH.time, tz);
+  if(nowAlert.notes.length){
+    return activityGrade(nowH.score);
+  }
+  return activityGrade(Math.max(...eligible.map(h => h.score)));
+}
 function activityGradeLabel(g){
   return g === 'good' ? 'Good' : g === 'fair' ? 'Fair' : 'Poor';
 }
@@ -2369,11 +2379,13 @@ function alertActiveAtHour(feature, hourIso, timezone){
   const p = feature.properties || {};
   const hour = wallPartsFromForecastIso(hourIso);
   if(!hour) return true;
-  if(p.onset){
-    const onset = wallPartsInTz(p.onset, timezone);
+  const startIso = p.onset || p.effective;
+  if(startIso){
+    const onset = wallPartsInTz(startIso, timezone);
     if(onset && wallPartsCmp(hour, onset) < 0) return false;
   }
-  const endIso = p.expires || p.ends;
+  // NWS `expires` is often the message expiry (can equal onset); `ends` is when the hazard ends.
+  const endIso = p.ends || p.parameters?.eventEndingTime?.[0] || p.expires;
   if(endIso){
     const end = wallPartsInTz(endIso, timezone);
     if(end && wallPartsCmp(hour, end) >= 0) return false;
@@ -2396,8 +2408,8 @@ function activityAlertImpact(def, hourIso, timezone){
   feats.forEach(f => {
     const ev = f.properties?.event || '';
     const evL = ev.toLowerCase();
-    if(actId === 'beach' && /beach hazards|rip current|high surf|rough surf|swim advisory|surf zone|dangerous rip/i.test(evL)){
-      apply(50, ev);
+    if(actId === 'beach' && /beach hazards|beach hazard|lakeshore hazard|rip current|high surf|rough surf|swim advisory|surf zone|dangerous rip/i.test(evL)){
+      apply(45, ev);
       return;
     }
     if((actId === 'beach' || actId === 'hiking') && /coastal flood|high surf|lakeshore flood/i.test(evL)){
@@ -2892,7 +2904,7 @@ function renderActivityCard(def, hours, d, extra){
   }
   const eligible = hours.filter(h => !h.ineligible);
   const peak = eligible.length ? Math.max(...eligible.map(h => h.score)) : 0;
-  const overall = eligible.length ? activityGrade(peak) : 'poor';
+  const overall = activityOverallGrade(def, eligible, d);
   const windows = mergeActivityWindows(hours);
   const bar = hours.map(h => {
     const cls = h.ineligible ? 'na' : (h.grade === 'good' ? 'g' : h.grade === 'fair' ? 'f' : 'p');
@@ -6791,6 +6803,7 @@ function getAppTab(){
 function prefetchOutdoorPanels(loc, d){
   if(!loc || !d) return;
   renderExposure(d);
+  if(isLikelyUS(loc) && !stormState.alertFeatures.length) loadAlerts(loc);
   renderActivityPlanner(d);
   syncMarinePanelVisibility(loc);
   renderAuroraHint(loc, d);
