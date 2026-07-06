@@ -393,16 +393,19 @@ body.radar-expanded{overflow:hidden}
 .exposure-hour .ex-v.uv-low{color:var(--good)}.exposure-hour .ex-v.uv-mid{color:var(--warm)}.exposure-hour .ex-v.uv-high{color:var(--warn)}
 .exposure-hour .ex-note{font-size:.625rem;color:var(--mut);margin-top:5px;line-height:1.25}
 .exposure-strip-note{font-size:.6875rem;color:var(--dim);margin:-6px 0 8px;line-height:1.4}
-.uv-day-chart{margin:8px 0 14px;padding:10px 12px;background:var(--panel-2);border-radius:8px;border:1px solid var(--line)}
-.uv-day-chart svg{display:block;width:100%;height:72px;color:var(--sun)}
-.uv-day-chart svg text.uv-axis-y{font-size:8px;fill:var(--dim);font-family:var(--sans);font-weight:600}
-.uv-day-ticks{display:flex;justify-content:space-between;align-items:flex-end;gap:2px;margin-top:4px}
-.uv-day-tick{flex:1 1 0;min-width:0;text-align:center}
-.uv-day-tick .uv-day-tick-t{font-size:.5625rem;color:var(--dim);line-height:1.2;white-space:nowrap}
-.uv-day-tick .uv-day-tick-v{font-size:.625rem;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3;margin-top:2px}
+.uv-day-chart{margin:8px 0 14px;padding:12px 14px;background:var(--panel-2);border-radius:8px;border:1px solid var(--line)}
+.uv-day-chart-inner{display:flex;gap:10px;align-items:stretch}
+.uv-y-axis{display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0;width:1.35rem;padding:2px 0 22px;font-size:.625rem;font-weight:600;color:var(--dim);text-align:right;font-variant-numeric:tabular-nums;line-height:1}
+.uv-chart-body{flex:1;min-width:0}
+.uv-day-chart svg{display:block;width:100%;height:100px;color:var(--sun)}
+.uv-day-ticks{display:flex;justify-content:space-between;gap:10px;margin-top:8px;padding:0 2px}
+.uv-day-tick{flex:1 1 0;min-width:2.75rem;text-align:center}
+.uv-day-tick .uv-day-tick-t{font-size:.625rem;color:var(--dim);line-height:1.25}
+.uv-day-tick .uv-day-tick-v{font-size:.6875rem;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3;margin-top:3px}
 .uv-day-tick.now .uv-day-tick-t,.uv-day-tick.now .uv-day-tick-v{color:var(--accent);font-weight:700}
-.uv-day-chart-note{font-size:.625rem;color:var(--dim);margin-top:6px;line-height:1.35}
+.uv-day-chart-note{font-size:.625rem;color:var(--dim);margin-top:8px;line-height:1.4}
 .uv-day-now{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:3,2}
+@media (max-width:520px){.uv-day-ticks{overflow-x:auto;justify-content:flex-start;padding-bottom:4px;-webkit-overflow-scrolling:touch}.uv-day-tick{flex:0 0 auto;min-width:3rem}}
 .activity-lede{font-size:.75rem;color:var(--mut);margin:4px 0 12px;line-height:1.45}
 .activity-card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;background:var(--panel-2)}
 .activity-card:first-child{margin-top:0}
@@ -2204,9 +2207,9 @@ function uvDayChartHtml(h, nowIdx, todayKey){
     pts.push({ idx: j, uv: h.uv_index?.[j] ?? 0, t: h.time[j] });
   }
   if(!pts.length) return '';
-  const w = 340, height = 72, padL = 26, padR = 6, maxUv = 11;
+  const w = 300, height = 100, padL = 4, padR = 4, maxUv = 11;
   const chartW = w - padL - padR;
-  const yOfNum = u => height - 4 - (Math.min(Math.max(u, 0), maxUv) / maxUv) * (height - 8);
+  const yOfNum = u => height - 6 - (Math.min(Math.max(u, 0), maxUv) / maxUv) * (height - 12);
   const yOf = u => yOfNum(u).toFixed(1);
   const xOf = k => (padL + (pts.length < 2 ? chartW / 2 : (k / (pts.length - 1)) * chartW)).toFixed(1);
   let bands = '';
@@ -2214,34 +2217,29 @@ function uvDayChartHtml(h, nowIdx, todayKey){
     bands += '<line x1="' + padL + '" y1="' + yOf(v) + '" x2="' + (w - padR) + '" y2="' + yOf(v)
       + '" stroke="currentColor" stroke-opacity=".15" stroke-dasharray="2,3" vector-effect="non-scaling-stroke"/>';
   });
-  let yLabels = '';
-  [0, 3, 6, 9, 11].forEach(v => {
-    yLabels += '<text class="uv-axis-y" x="' + (padL - 5) + '" y="' + (yOfNum(v) + 3).toFixed(1)
-      + '" text-anchor="end">' + v + '</text>';
-  });
   const linePts = pts.map((p, k) => xOf(k) + ',' + yOf(p.uv));
   const area = padL + ',' + height + ' ' + linePts.join(' ') + ' ' + (w - padR) + ',' + height;
   const nowK = pts.findIndex(p => p.idx === nowIdx);
   let nowLine = '';
   if(nowK >= 0 && pts.length > 1){
     const nx = xOf(nowK);
-    nowLine = '<line class="uv-day-now" x1="' + nx + '" y1="2" x2="' + nx + '" y2="' + (height - 2)
+    nowLine = '<line class="uv-day-now" x1="' + nx + '" y1="4" x2="' + nx + '" y2="' + (height - 4)
       + '" vector-effect="non-scaling-stroke"/>';
   }
-  const tickStep = Math.max(1, Math.ceil(pts.length / 7));
+  const tickStep = Math.max(1, Math.ceil(pts.length / 5));
   const tickIdx = [];
   for(let k = 0; k < pts.length; k += tickStep) tickIdx.push(k);
   if(tickIdx[tickIdx.length - 1] !== pts.length - 1) tickIdx.push(pts.length - 1);
   let xTicksSvg = '';
   tickIdx.forEach(k => {
     const x = xOf(k);
-    xTicksSvg += '<line x1="' + x + '" y1="' + (height - 2) + '" x2="' + x + '" y2="' + (height - 7)
+    xTicksSvg += '<line x1="' + x + '" y1="' + (height - 4) + '" x2="' + x + '" y2="' + (height - 10)
       + '" stroke="currentColor" stroke-opacity=".35" vector-effect="non-scaling-stroke"/>';
   });
   const peak = pts.reduce((a, p) => p.uv > a.uv ? p : a, pts[0]);
   const svg = '<svg viewBox="0 0 ' + w + ' ' + height + '" preserveAspectRatio="none" role="img" aria-label="UV index through today, peak '
     + peak.uv.toFixed(1) + '">'
-    + bands + yLabels + xTicksSvg
+    + bands + xTicksSvg
     + '<polygon points="' + area + '" fill="currentColor" opacity=".18"/>'
     + '<polyline points="' + linePts.join(' ') + '" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>'
     + nowLine + '</svg>';
@@ -2251,7 +2249,10 @@ function uvDayChartHtml(h, nowIdx, todayKey){
     + '<div class="uv-day-tick-v">' + pts[k].uv.toFixed(1) + '</div>'
     + '</div>'
   ).join('') + '</div>';
-  return svg + tickHtml
+  const yAxisHtml = '<div class="uv-y-axis" aria-hidden="true">'
+    + [11, 8, 5, 0].map(v => '<span>' + v + '</span>').join('') + '</div>';
+  return '<div class="uv-day-chart-inner">' + yAxisHtml
+    + '<div class="uv-chart-body">' + svg + tickHtml + '</div></div>'
     + '<div class="uv-day-chart-note">Peak ' + peak.uv.toFixed(1) + ' near ' + hourLabelCompact(peak.t)
     + ' \u00B7 dashed lines at 3 / 6 / 8</div>';
 }
@@ -5759,17 +5760,13 @@ function polShortName(name){
   if(n.includes('NO2')) return 'NO\u2082';
   return name;
 }
-function buildAirNowDetail(airNow, hasGooglePollen){
+function buildAirNowDetail(airNow){
   const worst = airNow.params.reduce((a, b) => (a.aqi > b.aqi ? a : b), airNow.params[0]);
   const readings = airNow.params.map(p => polShortName(p.name) + ' ' + p.aqi).join(', ');
-  let text = 'Nearest EPA monitor: ' + airNow.site + '. '
+  return 'Nearest EPA monitor: ' + airNow.site + '. '
     + 'The US AQI above is the highest reading at that station right now ('
     + polShortName(worst.name) + ' ' + worst.aqi + '). '
     + 'Measured pollutants: ' + readings + '.';
-  if(hasGooglePollen){
-    text += ' Pollen values below are from Google\u2019s forecast, not the air monitor.';
-  }
-  return text;
 }
 function renderAirMetricSections(sections){
   if(!sections.length) return '';
@@ -5995,7 +5992,7 @@ async function loadAir(loc){
         renderPollenForecast(null, meteoDaily);
         $('pollenNote').textContent = 'Levels are low or off-season.';
       }
-      if(airNow) detail = buildAirNowDetail(airNow, !!(pollen && sections.some(s => /Google/i.test(s.title))));
+      if(airNow) detail = buildAirNowDetail(airNow);
       if(airLoadGen !== gen) return;
       const v = $('aqiVerdict');
       if(aqi == null){
