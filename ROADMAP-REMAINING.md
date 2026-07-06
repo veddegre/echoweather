@@ -20,7 +20,7 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 ## What is shipped (v136–v163)
 
 ### v174 (latest)
-- **Alert timeline** — compact active-hazard strip with expiration countdown above alert cards
+- **Alert expiration** — in-effect alerts show countdown when expiring soon (`Expires in N min`); multi-alert list sorted by severity then end time
 - **Shareable radar URLs** — `#radar?mode=…&frame=…&layers=…` encodes threat layer toggles; hash updates when layers change
 - **SPC meso links** — mesoanalysis, surface analysis, observed soundings in storm panel when risk elevated
 - **Day 2/3 SPC discussions** — outlook discussion excerpts shown whenever parsed (not gated on point risk for days 2–3)
@@ -183,7 +183,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | Alert timeline + expiration labels | Done |
+| 1 | Alert expiration in summary (countdown when soon) | Done |
 | 4 | Shareable radar hash with `layers=` | Done |
 | 6 | SPC mesoanalysis / surface / soundings links | Done |
 | 7 | Day 2/3 outlook discussion excerpts | Done |
@@ -300,7 +300,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | Function | File | Purpose |
 |----------|------|---------|
 | `jumpRadarToAlertPolygon` | `radar.js` | Center radar on warning/watch polygon centroid |
-| `formatAlertExpiresLabel` / `renderAlertTimeline` | `impact.js`, `storm.js` | Active hazard countdown strip |
+| `formatAlertSummaryTiming` / `formatAlertExpiresLabel` | `impact.js` | Inline alert expiration + soon countdown |
 | `threatLayersHashParam` / `applyThreatLayersFromHash` | `storm.js` | Shareable radar layer state in URL hash |
 | `nearestWatchPolygon` | `storm.js` | Nearest active watch geometry to pin |
 | `autoEnableStormThreatLayers` | `storm.js` | Turn on reports + SPC cat when storm mode fires |

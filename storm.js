@@ -374,39 +374,6 @@ async function fetchActiveAlertFeatures(loc){
   const feats = await fetchAllActiveAlerts(loc);
   return feats.filter(f => f.geometry);
 }
-function renderAlertTimeline(feats){
-  const box = $('alertTimeline');
-  if(!box) return;
-  if(!feats.length){
-    box.hidden = true;
-    box.innerHTML = '';
-    return;
-  }
-  const now = Date.now();
-  const rows = feats.map(f => ({ f, p: f.properties || {}, endMs: alertEndMs(f.properties || {}) }))
-    .filter(r => !isNaN(r.endMs) && r.endMs > now - 120000)
-    .sort((a, b) => {
-      const ra = /warning/i.test(a.p.event) ? 0 : /watch/i.test(a.p.event) ? 1 : 2;
-      const rb = /warning/i.test(b.p.event) ? 0 : /watch/i.test(b.p.event) ? 1 : 2;
-      if(ra !== rb) return ra - rb;
-      return a.endMs - b.endMs;
-    })
-    .slice(0, 8);
-  if(!rows.length){
-    box.hidden = true;
-    box.innerHTML = '';
-    return;
-  }
-  box.hidden = false;
-  box.innerHTML = '<div class="alert-timeline-lbl">Active hazards</div><div class="alert-timeline-items">'
-    + rows.map(r => {
-      const ev = r.p.event || 'Alert';
-      const cls = /warning/i.test(ev) ? 'warn' : /watch/i.test(ev) ? 'watch' : 'adv';
-      const exp = formatAlertExpiresLabel(r.p);
-      return '<div class="alert-timeline-item ' + cls + '"><span class="ati-ev">' + esc(ev) + '</span>'
-        + (exp ? '<span class="ati-exp">' + esc(exp) + '</span>' : '') + '</div>';
-    }).join('') + '</div>';
-}
 function renderAlertsBox(feats){
   const box = $('alerts');
   if(!box) return;
@@ -414,12 +381,18 @@ function renderAlertsBox(feats){
   box.innerHTML = '';
   if(!feats.length) return;
   const rank = ev => /warning/i.test(ev) ? 0 : /watch/i.test(ev) ? 1 : 2;
-  const sorted = feats.slice().sort((a, b) => rank(a.properties.event) - rank(b.properties.event)).slice(0, 6);
+  const sorted = feats.slice().sort((a, b) => {
+    const ra = rank(a.properties.event), rb = rank(b.properties.event);
+    if(ra !== rb) return ra - rb;
+    const ea = alertEndMs(a.properties), eb = alertEndMs(b.properties);
+    if(!isNaN(ea) && !isNaN(eb)) return ea - eb;
+    return 0;
+  }).slice(0, 6);
   box.innerHTML = sorted.map(f => {
     const p = f.properties;
     const ev = p.event || 'Alert';
     const cls = /warning/i.test(ev) ? '' : /watch/i.test(ev) ? ' watch' : ' adv';
-    const until = formatAlertWindow(p);
+    const until = formatAlertSummaryTiming(p);
     const desc = ((p.description || '') + (p.instruction ? '\n\nPRECAUTIONARY ACTIONS:\n' + p.instruction : ''))
       .replace(/&/g,'&amp;').replace(/</g,'&lt;');
     return '<details class="alert' + cls + '"><summary>'
@@ -428,7 +401,6 @@ function renderAlertsBox(feats){
       + '</summary><div class="desc">' + desc + '</div></details>';
   }).join('');
   box.style.display = 'flex';
-  renderAlertTimeline(feats);
 }
 async function loadAlerts(loc){
   return panelTask('alerts', null, async () => {
@@ -443,7 +415,6 @@ async function loadAlerts(loc){
     }catch(e){
       stormState.alertFeatures = [];
       renderAlertsBox([]);
-      renderAlertTimeline([]);
       syncAlertPolygons([]);
       if(state.data) renderActivityPlanner(state.data);
       return 0;
