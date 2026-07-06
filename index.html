@@ -444,8 +444,17 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 #winterOutlook{padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
 .aurora-hint{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
 .aurora-hint .lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
+.taf-lede{font-size:.75rem;color:var(--mut);margin:6px 0 0;line-height:1.45}
+.taf-meta{font-size:.72rem;color:var(--dim);margin-top:4px}
+.taf-raw-wrap{margin-top:10px}
+.taf-raw-wrap summary{font-size:.72rem;color:var(--acc);cursor:pointer;user-select:none}
 .taf-raw{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:.75rem;line-height:1.45;white-space:pre-wrap;margin-top:8px;padding:10px 12px;background:var(--panel-2);border-radius:8px}
-.taf-period{font-size:.75rem;color:var(--mut);margin-top:6px;line-height:1.4}
+.taf-periods{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.taf-period-card{padding:10px 12px;background:var(--panel-2);border-radius:8px}
+.taf-period-time{font-weight:600;font-size:.82rem;margin-bottom:8px}
+.taf-dl{display:grid;grid-template-columns:5.5em 1fr;gap:4px 10px;margin:0;font-size:.75rem;line-height:1.45}
+.taf-dl dt{color:var(--mut);margin:0}
+.taf-dl dd{margin:0;color:var(--fg)}
 .storm-report-pin{background:transparent;border:none}
 .storm-report-pin span{display:block;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .app-tab-bar button{position:relative}
@@ -874,6 +883,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
     <div id="afdPanelWrap" style="margin-top:16px">
       <section class="panel full nav-target" id="tafPanel" data-tab="more" aria-label="Aviation forecast">
         <h2>Aviation TAF <span class="panel-status" id="tafStatus"></span></h2>
+        <p class="taf-lede" id="tafLede">Decoded airport forecast for the nearest field with a TAF — wind, visibility, clouds, and weather on the airfield.</p>
         <div id="tafText" class="radar-note">Loading TAF&hellip;</div>
       </section>
       <section class="panel full nav-target" id="afdPanel" data-tab="more" aria-label="Forecast discussion">
@@ -915,7 +925,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '118';
+const APP_VERSION = '119';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -5038,21 +5048,107 @@ async function resolveTafIcaos(loc){
   }
   return out.slice(0, 3);
 }
+const TAF_WX_PHRASES = {
+  VCSH:'Showers nearby', VCTS:'Thunderstorms nearby', VCFG:'Fog nearby',
+  '-SHRA':'Light rain showers', SHRA:'Rain showers', '+SHRA':'Heavy rain showers',
+  '-RA':'Light rain', RA:'Rain', '+RA':'Heavy rain',
+  '-SN':'Light snow', SN:'Snow', '+SN':'Heavy snow',
+  '-DZ':'Light drizzle', DZ:'Drizzle', BR:'Mist', FG:'Fog', HZ:'Haze', FU:'Smoke',
+  TS:'Thunderstorm', TSRAGRA:'Thunderstorm with rain and hail',
+  FZRA:'Freezing rain', FZDZ:'Freezing drizzle', PL:'Sleet / ice pellets',
+  GR:'Hail', SQ:'Squalls', IC:'Ice crystals', SH:'Showers', VC:'Nearby'
+};
+const TAF_COVER = { FEW:'Few', SCT:'Scattered', BKN:'Broken', OVC:'Overcast', SKC:'Clear', CLR:'Clear' };
+function tafTimeMs(t){
+  if(t == null) return null;
+  if(typeof t === 'number') return t < 1e12 ? t * 1000 : t;
+  const d = new Date(t);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+function fmtTafWhen(ms, opts){
+  if(ms == null) return '';
+  return new Date(ms).toLocaleString([], opts || { weekday:'short', hour:'numeric', minute:'2-digit' });
+}
+function decodeTafWx(s){
+  if(!s) return '';
+  const u = String(s).toUpperCase().trim();
+  if(TAF_WX_PHRASES[u]) return TAF_WX_PHRASES[u];
+  const parts = u.split(/\s+/).map(t => TAF_WX_PHRASES[t] || t);
+  return parts.join(', ');
+}
+function decodeTafVis(v){
+  if(v == null || v === '') return '';
+  const s = String(v).trim();
+  if(/^P6/i.test(s) || s === '6+') return 'More than 6 miles';
+  const n = parseFloat(s);
+  if(!isNaN(n)) return n + (n === 1 ? ' mile' : ' miles') + ' visibility';
+  return s + ' visibility';
+}
+function decodeTafClouds(clouds){
+  if(!clouds || !clouds.length) return 'Clear or not reported';
+  return clouds.map(c => {
+    const cov = TAF_COVER[c.cover] || c.cover;
+    if(c.base == null) return cov;
+    const ft = Number(c.base);
+    const low = ft < 6000 ? ' (low clouds)' : '';
+    return cov + ' at ' + ft.toLocaleString() + ' ft' + low;
+  }).join('; ');
+}
+function decodeTafWind(wdir, wspd, wgst){
+  if(wspd == null) return '';
+  const kt = Number(wspd);
+  const spdDisp = state.units === 'F'
+    ? Math.round(kt * 1.15078) + ' mph'
+    : Math.round(kt * 1.852) + ' km/h';
+  let s = '';
+  if(wdir != null && wdir !== 'VRB') s += compass(wdir) + ' (' + wdir + '\u00B0) at ';
+  else if(String(wdir).toUpperCase() === 'VRB') s += 'Variable wind at ';
+  s += spdDisp + ' (' + kt + ' kt)';
+  if(wgst != null) s += ', gusts to ' + wgst + ' kt';
+  return s;
+}
+function fmtTafPeriod(from, to){
+  const a = tafTimeMs(from), b = tafTimeMs(to);
+  if(a == null) return '';
+  const opts = { weekday:'short', hour:'numeric', minute:'2-digit' };
+  if(b == null) return 'From ' + fmtTafWhen(a, opts);
+  return fmtTafWhen(a, opts) + ' \u2013 ' + fmtTafWhen(b, opts);
+}
 function renderTafHtml(taf){
   const raw = taf.rawTAF || '';
-  let html = '<div><strong>' + esc(taf.name || taf.icaoId || 'Airport') + '</strong>'
-    + ' <span class="radar-note">(' + esc(taf.icaoId || '') + ')</span></div>';
-  if(raw) html += '<div class="taf-raw">' + esc(raw) + '</div>';
+  const issuedMs = tafTimeMs(taf.issueTime || taf.bulletinTime);
+  const validToMs = tafTimeMs(taf.validTimeTo);
+  let html = '<div class="taf-head"><strong>' + esc(taf.name || taf.icaoId || 'Airport') + '</strong>'
+    + ' <span class="radar-note">(' + esc(taf.icaoId || '') + ')</span>';
+  const meta = [];
+  if(issuedMs) meta.push('Issued ' + fmtTafWhen(issuedMs));
+  if(validToMs) meta.push('valid through ' + fmtTafWhen(validToMs));
+  if(meta.length) html += '<div class="taf-meta">' + esc(meta.join(' \u00B7 ')) + '</div>';
+  html += '</div>';
+  if(raw){
+    html += '<details class="taf-raw-wrap"><summary>Raw aviation code</summary>'
+      + '<div class="taf-raw">' + esc(raw) + '</div></details>';
+  }
   const fcsts = taf.fcsts || [];
   if(fcsts.length){
-    html += fcsts.slice(0, 5).map(f => {
-      const t = f.timeFrom ? new Date(f.timeFrom * 1000).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' }) : '';
-      const wind = (f.wdir != null && f.wspd != null) ? f.wdir + '\u00B0 @ ' + f.wspd + ' kt' : '';
-      const vis = f.visib ? f.visib + ' SM' : '';
-      const wx = f.wxString || '';
-      const clouds = (f.clouds || []).map(c => c.cover + (c.base ? ' ' + c.base + 'ft' : '')).join(' ');
-      return '<div class="taf-period">' + esc(t) + ' \u2014 ' + esc([wind, vis, wx, clouds].filter(Boolean).join(' \u00B7 ')) + '</div>';
-    }).join('');
+    html += '<div class="taf-periods">' + fcsts.slice(0, 6).map(f => {
+      const wind = decodeTafWind(f.wdir, f.wspd, f.wgst);
+      const vis = decodeTafVis(f.visib);
+      const wx = decodeTafWx(f.wxString);
+      const clouds = decodeTafClouds(f.clouds);
+      const rows = [
+        ['Wind', wind],
+        ['Visibility', vis],
+        ['Weather', wx],
+        ['Clouds', clouds]
+      ].filter(r => r[1]);
+      const change = f.fcstChange === 'FM' ? 'Change from ' : (f.fcstChange === 'TEMPO' ? 'Temporary ' : (f.fcstChange === 'BECMG' ? 'Becoming ' : ''));
+      const title = change + fmtTafPeriod(f.timeFrom, f.timeTo);
+      return '<div class="taf-period-card">'
+        + '<div class="taf-period-time">' + esc(title) + '</div>'
+        + '<dl class="taf-dl">' + rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>').join('') + '</dl>'
+        + '</div>';
+    }).join('') + '</div>';
   }
   return html;
 }
