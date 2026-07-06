@@ -614,9 +614,6 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .loc-compare .lc-badge.spc{background:color-mix(in srgb,var(--accent) 12%,var(--panel));border-color:var(--accent)}
 .storm-report-pin{background:transparent;border:none}
 .storm-report-pin span{display:block;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
-.app-tab-bar button{position:relative}
-.cache-tab-dot{display:none;position:absolute;top:6px;right:calc(50% - 18px);width:6px;height:6px;border-radius:50%;background:var(--warm);pointer-events:none}
-body.data-cached .cache-tab-dot{display:block}
 .panel-status.is-cached::after{content:' · cached';color:var(--warm);font-weight:500}
 .radar-vel-toggle{flex:0 0 auto}
 .storm-probs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
