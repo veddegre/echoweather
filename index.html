@@ -361,7 +361,8 @@ body.radar-expanded{overflow:hidden}
 .activity-bar-lbl{display:flex;justify-content:space-between;font-size:.5625rem;color:var(--dim);margin-top:4px;letter-spacing:.03em}
 .activity-why{margin-top:8px;font-size:.72rem;color:var(--mut);line-height:1.45}
 .activity-why summary{cursor:pointer;color:var(--acc);user-select:none}
-#activityList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#activityList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-height:8rem}
+#activityList.is-loading{min-height:28rem}
 #activityList .activity-card{margin-top:0}
 .activity-bar span.na{background:var(--line);opacity:.45}
 @media (max-width:720px){#activityList{grid-template-columns:1fr}}
@@ -703,7 +704,6 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div class="metrics-lbl">Twilight &amp; darkness</div>
         <div class="twilight-grid" id="twilightGrid"></div>
         <div class="sky-darkness" id="skyDarkness"></div>
-        <div class="aurora-hint" id="auroraHint" hidden aria-label="Aurora outlook"></div>
         <div class="outlook" id="outlook">
           <div class="lbl">Tonight's sunset outlook</div>
           <div class="verdict" id="verdict">—</div>
@@ -842,10 +842,15 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div class="hourly-strip" id="exposureUvStrip"></div>
       </section>
 
+      <section class="panel nav-target outdoor-wide" id="auroraPanel" data-tab="outdoor" aria-label="Aurora outlook" hidden>
+        <h2>Aurora</h2>
+        <div class="aurora-hint" id="auroraOutdoor" hidden aria-live="polite"></div>
+      </section>
+
       <section class="panel nav-target outdoor-wide" id="activityPanel" data-tab="outdoor" aria-label="Outdoor activity forecast">
         <h2>Activity planner</h2>
         <p class="activity-lede" id="activityLede">Best times in the next 24 hours — rain, wind, heat, UV, and air quality. Activities adjust by season.</p>
-        <div id="activityList" class="radar-note">Loading activity forecast&hellip;</div>
+        <div id="activityList" class="radar-note is-loading">Loading activity forecast&hellip;</div>
       </section>
 
       <section class="panel nav-target outdoor-wide" id="coastalPanel" data-tab="outdoor" aria-label="Coastal tides" hidden>
@@ -962,7 +967,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '128';
+const APP_VERSION = '129';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2708,6 +2713,7 @@ function renderActivityPlanner(d){
   const lede = $('activityLede');
   if(!box) return;
   if(!d || !d.hourly || !d.hourly.time || !d.hourly.time.length){
+    box.classList.remove('is-loading');
     box.textContent = 'Forecast required for activity planner.';
     return;
   }
@@ -2721,9 +2727,11 @@ function renderActivityPlanner(d){
     coastal: loc && isCoastalLoc(loc)
   };
   if(!defs.length){
+    box.classList.remove('is-loading');
     box.textContent = 'No activities match the current season.';
     return;
   }
+  box.classList.remove('is-loading');
   box.innerHTML = defs.map(def =>
     renderActivityCard(def, buildActivityHours(d, def, extra), d, extra)
   ).join('');
@@ -2948,33 +2956,35 @@ function renderLight(d){
   const v = $('verdict');
   v.textContent = verdict; v.className = 'verdict ' + cls;
   $('verdictDetail').textContent = detail;
-  renderAuroraHint(loc, d);
 }
 async function renderAuroraHint(loc, d){
-  const box = $('auroraHint');
-  if(!box || !loc || loc.lat < 40 || !d) { if(box) box.hidden = true; return; }
+  const box = $('auroraOutdoor');
+  const panel = $('auroraPanel');
+  const hide = () => { if(box) box.hidden = true; if(panel) panel.hidden = true; };
+  if(!box || !panel || !loc || loc.lat < 40 || !d){ hide(); return; }
   try{
     const r = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
     if(!r.ok) throw new Error('kp');
     const rows = await r.json();
     const last = rows[rows.length - 1];
     const kp = parseFloat(last && last[1]);
-    if(isNaN(kp) || kp < 4){ box.hidden = true; return; }
+    if(isNaN(kp) || kp < 4){ hide(); return; }
     const i0 = nowIndex(d);
     let nightCloud = 100;
     for(let j = i0; j < Math.min(i0 + 12, d.hourly.time.length); j++){
       const h = new Date(d.hourly.time[j]).getHours();
       if(h >= 20 || h <= 5){
-        nightCloud = Math.min(nightCloud, d.hourly.cloud_cover?.[j] ?? 100);
+        nightCloud = Math.min(nightCloud, activityCloudCover(d.hourly, j));
       }
     }
-    if(nightCloud > 65){ box.hidden = true; return; }
+    if(nightCloud > 65){ hide(); return; }
+    panel.hidden = false;
     box.hidden = false;
-    box.innerHTML = '<div class="lbl">Aurora</div>'
+    box.innerHTML = '<div class="lbl">Northern lights</div>'
       + '<div class="verdict good">Possible tonight</div>'
       + '<div class="detail">Planetary Kp ' + kp.toFixed(1) + ' with relatively clear skies tonight (cloud ~'
-      + nightCloud + '%). Best away from city lights facing north.</div>';
-  }catch(e){ box.hidden = true; }
+      + Math.round(nightCloud) + '%). Best away from city lights, facing north.</div>';
+  }catch(e){ hide(); }
 }
 function renderFireBanner(loc, d, spcLabel){
   const box = $('fireModeBanner');
@@ -3677,13 +3687,13 @@ async function loadAlerts(loc){
       renderAlertsBox(feats);
       syncAlertPolygons(feats.filter(f => f.geometry));
       if(isRadarTabVisible()) showStormPanelPending(loc);
-      if(tabPanelsLoaded.outdoor && state.data) renderActivityPlanner(state.data);
+      if(state.data) renderActivityPlanner(state.data);
       return feats.length;
     }catch(e){
       stormState.alertFeatures = [];
       renderAlertsBox([]);
       syncAlertPolygons([]);
-      if(tabPanelsLoaded.outdoor && state.data) renderActivityPlanner(state.data);
+      if(state.data) renderActivityPlanner(state.data);
       return 0;
     }
   });
@@ -5406,7 +5416,8 @@ async function loadAir(loc){
   const gen = ++airLoadGen;
   return panelTask('airPanel', 'airStatus', async () => {
     let meteoDaily = null;
-    renderPollenPlaceholder();
+    const pollenBox = $('pollenForecast');
+    if(!pollenBox || !pollenBox.children.length) renderPollenPlaceholder();
     try{
       $('pollenNote').textContent = '';
       let aqi = null, source = '', detail = '', rows = [];
@@ -5501,7 +5512,7 @@ async function loadAir(loc){
       ).join('');
       renderAirnowKey();
       outdoorAir = { aqi: aqi ?? null, pm25: c?.pm2_5 ?? null };
-      if(tabPanelsLoaded.outdoor && state.data) renderActivityPlanner(state.data);
+      if(state.data) renderActivityPlanner(state.data);
     }catch(e){
       $('aqiVerdict').textContent = 'unavailable';
       $('aqiDetail').textContent = 'Could not load air quality. Check connection and retry.';
@@ -6534,6 +6545,20 @@ function getAppTab(){
   if(document.body.classList.contains('mtab-more')) return 'more';
   return 'now';
 }
+function prefetchOutdoorPanels(loc, d){
+  if(!loc || !d) return;
+  renderExposure(d);
+  renderActivityPlanner(d);
+  syncMarinePanelVisibility(loc);
+  renderAuroraHint(loc, d);
+  loadAir(loc);
+  if(isGreatLakesLoc(loc)) loadMarine(loc);
+  getTideStations().then(() => {
+    if(state.locations[state.active] !== loc) return;
+    syncCoastalPanelVisibility(loc);
+    if(isCoastalLoc(loc)) loadCoastal(loc);
+  });
+}
 function ensureTabPanels(tab){
   const loc = state.locations[state.active];
   const d = state.data;
@@ -6552,14 +6577,7 @@ function ensureTabPanels(tab){
   }
   if((all || tab === 'outdoor') && !tabPanelsLoaded.outdoor){
     tabPanelsLoaded.outdoor = true;
-    loadAir(loc);
-    renderExposure(d);
-    renderActivityPlanner(d);
-    if(isGreatLakesLoc(loc)){
-      loadMarine(loc);
-      loadBuoy();
-    }
-    loadCoastal(loc);
+    if(isGreatLakesLoc(loc)) loadBuoy();
   }
   if((all || tab === 'more') && !tabPanelsLoaded.more){
     tabPanelsLoaded.more = true;
@@ -6575,10 +6593,11 @@ function scheduleIdleForecastPrefetch(){
   else setTimeout(run, 2000);
 }
 function scheduleIdleOutdoorPrefetch(loc){
-  if(!isGreatLakesLoc(loc)) return;
-  const run = () => { if(!tabPanelsLoaded.outdoor) ensureTabPanels('outdoor'); };
-  if(typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3500 });
-  else setTimeout(run, 2800);
+  const run = () => {
+    if(state.data && state.locations[state.active] === loc) prefetchOutdoorPanels(loc, state.data);
+  };
+  if(typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 1200 });
+  else setTimeout(run, 400);
 }
 function scheduleIdleStormPrefetch(loc){
   if(!isLikelyUS(loc)) return;
@@ -6810,6 +6829,7 @@ async function loadAll(){
     }
     $('content').classList.remove('loading');
     loadAlerts(loc);
+    prefetchOutdoorPanels(loc, fetched);
     if(isLikelyUS(loc) && state.data){
       refreshStormTracking(loc, state.data);
       refreshFireWeather(loc, state.data);
@@ -6833,6 +6853,7 @@ async function loadAll(){
       console.error('renderWeatherUi cached', e);
       $('nowCond').textContent = cached.current?.condition || cached.current?.textDescription || 'Cached conditions';
     }
+    prefetchOutdoorPanels(loc, cached);
     ensureTabPanels(getAppTab());
   }else{
     $('nowCond').textContent = 'Could not load weather \u2014 check connection and retry.';
@@ -7139,7 +7160,9 @@ function setAppTab(tab, opts){
       else btn.removeAttribute('aria-current');
     });
   }
-  if(!opts || !opts.skipScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+  if(!opts || !opts.skipScroll){
+    window.scrollTo({ top: 0, behavior: isMobileTabLayout() ? 'auto' : 'smooth' });
+  }
   if(!opts || !opts.skipHash){
     const next = tab === 'radar' ? buildRadarHash() : '#' + tab;
     if(location.hash !== next) history.replaceState(null, '', next);

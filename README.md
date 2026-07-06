@@ -459,7 +459,6 @@ The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works. Rada
 - **Current conditions** — METAR when available (US), otherwise Open-Meteo; feels-like, pressure trend, glance metrics (wind, humidity, visibility, AQI teaser).
 - **Storm setup** *(conditional)* — CAPE, freezing level, wind shear, moisture, and Day 1 SPC probabilistic risks when convective weather is possible.
 - **Sun & Light** — Sun arc, golden/blue hour bar, sky compass, twilight/darkness estimate, sunset outlook.
-- **Aurora hint** *(northern latitudes)* — When planetary Kp is elevated and tonight’s skies are relatively clear.
 - **Next 24 Hours** — Hourly strip anchored at *now* (NWS periods overlaid on Open-Meteo timing); correct day/night icons; source labels on hover. Mini sparklines (pressure, temp, dew point, CAPE) show **low–high range** and **Now → Later** axis labels.
 
 ### Forecast
@@ -486,6 +485,7 @@ The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works. Rada
 - **Air Quality & Pollen** — AirNow (via PHP proxy) or Open-Meteo modeled AQI; pollutant breakdown; smoke/haze row when PM2.5 is high; **year-round** 3-day pollen forecast.
 - **UV & Exposure** — Current UV, humidity, dew point, visibility, wet bulb; **outdoor rest-of-today** hourly strip (UV, RH, comfort).
 - **Activity planner** — Best times in the next 24 hours for golf, hiking, yard work, running, beach/pool, cycling, dog walks, stargazing, and (when the **local forecast** is cold or snowy) skiing/sledding and snow shoveling. Per-hour scores use rain, wind, heat, UV, AQI, wind chill, ice, and snow; **daytime-only** activities skip after-dark hours (gray bar on timeline). Warm-season activities (golf, yard, beach) hide when winter conditions apply at **this location**; winter activities hide when it is warm (e.g. golf in Florida in January). Expandable **Why** explains top window and conditions.
+- **Aurora** *(lat ≥ 40°N, when active)* — NOAA planetary Kp ≥ 4 and relatively clear skies tonight; panel appears above the activity planner when conditions align.
 - **Coastal tides** *(coastal US)* — NOAA CO-OPS tide predictions for the nearest station.
 - **Great Lakes** *(basin only)* — NWS GLF or marine zone text, wave model, lake–air delta outlook, NDBC buoy picker with live obs.
 
