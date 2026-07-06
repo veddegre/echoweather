@@ -844,7 +844,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 
       <section class="panel nav-target outdoor-wide" id="activityPanel" data-tab="outdoor" aria-label="Outdoor activity forecast">
         <h2>Activity planner</h2>
-        <p class="activity-lede">Best times in the next 24 hours for popular outdoor plans — rain, wind, heat, UV, and air quality. Daytime activities ignore after-dark hours (gray bar). Green = good, amber = fair, red = poor.</p>
+        <p class="activity-lede" id="activityLede">Best times in the next 24 hours — rain, wind, heat, UV, and air quality. Activities adjust by season.</p>
         <div id="activityList" class="radar-note">Loading activity forecast&hellip;</div>
       </section>
 
@@ -962,7 +962,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '124';
+const APP_VERSION = '125';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2171,6 +2171,62 @@ function isRainWxCode(c){
 }
 function isStormWxCode(c){ return c >= 95; }
 function isSnowWxCode(c){ return (c >= 71 && c <= 77) || c === 85 || c === 86; }
+function isIceWxCode(c){ return c === 56 || c === 57 || c === 66 || c === 67; }
+function activityLocalMonth(d){
+  const i0 = nowIndex(d);
+  const t = d?.hourly?.time?.[i0];
+  return t ? new Date(t).getMonth() : new Date().getMonth();
+}
+function getActivitySeason(loc, d){
+  const month = activityLocalMonth(d);
+  const nh = !loc || loc.lat >= 0;
+  const warmHighF = 62, coldHighF = 45, coldLowF = 28;
+  const warmHighC = 17, coldHighC = 7, coldLowC = -2;
+  const warmHigh = state.units === 'F' ? warmHighF : warmHighC;
+  const coldHigh = state.units === 'F' ? coldHighF : coldHighC;
+  const coldLow = state.units === 'F' ? coldLowF : coldLowC;
+  let avgHigh = null, avgLow = null;
+  if(d?.daily?.temperature_2m_max?.length){
+    const highs = d.daily.temperature_2m_max.slice(0, 5);
+    const lows = d.daily.temperature_2m_min?.slice(0, 5) || [];
+    avgHigh = highs.reduce((a, b) => a + b, 0) / highs.length;
+    avgLow = lows.length ? lows.reduce((a, b) => a + b, 0) / lows.length : avgHigh;
+  }
+  const i0 = d?.hourly?.time?.length ? nowIndex(d) : 0;
+  const snowDepth = d?.hourly?.snow_depth?.[i0] ?? d?.om?.hourly?.snow_depth?.[i0] ?? 0;
+  const snowfallToday = d?.daily?.snowfall_sum?.[0] ?? 0;
+  let warm = avgHigh != null ? avgHigh >= warmHigh : false;
+  let cold = avgHigh != null ? (avgHigh < coldHigh || avgLow < coldLow) : false;
+  if(snowDepth > 0.02 || snowfallToday > (state.units === 'F' ? 0.1 : 0.3)) cold = true;
+  if(nh){
+    if([5, 6, 7, 8].includes(month)) warm = true;
+    if([11, 0, 1, 2].includes(month) && (avgHigh == null || avgHigh < (state.units === 'F' ? 50 : 10))) cold = true;
+    if([3, 4, 9, 10].includes(month) && avgHigh != null && avgHigh >= (state.units === 'F' ? 55 : 13)) warm = true;
+  }else{
+    if([11, 0, 1, 2].includes(month)) warm = true;
+    if([5, 6, 7, 8].includes(month) && (avgHigh == null || avgHigh < warmHigh)) cold = true;
+  }
+  if(warm && cold) cold = avgHigh != null && avgHigh < coldHigh;
+  const shoulder = !warm && !cold;
+  let note = 'Year-round activities always shown. ';
+  if(cold && !warm) note += 'Winter mode — skiing and shoveling replace golf, yard work, and beach/pool.';
+  else if(warm && !cold) note += 'Warm season — winter-only activities hidden.';
+  else note += 'Shoulder season — summer sports hidden if it stays cold.';
+  return { warm, cold, shoulder, note };
+}
+function activitiesForSeason(season){
+  return ACTIVITY_DEFS.filter(def => {
+    if(def.season === 'warm') return !season.cold;
+    if(def.season === 'cold') return season.cold;
+    return true;
+  });
+}
+function activityWindChillF(ctx){
+  if(state.units !== 'F') return null;
+  const temp = ctx.temp, wind = ctx.wind;
+  if(temp == null || wind < 3 || temp >= 50) return null;
+  return Math.round(35.74 + 0.6215 * temp - 35.75 * Math.pow(wind, 0.16) + 0.4275 * temp * Math.pow(wind, 0.16));
+}
 function activityGrade(score){
   if(score >= 70) return 'good';
   if(score >= 45) return 'fair';
@@ -2195,7 +2251,12 @@ function activityHourContext(d, i){
     code: h.weather_code?.[i] ?? 0,
     isDay: h.is_day?.[i] ?? 1,
     cloud: h.cloud_cover?.[i] ?? 0,
-    wetBulb: h.wet_bulb_temperature_2m?.[i] ?? h.temperature_2m[i] ?? 0
+    wetBulb: h.wet_bulb_temperature_2m?.[i] ?? h.temperature_2m[i] ?? 0,
+    snowDepth: h.snow_depth?.[i] ?? d.om?.hourly?.snow_depth?.[i] ?? 0,
+    snowfall: h.snowfall?.[i] ?? 0,
+    visibility: h.visibility?.[i] != null
+      ? (state.units === 'F' ? h.visibility[i] / 1609.34 : h.visibility[i] / 1000)
+      : null
   };
 }
 function activityAlertCap(){
@@ -2249,6 +2310,17 @@ function penalizeAqi(extra, reasons, strict){
   if(aqi > 75 && strict) reasons.push('Sensitive groups: elevated AQI');
   return aqi > 75 && strict ? 8 : 0;
 }
+function penalizeWinter(ctx, reasons){
+  let s = 0;
+  if(isIceWxCode(ctx.code)){ s += 45; reasons.push('Freezing rain or ice'); }
+  const wc = activityWindChillF(ctx);
+  if(wc != null && wc <= 0){ s += 35; reasons.push('Bitter wind chill (' + wc + '\u00B0F)'); }
+  else if(wc != null && wc <= 15){ s += 18; reasons.push('Wind chill ' + wc + '\u00B0F'); }
+  if(ctx.snowDepth > 0.05) reasons.push('Snow on the ground');
+  if(ctx.snowfall > (state.units === 'F' ? 0.02 : 0.05)) reasons.push('Snow falling');
+  if(ctx.visibility != null && ctx.visibility < 2){ s += 12; reasons.push('Low visibility'); }
+  return s;
+}
 const ACTIVITY_SCORERS = {
   golf(ctx, extra){
     let s = 100;
@@ -2256,6 +2328,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 55, 28);
     s -= penalizeWind(ctx, reasons, 18, 10);
     s -= penalizeHeat(ctx, reasons, 85, 92);
+    s -= penalizeWinter(ctx, reasons);
     if(ctx.uv >= 8 && ctx.isDay) reasons.push('High UV — seek shade');
     return { score: clampActScore(s), reasons };
   },
@@ -2265,6 +2338,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 50, 25);
     s -= penalizeWind(ctx, reasons, 28, 16);
     s -= penalizeHeat(ctx, reasons, 86, 94);
+    s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, true);
     if(ctx.uv >= 9 && ctx.isDay){ s -= 12; reasons.push('Very high UV'); }
     if(ctx.cloud > 85 && ctx.isDay) reasons.push('Overcast');
@@ -2277,6 +2351,7 @@ const ACTIVITY_SCORERS = {
     if(ctx.precip > 0.02) s -= 25;
     s -= penalizeWind(ctx, reasons, 22, 14);
     s -= penalizeHeat(ctx, reasons, 88, 96);
+    s -= penalizeWinter(ctx, reasons);
     if(ctx.wetBulb >= 80) reasons.push('Heavy work in heat — hydrate');
     return { score: clampActScore(s), reasons };
   },
@@ -2287,6 +2362,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeWind(ctx, reasons, 24, 14);
     const heat = penalizeHeat(ctx, reasons, 82, 90);
     s -= heat + (heat > 0 ? 5 : 0);
+    s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, true);
     if(ctx.temp >= 40 && ctx.temp <= 75 && ctx.pop < 25) reasons.push('Comfortable running temps');
     return { score: clampActScore(s), reasons };
@@ -2308,6 +2384,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 50, 25);
     s -= penalizeWind(ctx, reasons, 16, 9);
     s -= penalizeHeat(ctx, reasons, 84, 92);
+    s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, false);
     if(ctx.wind >= 20) s -= 15;
     return { score: clampActScore(s), reasons };
@@ -2319,7 +2396,42 @@ const ACTIVITY_SCORERS = {
     if(ctx.temp >= 85){ s -= 35; reasons.push('Hot pavement risk for paws'); }
     else if(ctx.temp >= 78){ s -= 15; reasons.push('Warm — short walks'); }
     if(ctx.temp <= 15){ s -= 25; reasons.push('Very cold for pets'); }
+    s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, true);
+    return { score: clampActScore(s), reasons };
+  },
+  ski(ctx, extra){
+    let s = 55;
+    const reasons = [];
+    if(isSnowWxCode(ctx.code) || ctx.snowfall > (state.units === 'F' ? 0.02 : 0.05)){
+      s += 30; reasons.push('Snow in the forecast');
+    }
+    if(ctx.snowDepth > 0.05) s += 20;
+    else if(ctx.snowDepth > 0.02) s += 10;
+    else { s -= 20; reasons.push('Thin or no snow cover'); }
+    if(state.units === 'F' && ctx.temp > 38) { s -= 25; reasons.push('Too warm — snow may be slushy'); }
+    else if(state.units === 'F' && ctx.temp <= 38 && ctx.temp >= 20) reasons.push('Cold enough to preserve snow');
+    s -= penalizeRain(ctx, reasons, 30, 15);
+    s -= penalizeWind(ctx, reasons, 30, 18);
+    s -= penalizeWinter(ctx, reasons);
+    if(ctx.wind >= 25) s -= 15;
+    return { score: clampActScore(s), reasons };
+  },
+  shovel(ctx, extra){
+    let s = 45;
+    const reasons = [];
+    if(isSnowWxCode(ctx.code) || ctx.snowfall > (state.units === 'F' ? 0.02 : 0.05)){
+      s += 35; reasons.push('Snow to clear');
+    }else if(ctx.snowDepth > 0.05){
+      s += 20; reasons.push('Snow on the ground');
+    }else{
+      s -= 30; reasons.push('Little snow expected');
+    }
+    s -= penalizeWind(ctx, reasons, 28, 16);
+    s -= penalizeWinter(ctx, reasons);
+    const wc = activityWindChillF(ctx);
+    if(wc != null && wc <= 5) s -= 20;
+    if(ctx.temp <= (state.units === 'F' ? 15 : -9)) reasons.push('Extreme cold for extended shoveling');
     return { score: clampActScore(s), reasons };
   },
   stars(ctx, extra){
@@ -2335,14 +2447,16 @@ const ACTIVITY_SCORERS = {
   }
 };
 const ACTIVITY_DEFS = [
-  { id: 'golf', name: 'Golf', icon: '\u26F3', dayOnly: true },
-  { id: 'hiking', name: 'Hiking', icon: '\uD83E\uDDF7', dayOnly: true },
-  { id: 'yard', name: 'Yard work', icon: '\uD83C\uDF3F', dayOnly: true },
-  { id: 'running', name: 'Running', icon: '\uD83C\uDFC3', daylight: true },
-  { id: 'beach', name: 'Beach / pool', icon: '\uD83C\uDFD6\uFE0F', dayOnly: true, hourMin: 9, hourMax: 20 },
-  { id: 'cycling', name: 'Cycling', icon: '\uD83D\uDEB4', daylight: true },
-  { id: 'dog', name: 'Dog walk', icon: '\uD83D\uDC36', daylight: true },
-  { id: 'stars', name: 'Stargazing', icon: '\uD83C\uDF19', nightOnly: true }
+  { id: 'golf', name: 'Golf', icon: '\u26F3', season: 'warm', dayOnly: true },
+  { id: 'hiking', name: 'Hiking', icon: '\uD83E\uDDF7', season: 'all', dayOnly: true },
+  { id: 'yard', name: 'Yard work', icon: '\uD83C\uDF3F', season: 'warm', dayOnly: true },
+  { id: 'running', name: 'Running', icon: '\uD83C\uDFC3', season: 'all', daylight: true },
+  { id: 'beach', name: 'Beach / pool', icon: '\uD83C\uDFD6\uFE0F', season: 'warm', dayOnly: true, hourMin: 9, hourMax: 20 },
+  { id: 'cycling', name: 'Cycling', icon: '\uD83D\uDEB4', season: 'all', daylight: true },
+  { id: 'dog', name: 'Dog walk', icon: '\uD83D\uDC36', season: 'all', daylight: true },
+  { id: 'ski', name: 'Skiing / sledding', icon: '\u26F7', season: 'cold', dayOnly: true },
+  { id: 'shovel', name: 'Snow shoveling', icon: '\u2744\uFE0F', season: 'cold', dayOnly: true },
+  { id: 'stars', name: 'Stargazing', icon: '\uD83C\uDF19', season: 'all', nightOnly: true }
 ];
 function activityHourEligible(def, ctx){
   if(def.nightOnly) return !ctx.isDay;
@@ -2453,6 +2567,7 @@ function buildActivityWhyList(def, hours, windows, d, extra){
   const wind = Math.round(ctx.wind);
   const wu = windUnit();
   const wcard = ctx.windDir != null ? compass(ctx.windDir) : '';
+  const wc = activityWindChillF(ctx);
 
   items.push('At peak: ' + activityWxLabel(ctx) + ', ' + temp + degSym() + ', ' + hourlyComfortNote(temp, dew).toLowerCase());
   if(pop <= 15) items.push('Rain unlikely (' + pop + '% chance)');
@@ -2469,6 +2584,8 @@ function buildActivityWhyList(def, hours, windows, d, extra){
     if(ctx.cloud < 40 && ctx.isDay) items.push('Good visibility on the trail');
     else if(ctx.cloud > 80) items.push('Overcast — dim light on trails');
     if(ctx.uv >= 8 && ctx.isDay) items.push('High UV — cover up on exposed ridges');
+    if(wc != null && wc <= 15) items.push('Wind chill ' + wc + '\u00B0F — layer up');
+    if(ctx.snowDepth > 0.05) items.push('Snow on trails — traction aids recommended');
   }else if(def.id === 'yard'){
     if(ctx.precip > 0.02) items.push('Ground may still be wet from recent rain');
     if(ctx.wetBulb >= 80) items.push('Heavy exertion in heat — take breaks and hydrate');
@@ -2489,7 +2606,16 @@ function buildActivityWhyList(def, hours, windows, d, extra){
   }else if(def.id === 'dog'){
     if(temp >= 85) items.push('Hot pavement risk — walk early or on grass');
     else if(temp <= 20) items.push('Cold — short walks; watch for ice on paws');
+    const wc = activityWindChillF(ctx);
+    if(wc != null && wc <= 10) items.push('Wind chill ' + wc + '\u00B0F — protect paws');
     if(extra.aqi != null && extra.aqi > 100) items.push('AQI ' + extra.aqi + ' — shorten outdoor time');
+  }else if(def.id === 'ski'){
+    if(ctx.snowDepth > 0.05) items.push('Snow depth supports sliding sports');
+    else if(ctx.snowfall > 0) items.push('Fresh snow expected');
+    if(wc != null) items.push('Wind chill ' + wc + '\u00B0F — dress in layers');
+    else if(temp <= 25) items.push('Dress for cold and wind');
+  }else if(def.id === 'shovel'){
+    if(ctx.snowfall > 0 || isSnowWxCode(ctx.code)) items.push('Snow accumulation likely');
   }else if(def.id === 'stars'){
     if(ctx.cloud < 25) items.push('Mostly clear skies');
     else if(ctx.cloud < 55) items.push('Partly cloudy — some stars visible');
@@ -2531,18 +2657,26 @@ function renderActivityCard(def, hours, d, extra){
 }
 function renderActivityPlanner(d){
   const box = $('activityList');
+  const lede = $('activityLede');
   if(!box) return;
   if(!d || !d.hourly || !d.hourly.time || !d.hourly.time.length){
     box.textContent = 'Forecast required for activity planner.';
     return;
   }
   const loc = state.locations[state.active];
+  const season = getActivitySeason(loc, d);
+  const defs = activitiesForSeason(season);
+  if(lede) lede.textContent = season.note + ' Daytime hours only for most activities (gray bar = after dark). Green = good, amber = fair, red = poor.';
   const extra = {
     aqi: outdoorAir.aqi,
     pm25: outdoorAir.pm25,
     coastal: loc && isCoastalLoc(loc)
   };
-  box.innerHTML = ACTIVITY_DEFS.map(def =>
+  if(!defs.length){
+    box.textContent = 'No activities match the current season.';
+    return;
+  }
+  box.innerHTML = defs.map(def =>
     renderActivityCard(def, buildActivityHours(d, def, extra), d, extra)
   ).join('');
 }
