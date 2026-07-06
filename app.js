@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '145';
+const APP_VERSION = '146';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -275,7 +275,7 @@ function windCompassHtml(degFrom, size){
   const flow = (degFrom + 180) % 360;
   const sz = size || 32;
   return '<svg class="dir-icon wind-dir" viewBox="0 0 32 32" width="' + sz + '" height="' + sz + '" aria-hidden="true">'
-    + '<circle cx="16" cy="16" r="13.5" fill="var(--panel)" stroke="currentColor" stroke-width="1.25"/>'
+    + '<circle class="wc-fill" cx="16" cy="16" r="13.5" stroke="currentColor" stroke-width="1.25"/>'
     + '<text x="16" y="7.5" text-anchor="middle" font-size="4.5" font-weight="600" fill="currentColor" opacity=".7">N</text>'
     + '<g transform="rotate(' + flow + ' 16 16)"><path d="M16 7 L19.5 21 L16 17.5 L12.5 21 Z" fill="currentColor"/></g>'
     + '</svg>';
@@ -2993,6 +2993,7 @@ function renderDaily(d){
       + '</div>'
       + '<div class="day-timeline-wrap">'
       + '<div class="day-cond-wrap">'
+      + (timeline.nowMark || '')
       + '<div class="day-cond-strip" role="img" aria-label="Hour-by-hour sky conditions for this day">' + timeline.segHtml + '</div>'
       + '</div>'
       + '<div class="day-temp-chart">'
@@ -3000,7 +3001,6 @@ function renderDaily(d){
       + timeline.ticksHtml
       + timeline.note
       + '</div>'
-      + (timeline.nowMark || '')
       + '</div></article>';
   }).join('');
   }catch(e){
@@ -5627,6 +5627,13 @@ function setAppTab(tab, opts){
   if(tab === 'radar') activateRadarPanel();
   else if(radarLightningOn) syncLightningOverlay();
   else if(map) refreshRadarMapSize();
+  const scrub = $('radarScrub');
+  if(scrub){
+    const onRadar = tab === 'radar';
+    scrub.disabled = !onRadar;
+    scrub.tabIndex = onRadar ? 0 : -1;
+    scrub.setAttribute('aria-hidden', onRadar ? 'false' : 'true');
+  }
   ensureTabPanels(tab);
   syncChromeHeight();
 }
