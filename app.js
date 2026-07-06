@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '158';
+const APP_VERSION = '159';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -4998,6 +4998,39 @@ function stashWaterCoastal(ctx){
   waterVerdictState.coastal = ctx;
   renderWaterVerdict();
 }
+function buildWaterVerdictAttribution(loc, marine, coastal, isLake, isCoast){
+  const parts = [];
+  const nwsSrc = marine?.nwsSource || coastal?.nwsSource;
+  if(nwsSrc){
+    parts.push(nwsSrc);
+    if(isLake && marine?.lake && !nwsSrc.includes(marine.lake)){
+      parts.push(marine.lake + ' open waters');
+    }
+  }else if(isLake && marine?.lake){
+    parts.push('No NWS lake forecast — waves and wind only');
+  }else if(isCoast){
+    parts.push('No NWS marine zone text loaded');
+  }
+  const waveAt = marine?.waveAt || coastal?.waveAt;
+  if(waveAt && waveAt !== 'your location'){
+    parts.push('Waves at ' + waveAt);
+  }else if(marine?.waveHeight != null || coastal?.waveHeight != null){
+    parts.push('Waves modeled at your pin');
+  }
+  if(loc?.name){
+    parts.push('Wind at ' + loc.name);
+  }
+  if(isCoast && coastal?.tideStation){
+    parts.push('Tides: ' + coastal.tideStation);
+  }
+  if(hazardNoteFromText(marine?.nwsText || coastal?.nwsText)){
+    parts.push('Verdict includes NWS marine wording');
+  }
+  return parts.join(' \u00B7 ');
+}
+function hazardNoteFromText(text){
+  return text && marineHazardLevel(text) > 0;
+}
 function renderWaterVerdict(){
   const panel = $('waterVerdictPanel');
   if(!panel) return;
@@ -5044,6 +5077,12 @@ function renderWaterVerdict(){
   $('waterVerdictText').textContent = verdict;
   $('waterVerdictText').className = 'verdict ' + cls;
   $('waterVerdictDetail').textContent = detailParts.join(' \u00B7 ') || 'Loading wave and marine forecast data\u2026';
+  const srcEl = $('waterVerdictSource');
+  if(srcEl){
+    const attr = buildWaterVerdictAttribution(loc, marine, coastal, isLake, isCoast);
+    srcEl.textContent = attr;
+    srcEl.hidden = !attr;
+  }
   panel.hidden = false;
 }
 function renderNearshoreSummary(lake, c, nwsMarine, buoyId, airDeltaC){
@@ -5143,11 +5182,21 @@ async function fetchNwsMarineText(loc, pointsProps){
   }
   const marineUrl = pointsProps && pointsProps.forecastMarineZone;
   if(marineUrl){
+    let zoneName = '';
+    try{
+      const zr = await nwsFetch(marineUrl);
+      if(zr.ok) zoneName = (await zr.json()).properties?.name || '';
+    }catch(e){ /* ignore */ }
     const r = await nwsFetch(marineUrl + '/forecast');
     if(r.ok){
       const j = await r.json();
       const p = (j.properties.periods || [])[0];
-      if(p) return { source: 'NWS marine zone', text: (p.shortForecast || '') + '\n\n' + (p.detailedForecast || '') };
+      if(p){
+        return {
+          source: zoneName ? 'NWS ' + zoneName : 'NWS marine zone',
+          text: (p.shortForecast || '') + '\n\n' + (p.detailedForecast || '')
+        };
+      }
     }
   }
   return null;
@@ -5207,7 +5256,9 @@ async function loadMarine(loc){
       stashWaterMarine({
         waveHeight: c.wave_height,
         nwsText: nwsMarine?.text || '',
-        lake
+        nwsSource: nwsMarine?.source || '',
+        lake,
+        waveAt
       });
       if(c.wave_height === null || c.wave_height === undefined){
         const extra = note.textContent ? note.textContent + ' ' : '';
@@ -5880,9 +5931,12 @@ async function loadCoastal(loc){
       stashWaterCoastal({
         waveHeight: c?.wave_height ?? null,
         nwsText: nwsMarine?.text || '',
+        nwsSource: nwsMarine?.source || '',
         tideLabel: upcoming[0]
           ? (upcoming[0].type === 'H' ? 'Next high' : 'Next low') + ' ' + new Date(upcoming[0].t).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })
-          : ''
+          : '',
+        tideStation: st.name + ' (' + st.id + ')',
+        waveAt: c?.wave_height != null ? 'your location' : (st.lat != null ? 'nearest tide station' : '')
       });
     }catch(e){
       setPanelUnavail($('coastalNote'), 'no_tides');
