@@ -962,7 +962,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '127';
+const APP_VERSION = '128';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2280,7 +2280,7 @@ function activityHourContext(d, i){
     windDir: h.wind_direction_10m?.[i] ?? null,
     uv: h.uv_index?.[i] ?? 0,
     code: h.weather_code?.[i] ?? 0,
-    isDay: h.is_day?.[i] ?? 1,
+    isDay: Number(h.is_day?.[i] ?? 1) !== 0,
     cloud: activityCloudCover(h, i),
     wetBulb: h.wet_bulb_temperature_2m?.[i] ?? h.temperature_2m[i] ?? 0,
     snowDepth: h.snow_depth?.[i] ?? d.om?.hourly?.snow_depth?.[i] ?? 0,
@@ -2531,13 +2531,19 @@ function buildActivityHours(d, def, extra){
   return hours;
 }
 function mergeActivityWindows(hours){
-  const eligible = hours.filter(h => !h.ineligible);
-  if(!eligible.length) return [];
+  if(!hours.length) return [];
   const out = [];
-  let cur = { start: eligible[0].time, end: eligible[0].time, grade: eligible[0].grade, reasons: eligible[0].reasons.slice() };
-  for(let i = 1; i < eligible.length; i++){
-    const h = eligible[i];
-    if(h.grade === cur.grade){
+  let cur = null;
+  for(let i = 0; i < hours.length; i++){
+    const h = hours[i];
+    if(h.ineligible){
+      if(cur){ out.push(cur); cur = null; }
+      continue;
+    }
+    const prev = i > 0 ? hours[i - 1] : null;
+    if(!cur){
+      cur = { start: h.time, end: h.time, grade: h.grade, reasons: h.reasons.slice() };
+    }else if(h.grade === cur.grade && prev && !prev.ineligible){
       cur.end = h.time;
       h.reasons.forEach(r => { if(cur.reasons.length < 4 && !cur.reasons.includes(r)) cur.reasons.push(r); });
     }else{
@@ -2545,7 +2551,7 @@ function mergeActivityWindows(hours){
       cur = { start: h.time, end: h.time, grade: h.grade, reasons: h.reasons.slice() };
     }
   }
-  out.push(cur);
+  if(cur) out.push(cur);
   return out;
 }
 function fmtActWindow(w){
@@ -2559,8 +2565,15 @@ function summarizeActivityWindows(windows, hours, def){
     if(def.dayOnly || def.daylight) return 'Best during daylight — check again tomorrow morning';
     return 'No suitable hours in the forecast window';
   }
-  const good = windows.filter(w => w.grade === 'good');
-  const fair = windows.filter(w => w.grade === 'fair');
+  const nowIso = hours[0]?.time;
+  const windowSort = (a, b) => {
+    const aNow = nowIso && a.start <= nowIso && a.end >= nowIso;
+    const bNow = nowIso && b.start <= nowIso && b.end >= nowIso;
+    if(aNow !== bNow) return aNow ? -1 : 1;
+    return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
+  };
+  const good = windows.filter(w => w.grade === 'good').sort(windowSort);
+  const fair = windows.filter(w => w.grade === 'fair').sort(windowSort);
   const parts = [];
   if(good.length) parts.push('Best ' + good.slice(0, 2).map(fmtActWindow).join(', '));
   if(fair.length) parts.push('Fair ' + fair.slice(0, 2).map(fmtActWindow).join(', '));
@@ -2586,13 +2599,15 @@ function buildActivityWhyList(def, hours, windows, d, extra){
       ? 'Needs darkness — none left in this 24-hour window.'
       : 'Best in daylight; remaining hours are after dark.'];
   }
-  const bestWin = windows.find(w => w.grade === 'good') || windows.find(w => w.grade === 'fair');
-  if(bestWin){
-    items.push('Top window: ' + fmtActWindow(bestWin) + ' (' + activityGradeLabel(bestWin.grade).toLowerCase() + ')');
-  }
   const peakHour = eligible.reduce((a, h) => h.score > a.score ? h : a, eligible[0]);
   const peakIdx = d.hourly.time.indexOf(peakHour.time);
   if(peakIdx < 0) return items.length ? items : ['Forecast data unavailable for this period.'];
+  const bestWin = windows.find(w => peakHour.time >= w.start && peakHour.time <= w.end)
+    || windows.find(w => w.grade === 'good')
+    || windows.find(w => w.grade === 'fair');
+  if(bestWin){
+    items.push('Top window: ' + fmtActWindow(bestWin) + ' (' + activityGradeLabel(bestWin.grade).toLowerCase() + ')');
+  }
   const ctx = activityHourContext(d, peakIdx);
   const temp = Math.round(ctx.temp);
   const dew = Math.round(ctx.dew);
