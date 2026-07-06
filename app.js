@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '161';
+const APP_VERSION = '162';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -6442,11 +6442,57 @@ function scrollToNavTarget(id){
   if(!id || APP_TABS.includes(id)) return;
   const el = document.getElementById(id);
   if(!el || !el.classList.contains('nav-target')) return;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      el.scrollIntoView({ behavior: isMobileTabLayout() ? 'auto' : 'smooth', block: 'start' });
-    });
-  });
+  const behavior = isMobileTabLayout() ? 'auto' : 'smooth';
+  let frame = 0;
+  const tryScroll = () => {
+    frame++;
+    const h = el.getBoundingClientRect().height;
+    if(h > 0 || frame >= 16){
+      el.scrollIntoView({ behavior: frame > 2 ? 'auto' : behavior, block: 'start' });
+    }
+    if(h === 0 && frame < 16) requestAnimationFrame(tryScroll);
+  };
+  requestAnimationFrame(() => requestAnimationFrame(tryScroll));
+  setTimeout(() => {
+    if(!document.body.contains(el) || el.getBoundingClientRect().height === 0) return;
+    const top = el.getBoundingClientRect().top;
+    const chrome = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--chrome-h')) || 80;
+    if(top < chrome + 4 || top > window.innerHeight * 0.45)
+      el.scrollIntoView({ behavior: 'auto', block: 'start' });
+  }, 180);
+}
+
+function navPathFromHref(href){
+  const raw = decodeURIComponent((href || '').replace(/^#/, ''));
+  const qi = raw.indexOf('?');
+  return qi >= 0 ? raw.slice(0, qi) : raw;
+}
+
+function tabForNavPath(path){
+  if(APP_TABS.includes(path)) return path;
+  if(path === 'air') return 'outdoor';
+  if(path === 'lightPanel' || path === 'hourlyPanel' || path === 'nowPanel') return 'now';
+  if(path === 'dailyPanel' || path === 'forecastTextPanel' || path === 'obsPanel') return 'forecast';
+  if(path === 'radarPanel' || path === 'stormLinks') return 'radar';
+  if(path === 'airPanel' || path === 'exposurePanel' || path === 'marinePanel' || path === 'activityPanel' || path === 'impactPanel') return 'outdoor';
+  if(path === 'afdPanel' || path === 'tafPanel' || path === 'moonPanel' || path === 'advPanel' || path === 'advCollapse') return 'more';
+  return 'now';
+}
+
+function applyNavHash(){
+  syncChromeHeight();
+  applyRadarDeepLinkFromHash();
+  const { path } = parseNavHash();
+  setAppTab(tabForNavPath(path), { skipScroll: true, skipHash: true });
+  scrollToNavTarget(path);
+}
+
+function navigateToNavTarget(href){
+  const raw = (href || '').replace(/^#/, '');
+  if(!raw) return;
+  const want = '#' + raw;
+  if(location.hash !== want) location.hash = want;
+  else applyNavHash();
 }
 
 function parseNavHash(){
@@ -6505,15 +6551,7 @@ function setAppTab(tab, opts){
 }
 
 function tabFromHash(){
-  const { path } = parseNavHash();
-  if(APP_TABS.includes(path)) return path;
-  if(path === 'air') return 'outdoor';
-  if(path === 'lightPanel' || path === 'hourlyPanel' || path === 'nowPanel') return 'now';
-  if(path === 'dailyPanel' || path === 'forecastTextPanel' || path === 'obsPanel') return 'forecast';
-  if(path === 'radarPanel' || path === 'stormLinks') return 'radar';
-  if(path === 'airPanel' || path === 'exposurePanel' || path === 'marinePanel' || path === 'activityPanel' || path === 'impactPanel') return 'outdoor';
-  if(path === 'afdPanel' || path === 'tafPanel' || path === 'moonPanel' || path === 'advPanel' || path === 'advCollapse') return 'more';
-  return 'now';
+  return tabForNavPath(parseNavHash().path);
 }
 
 function initPageNav(){
@@ -6529,6 +6567,20 @@ function initPageNav(){
   document.addEventListener('keydown', e => {
     if(e.key === 'Escape' && $('radarStage')?.classList.contains('expanded')) toggleRadarExpand();
   });
+
+  document.addEventListener('click', e => {
+    if(e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest('a[href^="#"]');
+    if(!a) return;
+    const href = a.getAttribute('href');
+    if(!href || href === '#') return;
+    const path = navPathFromHref(href);
+    if(!path) return;
+    if(APP_TABS.includes(path) || document.getElementById(path)?.classList.contains('nav-target')){
+      e.preventDefault();
+      navigateToNavTarget(href.slice(1));
+    }
+  }, true);
 
   $('smokeRadarBtn')?.addEventListener('click', () => {
     enableHmsSmokeLayer();
@@ -6575,15 +6627,10 @@ function initPageNav(){
     if(tabBar) ro.observe(tabBar);
   }
 
-  const syncLayout = () => {
-    syncChromeHeight();
-    applyRadarDeepLinkFromHash();
-    const { path } = parseNavHash();
-    setAppTab(tabFromHash(), { skipScroll: true, skipHash: true });
-    scrollToNavTarget(path);
-  };
+  const syncLayout = () => { applyNavHash(); };
 
   window.addEventListener('hashchange', syncLayout);
+  window.addEventListener('pageshow', e => { if(e.persisted) syncLayout(); });
   window.addEventListener('resize', () => {
     syncChromeHeight();
     syncLayout();
