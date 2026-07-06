@@ -356,6 +356,22 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .radar-ctl button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .leaflet-container{font-family:var(--sans);font-size:.75rem;background:var(--panel-2)}
 .lightning-canvas{position:absolute;left:0;top:0;z-index:500;pointer-events:none}
+.threat-layers{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);padding:0}
+.threat-layers>summary{padding:8px 12px;font-size:.75rem;font-weight:600;color:var(--sky);cursor:pointer;list-style:none}
+.threat-layers>summary::-webkit-details-marker{display:none}
+.threat-layer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:6px 10px;padding:0 12px 10px;font-size:.75rem;color:var(--mut)}
+.threat-layer-grid label{display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+.threat-layer-grid input{accent-color:var(--accent)}
+.radar-scrub-wrap{position:relative;grid-column:1;width:100%;min-width:0;display:flex;align-items:center}
+.radar-scrub-wrap .radar-scrub{flex:1}
+.radar-storm-mark{position:absolute;top:50%;height:10px;transform:translateY(-50%);background:var(--warn);opacity:.45;border-radius:3px;pointer-events:none;z-index:1}
+.storm-mode-banner .storm-narrative{display:block;margin-top:6px;font-size:.8125rem;font-weight:400;color:var(--ink);line-height:1.45}
+.twilight-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.sky-darkness{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.offline-badge{display:none;margin:0 0 10px;padding:8px 12px;border-radius:8px;background:var(--warm);color:var(--ink);font-size:.75rem;font-weight:600}
+.offline-badge.show{display:block}
+#winterOutlook{margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+#winterOutlook[hidden]{display:none!important}
 .radar-wrap{position:relative}
 .radar-wrap .leaflet-control-zoom{border:none;box-shadow:var(--card-shadow)}
 .radar-wrap .leaflet-control-zoom a{width:34px;height:34px;line-height:34px;background:var(--panel);color:var(--ink);border:1px solid var(--line);font-size:18px}
@@ -581,6 +597,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   </div>
 
   <div id="content">
+    <div class="offline-badge" id="offlineBadge" role="status">Showing cached data — connection unavailable</div>
     <div class="grid">
       <section class="panel nav-target" id="nowPanel" data-tab="now" aria-label="Current conditions">
         <h2 id="nowTitle">Current Conditions</h2>
@@ -628,6 +645,9 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         </div>
         <div class="metrics-lbl">Golden &amp; blue hour</div>
         <div class="suntimes" id="suntimes"></div>
+        <div class="metrics-lbl">Twilight &amp; darkness</div>
+        <div class="twilight-grid" id="twilightGrid"></div>
+        <div class="sky-darkness" id="skyDarkness"></div>
         <div class="outlook" id="outlook">
           <div class="lbl">Tonight's sunset outlook</div>
           <div class="verdict" id="verdict">—</div>
@@ -644,6 +664,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 
     <section class="panel full nav-target" id="dailyPanel" data-tab="forecast" aria-label="Five day forecast">
       <h2>5-Day Forecast <span class="panel-status" id="dailySource"></span></h2>
+      <div id="winterOutlook" hidden aria-label="Winter weather outlook"></div>
       <div class="daily" id="daily"></div>
     </section>
 
@@ -676,13 +697,30 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
             <option value="rainviewer">RainViewer (animated)</option>
             <option value="iem-n0q">IEM NEXRAD base (animated)</option>
             <option value="iem-n0r">IEM composite (animated)</option>
+            <option value="iem-n0u">IEM NEXRAD velocity (animated)</option>
           </select>
           <span id="radarAnimCtl" class="radar-anim-ctl">
             <button id="radarPlay" aria-label="Play or pause radar animation">&#9654; Play</button>
-            <input type="range" id="radarScrub" class="radar-scrub" min="0" max="0" value="0" aria-label="Radar frame scrubber">
+            <div class="radar-scrub-wrap">
+              <div class="radar-storm-mark" id="radarStormMark" hidden></div>
+              <input type="range" id="radarScrub" class="radar-scrub" min="0" max="0" value="0" aria-label="Radar frame scrubber">
+            </div>
             <button id="radarSat" aria-label="Toggle satellite infrared overlay">Satellite</button>
             <button id="radarLightning" aria-label="Toggle lightning strike overlay">Lightning</button>
           </span>
+          <details class="threat-layers" id="threatLayers">
+            <summary>Map threat layers</summary>
+            <div class="threat-layer-grid" id="threatLayerGrid">
+              <label><input type="checkbox" data-threat="warnings" checked> Warnings</label>
+              <label><input type="checkbox" data-threat="watches" checked> Watches</label>
+              <label><input type="checkbox" data-threat="advisories"> Advisories</label>
+              <label><input type="checkbox" data-threat="spcCat" checked> SPC Day 1 risk</label>
+              <label><input type="checkbox" data-threat="spcTorn"> Tornado prob</label>
+              <label><input type="checkbox" data-threat="spcHail"> Hail prob</label>
+              <label><input type="checkbox" data-threat="spcWind"> Wind prob</label>
+              <label><input type="checkbox" data-threat="nhc"> NHC storms</label>
+            </div>
+          </details>
           <div class="radar-meta">
             <span class="radar-time" id="radarTime">&mdash;</span>
             <span class="radar-note" id="radarNote">RainViewer</span>
@@ -699,6 +737,10 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <h2>Obs vs NWS Forecast <span class="panel-status" id="obsStatus"></span></h2>
         <div class="radar-note" id="obsStation"></div>
         <div class="obs-compare" id="obsMetrics"></div>
+        <div class="metar-trace" id="metarTrace" hidden>
+          <div class="metrics-lbl" style="margin-top:12px">Last 24 hours at station</div>
+          <div class="trends" id="metarTrends"></div>
+        </div>
         <div class="radar-note" id="obsNote" style="margin-top:8px"></div>
       </section>
     </div>
@@ -731,6 +773,17 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div class="metrics-lbl">Outdoor rest of today</div>
         <div class="exposure-strip-note">UV, humidity, and comfort each hour</div>
         <div class="hourly-strip" id="exposureUvStrip"></div>
+      </section>
+
+      <section class="panel nav-target outdoor-wide" id="coastalPanel" data-tab="outdoor" aria-label="Coastal tides" hidden>
+        <h2>Coastal Tides <span class="panel-status" id="coastalStatus"></span></h2>
+        <div class="outlook" style="margin-top:0">
+          <div class="lbl" id="coastalStationLbl">Tide station</div>
+          <div class="verdict" id="coastalVerdict">&mdash;</div>
+          <div class="detail" id="coastalDetail"></div>
+        </div>
+        <div class="metrics" id="coastalMetrics" style="margin-top:12px"></div>
+        <div class="radar-note" id="coastalNote" style="margin-top:8px"></div>
       </section>
 
       <section class="panel nav-target outdoor-wide" id="marinePanel" data-tab="outdoor" aria-label="Great Lakes water conditions" hidden>
@@ -831,7 +884,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '109';
+const APP_VERSION = '110';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -1196,6 +1249,48 @@ const fmtMins = m => {
   h = h % 12 === 0 ? 12 : h % 12;
   return h + ':' + String(mm).padStart(2,'0') + ' ' + ap;
 };
+function sunAltAt(lat, lon, date){
+  return sunPosition(date, lat, lon).alt;
+}
+function timeAtSunAlt(lat, lon, date, targetAlt, rising){
+  const base = new Date(date);
+  base.setSeconds(0, 0);
+  let lo = 0, hi = 24 * 60;
+  for(let i = 0; i < 28; i++){
+    const mid = (lo + hi) / 2;
+    const t = new Date(base.getTime() + mid * 60000);
+    const alt = sunAltAt(lat, lon, t);
+    if((rising && alt < targetAlt) || (!rising && alt > targetAlt)) lo = mid;
+    else hi = mid;
+  }
+  return new Date(base.getTime() + hi * 60000).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+}
+function twilightTimes(lat, lon, date){
+  return {
+    civilDawn: timeAtSunAlt(lat, lon, date, -6, true),
+    civilDusk: timeAtSunAlt(lat, lon, date, -6, false),
+    nauticalDawn: timeAtSunAlt(lat, lon, date, -12, true),
+    nauticalDusk: timeAtSunAlt(lat, lon, date, -12, false),
+    astroDawn: timeAtSunAlt(lat, lon, date, -18, true),
+    astroDusk: timeAtSunAlt(lat, lon, date, -18, false)
+  };
+}
+function estimateSkyDarkness(moonFrac, cloudPct, sunAlt){
+  if(sunAlt > -6) return { label: 'Daylight / twilight', cls: 'mid', detail: 'Too bright for deep-sky observing.' };
+  let score = 8;
+  if(moonFrac > 0.85) score -= 3;
+  else if(moonFrac > 0.45) score -= 2;
+  else if(moonFrac > 0.15) score -= 1;
+  if(cloudPct > 70) score -= 2;
+  else if(cloudPct > 35) score -= 1;
+  score = Math.max(1, Math.min(9, score));
+  const labels = ['', 'Excellent dark sky', 'Very dark', 'Rural dark', 'Suburban dark', 'Moderate light', 'Bright skyglow', 'Urban skyglow', 'Very bright', 'Day-bright'];
+  return {
+    label: 'Bortle ~' + score,
+    cls: score <= 4 ? 'good' : score <= 6 ? 'mid' : 'warn',
+    detail: labels[score] + ' — moon ' + Math.round(moonFrac * 100) + '% lit, clouds ' + Math.round(cloudPct) + '%.'
+  };
+}
 const dayName = iso => new Date(iso + 'T12:00:00').toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
 function esc(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function cssColor(v){
@@ -1567,8 +1662,8 @@ async function fetchOpenMeteoBase(loc){
   const url = 'https://api.open-meteo.com/v1/forecast'
     + '?latitude=' + loc.lat + '&longitude=' + loc.lon
     + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m'
-    + '&hourly=is_day,temperature_2m,dew_point_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,pressure_msl,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cape,freezing_level_height,wet_bulb_temperature_2m,boundary_layer_height,sunshine_duration,snow_depth,soil_temperature_0cm,soil_moisture_0_to_1cm,wind_speed_80m,wind_speed_120m,wind_speed_180m,wind_direction_80m,wind_direction_120m,wind_direction_180m'
-    + '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,sunshine_duration,daylight_duration'
+    + '&hourly=is_day,temperature_2m,dew_point_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,pressure_msl,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,cape,freezing_level_height,wet_bulb_temperature_2m,boundary_layer_height,sunshine_duration,snow_depth,snowfall,soil_temperature_0cm,soil_moisture_0_to_1cm,wind_speed_80m,wind_speed_120m,wind_speed_180m,wind_direction_80m,wind_direction_120m,wind_direction_180m'
+    + '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,sunshine_duration,daylight_duration,snowfall_sum,precipitation_sum'
     + '&temperature_unit=' + tempU + '&wind_speed_unit=' + windU + '&precipitation_unit=' + precU
     + '&timezone=auto&forecast_days=7';
   const r = await fetch(url);
@@ -2144,6 +2239,20 @@ function renderLight(d){
     '<div class="metric lb-' + r[2] + '"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
   ).join('');
 
+  const tw = twilightTimes(loc.lat, loc.lon, now, d.timezone);
+  $('twilightGrid').innerHTML = [
+    ['Civil dawn', tw.civilDawn], ['Civil dusk', tw.civilDusk],
+    ['Nautical dawn', tw.nauticalDawn], ['Nautical dusk', tw.nauticalDusk],
+    ['Astro dawn', tw.astroDawn], ['Astro dusk', tw.astroDusk]
+  ].map(r => '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>').join('');
+
+  const moon = moonIllumination(now);
+  const cloud = d.hourly.cloud_cover?.[nowIndex(d)] ?? 0;
+  const dark = estimateSkyDarkness(moon.fraction, cloud, sun.alt);
+  $('skyDarkness').innerHTML = '<div class="lbl">Night sky quality (estimate)</div>'
+    + '<div class="verdict ' + dark.cls + '">' + esc(dark.label) + '</div>'
+    + '<div class="detail">' + esc(dark.detail) + '</div>';
+
   // sunset cloud outlook: find hourly index closest to sunset
   const ssKey = ss.slice(0,13);
   let si = d.hourly.time.findIndex(t => t.slice(0,13) === ssKey);
@@ -2205,8 +2314,14 @@ function renderHourly(d){
       + '</div>');
   }
   $('hourly').innerHTML = out.join('');
-  const fcSrc = d.sources && d.sources.forecast === 'nws' ? 'NWS' : 'Open-Meteo';
-  $('hourlySource').textContent = fcSrc;
+  const srcBits = [];
+  if(d.sources){
+    if(d.sources.forecast === 'nws') srcBits.push('NWS hourly periods');
+    else srcBits.push('Open-Meteo hourly');
+    if(d.sources.current === 'metar') srcBits.push('METAR current');
+    if(d.om && d.om.hourly.cape) srcBits.push('HRRR CAPE');
+  }
+  $('hourlySource').textContent = srcBits.length ? srcBits.join(' \u00B7 ') : '';
 }
 
 // ---------- render: daily ----------
@@ -2416,6 +2531,37 @@ function renderDaily(d){
     $('daily').innerHTML = '<p class="radar-note">Could not render daily forecast.</p>';
   }
   $('dailySource').textContent = (d.sources && d.sources.forecast === 'nws') ? 'NWS' : 'Open-Meteo';
+  renderWinterOutlook(d);
+}
+function renderWinterOutlook(d){
+  const box = $('winterOutlook');
+  if(!box || !d || !d.om) return;
+  const dd = d.om.daily;
+  const snow = dd.snowfall_sum && dd.snowfall_sum[0];
+  const precip = dd.precipitation_sum && dd.precipitation_sum[0];
+  const snowDepth = d.om.hourly.snow_depth && d.om.hourly.snow_depth[nowIndex(d)];
+  const nwsText = (d.nwsDaily || []).map(p => (p.shortForecast || '') + ' ' + (p.detailedForecast || '')).join(' ').toLowerCase();
+  const winterWords = /winter storm|ice storm|freezing rain|blizzard|heavy snow|snow accum/i.test(nwsText);
+  const hasSnow = (snow != null && snow > 0.1) || (snowDepth != null && snowDepth > 0.05) || winterWords;
+  if(!hasSnow){
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  box.hidden = false;
+  const snowDisp = snow != null
+    ? (state.units === 'F' ? (snow / 25.4).toFixed(1) + ' in' : snow.toFixed(1) + ' cm')
+    : null;
+  const depthDisp = snowDepth != null
+    ? (state.units === 'F' ? (snowDepth * 3.281 / 12).toFixed(1) + ' in on ground' : snowDepth.toFixed(2) + ' m on ground')
+    : null;
+  let detail = '';
+  if(snowDisp) detail += 'Modeled snowfall today: ' + snowDisp + '. ';
+  if(depthDisp) detail += 'Snow depth: ' + depthDisp + '. ';
+  if(winterWords) detail += 'NWS text mentions wintry precipitation.';
+  box.innerHTML = '<div class="lbl">Winter weather</div>'
+    + '<div class="verdict mid">Wintry precipitation possible</div>'
+    + '<div class="detail">' + esc(detail.trim()) + '</div>';
 }
 
 function renderForecastPeriod(p){
@@ -2510,6 +2656,140 @@ const stormState = {
   maxDn: 0, stormMode: false, loaded: false
 };
 let alertLayerGroup = null;
+let threatOverlayGroups = {};
+let nhcMarkerGroup = null;
+let glmLayer = null;
+let threatGeoCache = {};
+const THREAT_GEO_TTL = 5 * 60 * 1000;
+const THREAT_LAYER_URLS = {
+  spcCat: 'https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson',
+  spcTorn: 'https://www.spc.noaa.gov/products/outlook/day1otlk_torn.lyr.geojson',
+  spcHail: 'https://www.spc.noaa.gov/products/outlook/day1otlk_hail.lyr.geojson',
+  spcWind: 'https://www.spc.noaa.gov/products/outlook/day1otlk_wind.lyr.geojson'
+};
+const threatLayerOpts = {
+  warnings: true, watches: true, advisories: false,
+  spcCat: true, spcTorn: false, spcHail: false, spcWind: false, nhc: true
+};
+function loadThreatLayerPrefs(){
+  const saved = store.get('st_threat_layers');
+  if(saved && typeof saved === 'object'){
+    Object.keys(threatLayerOpts).forEach(k => {
+      if(saved[k] !== undefined) threatLayerOpts[k] = !!saved[k];
+    });
+  }
+  document.querySelectorAll('[data-threat]').forEach(inp => {
+    const k = inp.getAttribute('data-threat');
+    if(k in threatLayerOpts) inp.checked = threatLayerOpts[k];
+  });
+}
+function saveThreatLayerPrefs(){
+  store.set('st_threat_layers', { ...threatLayerOpts });
+}
+function filterAlertFeatures(feats){
+  return (feats || []).filter(f => {
+    if(!f.geometry) return false;
+    const ev = f.properties?.event || '';
+    const isWarn = /warning/i.test(ev);
+    const isWatch = /watch/i.test(ev);
+    if(isWarn && !threatLayerOpts.warnings) return false;
+    if(isWatch && !threatLayerOpts.watches) return false;
+    if(!isWarn && !isWatch && !threatLayerOpts.advisories) return false;
+    return true;
+  });
+}
+async function fetchThreatGeo(key, url){
+  const hit = threatGeoCache[key];
+  if(hit && Date.now() - hit.t < THREAT_GEO_TTL) return hit.g;
+  try{
+    const r = await fetch(url);
+    if(!r.ok) return null;
+    const g = await r.json();
+    threatGeoCache[key] = { g, t: Date.now() };
+    return g;
+  }catch(e){ return null; }
+}
+function clearThreatOverlays(){
+  if(!map) return;
+  Object.keys(threatOverlayGroups).forEach(k => {
+    const grp = threatOverlayGroups[k];
+    if(grp && map.hasLayer(grp)) map.removeLayer(grp);
+    threatOverlayGroups[k] = null;
+  });
+  if(nhcMarkerGroup && map.hasLayer(nhcMarkerGroup)){
+    map.removeLayer(nhcMarkerGroup);
+    nhcMarkerGroup = null;
+  }
+}
+function spcThreatStyle(f){
+  const fill = cssColor(f.properties?.fill) || '#e8e8e8';
+  const stroke = cssColor(f.properties?.stroke) || fill;
+  return { color: stroke, weight: 1.5, fillColor: fill, fillOpacity: 0.22, opacity: 0.85 };
+}
+async function syncThreatOverlays(){
+  if(!map || !isLikelyUS(state.locations[state.active])) return;
+  clearThreatOverlays();
+  const jobs = [];
+  ['spcCat', 'spcTorn', 'spcHail', 'spcWind'].forEach(key => {
+    if(!threatLayerOpts[key]) return;
+    jobs.push((async () => {
+      const geo = await fetchThreatGeo(key, THREAT_LAYER_URLS[key]);
+      if(!geo || !map) return;
+      const grp = L.layerGroup();
+      L.geoJSON(geo, {
+        style: spcThreatStyle,
+        onEachFeature(f, layer){
+          const p = f.properties || {};
+          layer.bindPopup('<strong>SPC ' + esc(p.LABEL2 || p.LABEL || key) + '</strong>');
+        }
+      }).eachLayer(l => grp.addLayer(l));
+      threatOverlayGroups[key] = grp;
+      grp.addTo(map);
+    })());
+  });
+  if(threatLayerOpts.nhc){
+    jobs.push((async () => {
+      try{
+        const r = await fetch('https://www.nhc.noaa.gov/CurrentStorms.json');
+        if(!r.ok || !map) return;
+        const storms = (await r.json()).activeStorms || [];
+        if(!storms.length) return;
+        nhcMarkerGroup = L.layerGroup();
+        storms.forEach(s => {
+          if(s.latitude == null || s.longitude == null) return;
+          const m = L.circleMarker([s.latitude, s.longitude], {
+            radius: 8, color: '#9b59b6', fillColor: '#9b59b6', fillOpacity: 0.75, weight: 2
+          });
+          m.bindPopup('<strong>' + esc(s.name || 'Tropical system') + '</strong><br>' + esc(s.intensity || s.classification || ''));
+          nhcMarkerGroup.addLayer(m);
+        });
+        nhcMarkerGroup.addTo(map);
+      }catch(e){}
+    })());
+  }
+  await Promise.all(jobs);
+  bringStormMapLayersFront();
+}
+function ensureGlmLayer(){
+  if(!map) return null;
+  if(!glmLayer){
+    glmLayer = L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes_east_glmfl-900913/{z}/{x}/{y}.png', {
+      opacity: 0.55, maxNativeZoom: 8, maxZoom: RADAR_ZOOM.rainviewer, zIndex: 455,
+      attribution: 'IEM / NOAA GOES-East GLM'
+    });
+  }
+  return glmLayer;
+}
+function syncGlmOverlay(){
+  if(!map) return;
+  const layer = ensureGlmLayer();
+  if(!layer) return;
+  const on = radarLightningOn && isRadarTabVisible();
+  if(on){
+    if(!map.hasLayer(layer)) layer.addTo(map);
+    layer.setOpacity(0.5);
+  }else if(map.hasLayer(layer)) map.removeLayer(layer);
+}
 let lightningCanvas = null, lightningCtx = null, lightningStrikes = [];
 let lightningWs = null, lightningWsIdx = 0, lightningRcTimer = null, lightningRaf = 0;
 let lightningWsState = 'off', lightningRecentHits = [];
@@ -2580,9 +2860,13 @@ function syncAlertPolygons(features){
     map.removeLayer(alertLayerGroup);
     alertLayerGroup = null;
   }
-  if(!features || !features.length) return;
+  const filtered = filterAlertFeatures(features);
+  if(!filtered.length){
+    syncThreatOverlays();
+    return;
+  }
   alertLayerGroup = L.layerGroup();
-  L.geoJSON({ type: 'FeatureCollection', features }, {
+  L.geoJSON({ type: 'FeatureCollection', features: filtered }, {
     style(f){
       const ev = f.properties.event || '';
       const isWarn = /warning/i.test(ev);
@@ -2600,11 +2884,16 @@ function syncAlertPolygons(features){
     }
   }).eachLayer(l => alertLayerGroup.addLayer(l));
   alertLayerGroup.addTo(map);
+  syncThreatOverlays();
   bringStormMapLayersFront();
 }
 function bringStormMapLayersFront(){
   if(!map) return;
+  Object.values(threatOverlayGroups).forEach(grp => {
+    if(grp) grp.eachLayer(l => l.bringToFront && l.bringToFront());
+  });
   if(alertLayerGroup) alertLayerGroup.eachLayer(l => l.bringToFront && l.bringToFront());
+  if(glmLayer && map.hasLayer(glmLayer)) glmLayer.bringToFront && glmLayer.bringToFront();
   if(mapMarker) mapMarker.bringToFront();
 }
 function decodeBlitzortung(raw){
@@ -2809,12 +3098,11 @@ function syncLightningOverlay(){
 }
 function setLightningOverlay(on){
   radarLightningOn = !!on;
-  if(!map){
-    const btn = $('radarLightning');
-    if(btn) btn.classList.toggle('on', radarLightningOn);
-    return;
-  }
+  const btn = $('radarLightning');
+  if(btn) btn.classList.toggle('on', radarLightningOn);
+  if(!map) return;
   syncLightningOverlay();
+  syncGlmOverlay();
 }
 
 // ---------- active weather (SPC outlook + MCD at your location) ----------
@@ -3131,6 +3419,8 @@ function renderStormSetup(d){
   if(shear) items.push({ k: 'Wind shear', v: shear.split(' \u00B7 ')[0], s: shear });
   const moist = moistureNote(d, i);
   if(moist) items.push({ k: 'Moisture', v: moist, s: 'Surface layer' });
+  const cidx = convectiveIndexNote(d, i);
+  if(cidx) items.push({ k: 'Environment', v: cidx, s: 'HRRR-derived indices' });
   if(stormState.prob){
     const p = stormState.prob;
     const bits = [];
@@ -3164,12 +3454,48 @@ function buildStormBannerText(){
   if(stormState.severeWindow) parts.push('Best window ' + esc(stormState.severeWindow.label));
   return parts.join(' \u00B7 ');
 }
+function buildThreatNarrative(d){
+  if(!d || !stormState.stormMode) return '';
+  const i = nowIndex(d);
+  const cape = Math.round(d.hourly.cape?.[i] ?? 0);
+  const bits = [];
+  const warns = stormState.alertFeatures.filter(f => /warning/i.test(f.properties?.event || ''));
+  const watches = stormState.alertFeatures.filter(f => /watch/i.test(f.properties?.event || ''));
+  if(warns.length){
+    bits.push('Active warning polygon at your location');
+  }else if(watches.length){
+    bits.push('Inside a watch area — storms may develop nearby');
+  }
+  if(cape >= 500) bits.push(cape + ' J/kg CAPE (HRRR) supports strong updrafts');
+  const shear = windShearNote(d, i);
+  if(shear && /Strong/i.test(shear)) bits.push('favorable wind shear for organized storms');
+  const day1 = stormState.risks.find(r => r.day === 'day1');
+  if(day1 && day1.dn >= 3) bits.push('SPC places this area in ' + (day1.label2 || day1.label).toLowerCase() + ' risk');
+  if(stormState.severeWindow) bits.push('hourly signals peak ' + stormState.severeWindow.label);
+  if(stormState.reports && stormState.reports.length){
+    bits.push(stormState.reports.length + ' SPC storm report' + (stormState.reports.length === 1 ? '' : 's') + ' within ~120 mi');
+  }
+  return bits.length ? bits.join('. ') + '.' : '';
+}
+function convectiveIndexNote(d, i){
+  const cape = d.hourly.cape?.[i] ?? 0;
+  const s10 = d.hourly.wind_speed_10m?.[i] ?? 0;
+  const s80 = d.hourly.wind_speed_80m?.[i];
+  if(s80 == null || cape < 300) return null;
+  const shear = s80 - s10;
+  if(cape >= 1500 && shear >= 20) return 'High CAPE + shear — supercell environment possible';
+  if(cape >= 800 && shear >= 12) return 'Moderate CAPE + shear — organized convection possible';
+  if(cape >= 500) return 'Weak to moderate instability';
+  return null;
+}
 function renderStormBanner(){
   const box = $('stormModeBanner');
   if(!box) return;
   const text = buildStormBannerText();
-  if(stormState.stormMode && text){
-    box.innerHTML = text;
+  const narrative = buildThreatNarrative(state.data);
+  if(stormState.stormMode && (text || narrative)){
+    box.innerHTML = (text ? '<div>' + text + '</div>' : '')
+      + (narrative ? '<div class="storm-narrative">' + esc(narrative) + '</div>' : '');
     box.classList.add('visible');
   } else {
     box.innerHTML = '';
@@ -3245,12 +3571,18 @@ function renderStormPanel(box, loc, opts){
     parts.push(renderOutlookDiscussionHtml(disc, dayLabels[r.day] || r.day, r.day === 'day1' && maxDn >= 4));
   }
   if(parts.length) discHtml = '<div class="storm-discs">' + parts.join('') + '</div>';
+  let floodHtml = '';
+  const outlook = state.data ? todayOutlook(state.data) : '';
+  if(/flash flood|excessive rainfall|heavy rain|areal flood|river flood/i.test(outlook || '')){
+    floodHtml = '<div class="storm-window"><strong>Heavy rain / flood signal:</strong> '
+      + 'NWS forecast text mentions flooding or excessive rainfall — see WPC excessive rainfall outlook maps for regional context.</div>';
+  }
   const fcUrl = 'https://forecast.weather.gov/MapClick.php?lat=' + loc.lat + '&lon=' + loc.lon;
   box.classList.toggle('storm-panel-muted', !!muted);
   box.innerHTML = '<div class="storm-head"><div class="lbl">Convective outlook</div>'
     + '<div class="storm-meta">SPC at your location</div></div>'
     + '<div class="storm-risks">' + riskHtml + '</div>'
-    + probHtml + windowHtml + lakeHtml + mcdHtml + reportHtml + discHtml
+    + probHtml + windowHtml + lakeHtml + floodHtml + mcdHtml + reportHtml + discHtml
     + '<div class="storm-foot">'
     + '<a href="https://www.spc.noaa.gov/products/outlook/" target="_blank" rel="noopener">SPC outlook maps</a>'
     + '<a href="' + fcUrl + '" target="_blank" rel="noopener">NWS point forecast</a>'
@@ -3285,6 +3617,7 @@ async function refreshStormTracking(loc, d){
   const gen = ++stormTrackGen;
   const cape = d.hourly.cape[nowIndex(d)] ?? 0;
   stormState.severeWindow = computeSevereWindow(d);
+  updateRadarStormMark();
   try{
     const [day1, day2, day3, products, prob, reports, lakeEffect, alertFeats] = await Promise.all([
       fetchSpcOutlookDay(loc, 'day1'),
@@ -3361,7 +3694,8 @@ const IEM_SUFFIXES = ['900913-m50m','900913-m45m','900913-m40m','900913-m35m','9
 const IEM_MINS = [50,45,40,35,30,25,20,15,10,5,0];
 const IEM_TILES = {
   'iem-n0q': { product: 'n0q', label: 'IEM NEXRAD base reflectivity' },
-  'iem-n0r': { product: 'n0r', label: 'IEM composite reflectivity' }
+  'iem-n0r': { product: 'n0r', label: 'IEM composite reflectivity' },
+  'iem-n0u': { product: 'N0U', label: 'IEM NEXRAD base velocity', ridge: true, velocity: true }
 };
 const RADAR_ZOOM = { min: 4, default: 6, rainviewer: 6, iem: 9 };
 const RV_TILE_OPTS = {
@@ -3502,6 +3836,7 @@ function activateRadarPanel(){
   initMap(loc);
   refreshRadarMapSize();
   if(created || radarFrameCount() === 0) loadRadar();
+  updateRadarLegend();
   if(radarLightningOn) setLightningOverlay(true);
   else syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
 }
@@ -3563,7 +3898,17 @@ function setRadarAnimControls(visible){
   if(!visible) stopRadarTimer();
 }
 function iemLayerName(mode, suffix){
+  const spec = IEM_TILES[mode];
+  if(spec && spec.ridge) return 'ridge::' + spec.product + '-' + suffix;
   return 'nexrad-' + IEM_TILES[mode].product + '-' + suffix;
+}
+function updateRadarLegend(){
+  const leg = document.querySelector('.radar-legend');
+  if(!leg) return;
+  const vel = IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity;
+  leg.innerHTML = vel
+    ? '<div>Velocity</div><div class="bar" style="background:linear-gradient(90deg,#00f,#0ff,#0f0,#ff0,#f00,#f0f)"></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>In</span><span>0</span><span>Out</span></div>'
+    : '<div>Reflectivity (dBZ)</div><div class="bar"></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>5</span><span>35</span><span>65+</span></div>';
 }
 function radarFrameCount(){
   return radarMode === 'rainviewer' ? radarFrames.length : iemFrames.length;
@@ -3643,6 +3988,7 @@ function loadIemRadar(mode){
   $('radarScrub').max = Math.max(0, iemFrames.length - 1);
   $('radarScrub').value = radarIdx;
   $('radarNote').textContent = radarNoteForMode();
+  updateRadarLegend();
   showFrame(radarIdx);
   applyRadarZoomLimits();
 }
@@ -3725,6 +4071,8 @@ function showFrame(i){
   if(basemapLayer) basemapLayer.bringToBack();
   bringStormMapLayersFront();
   $('radarScrub').value = i;
+  updateRadarStormMark();
+  syncGlmOverlay();
 }
 $('radarMode').value = radarMode;
 $('radarMode').addEventListener('change', e => {
@@ -3733,6 +4081,7 @@ $('radarMode').addEventListener('change', e => {
   radarLoadId++;
   stopRadarTimer();
   applyRadarZoomLimits();
+  updateRadarLegend();
   loadRadar();
 });
 $('radarScrub').addEventListener('input', e => {
@@ -3762,6 +4111,16 @@ $('radarSat').addEventListener('click', () => {
 $('radarLightning').addEventListener('click', () => {
   setLightningOverlay(!radarLightningOn);
 });
+document.querySelectorAll('[data-threat]').forEach(inp => {
+  inp.addEventListener('change', () => {
+    const k = inp.getAttribute('data-threat');
+    if(!(k in threatLayerOpts)) return;
+    threatLayerOpts[k] = inp.checked;
+    saveThreatLayerPrefs();
+    syncAlertPolygons(stormState.alertFeatures);
+  });
+});
+loadThreatLayerPrefs();
 
 // ---------- moon (compact astronomical formulas, SunCalc-style) ----------
 const EOBL = RAD * 23.4397;
@@ -4119,6 +4478,9 @@ async function loadAir(loc){
         v.className = 'verdict ' + cat[2];
         $('aqiDetail').textContent = source + (detail ? ' \u00B7 ' + detail : '');
       }
+      if(aqi != null && c && c.pm2_5 != null && c.pm2_5 >= 35){
+        rows.push(['Smoke / haze', (c.pm2_5 >= 55 ? 'High' : 'Moderate') + ' PM2.5 — check local smoke advisories<small></small>']);
+      }
       $('airMetrics').innerHTML = rows.map(r =>
         '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
       ).join('');
@@ -4228,11 +4590,40 @@ async function loadObs(loc){
       ];
       $('obsMetrics').innerHTML = rows.join('');
       $('obsNote').textContent = 'Badge = how observation compares to NWS forecast this hour';
+      await renderMetarTrace(sid);
     }catch(e){
       $('obsNote').textContent = 'OBS UNAVAILABLE \u2014 ' + (e.message || 'check console');
+      $('metarTrace').hidden = true;
       console.error('obs', e);
     }
   });
+}
+async function renderMetarTrace(stationId){
+  const wrap = $('metarTrace'), box = $('metarTrends');
+  if(!wrap || !box || !stationId){ if(wrap) wrap.hidden = true; return; }
+  try{
+    const r = await nwsFetch('https://api.weather.gov/stations/' + encodeURIComponent(stationId) + '/observations?limit=24');
+    if(!r.ok) throw new Error('obs list HTTP ' + r.status);
+    const feats = ((await r.json()).features || []).slice().reverse();
+    if(feats.length < 3){ wrap.hidden = true; return; }
+    const temps = [], winds = [];
+    feats.forEach(f => {
+      const p = f.properties || {};
+      const t = nwsVal(p.temperature);
+      const w = nwsVal(p.windSpeed);
+      if(t != null) temps.push(state.units === 'F' ? Math.round(t * 9/5 + 32) : Math.round(t));
+      if(w != null) winds.push(state.units === 'F' ? Math.round(w * 2.237) : Math.round(w * 3.6));
+    });
+    box.innerHTML = [
+      ['Temp (' + degSym() + ')', temps, 'temp'],
+      ['Wind (' + windUnit() + ')', winds, 'dew']
+    ].map(([lbl, vals, cls]) =>
+      '<div class="trend ' + cls + '"><div class="lbl">' + lbl + '</div>' + sparkline(vals, 100, 28) + '</div>'
+    ).join('');
+    wrap.hidden = false;
+  }catch(e){
+    wrap.hidden = true;
+  }
 }
 
 // ---------- NWS forecast discussion (inline) ----------
@@ -4976,6 +5367,7 @@ function ensureTabPanels(tab){
       loadMarine(loc);
       loadBuoy();
     }
+    loadCoastal(loc);
   }
   if((all || tab === 'more') && !tabPanelsLoaded.more){
     tabPanelsLoaded.more = true;
@@ -5001,6 +5393,150 @@ function scheduleIdleStormPrefetch(loc){
   if(typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3000 });
   else setTimeout(run, 2200);
 }
+let tideStationsCache = null;
+async function getTideStations(){
+  if(tideStationsCache) return tideStationsCache;
+  try{
+    const r = await fetch('https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions');
+    if(!r.ok) return [];
+    tideStationsCache = (await r.json()).stations || [];
+  }catch(e){ tideStationsCache = []; }
+  return tideStationsCache;
+}
+function nearestTideStation(lat, lon, maxNm){
+  const stations = tideStationsCache || [];
+  let best = null, bestD = Infinity;
+  stations.forEach(s => {
+    if(s.lat == null || s.lng == null) return;
+    const d = distNm(lat, lon, s.lat, s.lng);
+    if(d < bestD){ bestD = d; best = s; }
+  });
+  return best && bestD <= (maxNm || 40) ? { station: best, dist: bestD } : null;
+}
+function isCoastalLoc(loc){
+  return loc && isLikelyUS(loc) && !!nearestTideStation(loc.lat, loc.lon, 40);
+}
+function syncCoastalPanelVisibility(loc){
+  const panel = $('coastalPanel');
+  if(!panel) return;
+  const show = loc && isCoastalLoc(loc);
+  panel.hidden = !show;
+  panel.style.display = show ? '' : 'none';
+}
+let coastalLoadGen = 0;
+async function loadCoastal(loc){
+  const gen = ++coastalLoadGen;
+  await getTideStations();
+  syncCoastalPanelVisibility(loc);
+  if(!isCoastalLoc(loc)) return;
+  const near = nearestTideStation(loc.lat, loc.lon, 40);
+  if(!near) return;
+  const st = near.station;
+  return panelTask('coastalPanel', 'coastalStatus', async () => {
+    if(gen !== coastalLoadGen) return;
+    $('coastalStationLbl').textContent = st.name + ' (' + st.id + ')';
+    const today = new Date();
+    const ymd = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const url = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions'
+      + '&application=EchoWeather&begin_date=' + ymd + '&end_date=' + ymd
+      + '&datum=MLLW&station=' + encodeURIComponent(st.id) + '&time_zone=lst_ldt&units=english&interval=hilo&format=json';
+    try{
+      const r = await fetch(url);
+      if(!r.ok) throw new Error('tides HTTP ' + r.status);
+      const j = await r.json();
+      const preds = j.predictions || [];
+      const nowMs = Date.now();
+      const upcoming = preds.filter(p => new Date(p.t).getTime() >= nowMs - 600000).slice(0, 4);
+      $('coastalVerdict').textContent = upcoming[0]
+        ? (upcoming[0].type === 'H' ? 'Next high' : 'Next low') + ' ' + new Date(upcoming[0].t).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })
+        : 'Tide data available';
+      $('coastalDetail').textContent = Math.round(near.dist) + ' nm to station \u00B7 MLLW datum';
+      $('coastalMetrics').innerHTML = upcoming.map(p =>
+        '<div class="metric"><div class="k">' + esc(p.type === 'H' ? 'High' : 'Low') + ' ' + new Date(p.t).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }) + '</div>'
+        + '<div class="v">' + p.v + '<small> ft</small></div></div>'
+      ).join('');
+      $('coastalNote').textContent = 'NOAA CO-OPS predictions';
+    }catch(e){
+      $('coastalNote').textContent = 'Tide data unavailable';
+      console.warn('tides', e);
+    }
+  });
+}
+function weatherCacheKey(loc){
+  return 'ew_wx_' + locKey(loc);
+}
+function cacheWeatherSnapshot(loc, d){
+  if(!loc || !d) return;
+  try{
+    store.set(weatherCacheKey(loc), {
+      t: Date.now(),
+      timezone: d.timezone,
+      timezone_abbreviation: d.timezone_abbreviation,
+      current: d.current,
+      hourly: { time: d.hourly.time.slice(0, 30), temperature_2m: d.hourly.temperature_2m.slice(0, 30) },
+      daily: d.daily,
+      sources: d.sources
+    });
+  }catch(e){}
+}
+function loadCachedWeather(loc){
+  try{
+    const hit = store.get(weatherCacheKey(loc));
+    if(!hit || Date.now() - hit.t > 3 * 60 * 60 * 1000) return null;
+    return {
+      timezone: hit.timezone,
+      timezone_abbreviation: hit.timezone_abbreviation,
+      current: hit.current,
+      hourly: Object.assign({ anchoredNow: false }, hit.hourly),
+      daily: hit.daily,
+      sources: hit.sources || { forecast: 'cached', current: 'cached' },
+      cached: true
+    };
+  }catch(e){ return null; }
+}
+function setOfflineBadge(on){
+  const el = $('offlineBadge');
+  if(el) el.classList.toggle('show', !!on);
+}
+function updateRadarStormMark(){
+  const mark = $('radarStormMark'), scrub = $('radarScrub');
+  if(!mark || !scrub || !stormState.severeWindow || !state.data){
+    if(mark) mark.hidden = true;
+    return;
+  }
+  const d = state.data;
+  const winStart = stormState.severeWindow.start;
+  const winEnd = stormState.severeWindow.end;
+  const n = radarFrameCount();
+  if(!n){ mark.hidden = true; return; }
+  let i0 = -1, i1 = -1;
+  if(radarMode === 'rainviewer' && radarFrames.length){
+    const t0 = new Date(winStart).getTime() / 1000;
+    const t1 = new Date(winEnd).getTime() / 1000;
+    radarFrames.forEach((f, i) => {
+      if(f.time >= t0 - 1800 && i0 < 0) i0 = i;
+      if(f.time <= t1 + 1800) i1 = i;
+    });
+  }else if(iemFrames.length){
+    const now = Date.now();
+    const ws = new Date(winStart).getTime();
+    const we = new Date(winEnd).getTime();
+    iemFrames.forEach((suffix, i) => {
+      const mins = IEM_MINS[i] || 0;
+      const ft = now - mins * 60000;
+      if(ft >= ws - 900000 && i0 < 0) i0 = i;
+      if(ft <= we + 900000) i1 = i;
+    });
+  }
+  if(i0 < 0 || i1 < i0){ mark.hidden = true; return; }
+  const max = Math.max(1, n - 1);
+  const left = (i0 / max) * 100;
+  const width = ((i1 - i0) / max) * 100;
+  mark.style.left = left + '%';
+  mark.style.width = Math.max(4, width) + '%';
+  mark.hidden = false;
+  mark.title = 'Severe window ' + stormState.severeWindow.label;
+}
 function isGreatLakesLoc(loc){
   return loc && isLikelyUS(loc) && !!greatLakeName(loc.lat, loc.lon);
 }
@@ -5015,6 +5551,8 @@ async function loadAll(){
   const loc = state.locations[state.active];
   const reloadBuoy = tabPanelsLoaded.outdoor;
   syncMarinePanelVisibility(loc);
+  getTideStations().then(() => syncCoastalPanelVisibility(loc));
+  setOfflineBadge(false);
   stormState.loaded = false;
   stormTrackGen++;
   const setup = $('stormSetup');
@@ -5025,6 +5563,7 @@ async function loadAll(){
   try{
     const d = await fetchWeather(loc, { fastPath: true });
     state.data = d;
+    cacheWeatherSnapshot(loc, d);
     renderCurrent(d);
     renderLight(d);
     renderHourly(d);
@@ -5042,8 +5581,20 @@ async function loadAll(){
     scheduleIdleStormPrefetch(loc);
   }catch(e){
     console.error(e);
-    $('nowCond').textContent = 'Could not load weather \u2014 check connection and retry.';
-    $('lastUpdate').textContent = 'LOAD FAILED';
+    const cached = loadCachedWeather(loc);
+    if(cached){
+      state.data = cached;
+      setOfflineBadge(true);
+      renderCurrent(cached);
+      renderLight(cached);
+      renderHourly(cached);
+      $('lastUpdate').textContent = 'CACHED \u00B7 offline snapshot';
+      $('nowCond').textContent = (cached.current.condition || cached.current.textDescription || 'Cached conditions');
+      ensureTabPanels(getAppTab());
+    }else{
+      $('nowCond').textContent = 'Could not load weather \u2014 check connection and retry.';
+      $('lastUpdate').textContent = 'LOAD FAILED';
+    }
   }finally{
     $('content').classList.remove('loading');
   }
@@ -5430,6 +5981,7 @@ initBuoySelect();
 migrateBuoyPins();
 syncBuoyForLocation(state.locations[state.active], false);
 syncMarinePanelVisibility(state.locations[state.active]);
+getTideStations().then(() => syncCoastalPanelVisibility(state.locations[state.active]));
 try{ localStorage.removeItem('st_airnow_key'); }catch(e){}
 $('unitF').classList.toggle('on', state.units === 'F');
 $('unitC').classList.toggle('on', state.units === 'C');
