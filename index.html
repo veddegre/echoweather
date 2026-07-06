@@ -287,9 +287,21 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .outlook .verdict{font-family:var(--serif);font-size:1.15rem;font-weight:600;margin-top:4px}
 .outlook .verdict.good{color:var(--good)}.outlook .verdict.warn{color:var(--warn)}.outlook .verdict.mid{color:var(--warm)}
 .outlook .detail{font-size:.8125rem;color:var(--mut);margin-top:6px;line-height:1.45}
+#outdoorGrid .outdoor-wide{grid-column:1/-1}
+#outdoorGrid>#airPanel,#outdoorGrid>#exposurePanel{grid-column:1/-1}
+.air-metrics{display:flex;flex-direction:column;gap:0;margin-top:12px;width:100%;min-width:0}
+.air-metrics-section{width:100%;min-width:0}
 .air-metrics-section .metrics-lbl.air-metrics-lbl{margin-top:14px;margin-bottom:6px}
-.air-metrics-section.first .metrics-lbl.air-metrics-lbl{margin-top:12px}
-.air-metrics-grid{margin-top:0}
+.air-metrics-section.first .metrics-lbl.air-metrics-lbl{margin-top:0}
+.air-metrics-grid{display:flex;flex-direction:column;gap:6px;margin-top:0;width:100%;min-width:0}
+.air-metrics-grid .metric{display:flex;align-items:baseline;justify-content:space-between;gap:10px 16px;min-width:0;overflow:visible}
+.air-metrics-grid .metric .k{margin-bottom:0;white-space:nowrap;flex:0 0 auto}
+.air-metrics-grid .metric .v{overflow-wrap:normal;word-break:normal;text-align:right;flex:0 1 auto}
+@media (min-width:640px){
+  .air-metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(12.5rem,1fr));gap:8px}
+  .air-metrics-grid .metric{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:2px}
+  .air-metrics-grid .metric .v{text-align:left}
+}
 .sun-arc-wrap{margin-top:0}
 .sun-arc{width:100%;height:118px;display:block}
 .sun-arc .sun-horizon,.sun-arc .sun-path-guide{stroke:var(--line)}
@@ -385,7 +397,6 @@ body.radar-expanded{overflow:hidden}
 .pd-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:normal;text-align:right;overflow-wrap:anywhere}
 .pd-val.pd-low{color:var(--good)}.pd-val.pd-mid{color:var(--warm)}.pd-val.pd-high{color:var(--warn)}.pd-val.pd-none{color:var(--dim)}
 .pollen-empty-msg{font-size:.75rem;color:var(--mut);line-height:1.45;text-align:center;padding:6px 2px}
-#outdoorGrid .outdoor-wide{grid-column:1/-1}
 .exposure-hour{min-width:92px;padding:10px 8px}
 .exposure-hour .ex-row{display:flex;justify-content:space-between;align-items:baseline;gap:4px;font-size:.6875rem;margin-top:5px;line-height:1.2}
 .exposure-hour .ex-k{color:var(--dim);font-weight:500;letter-spacing:.02em}
@@ -906,7 +917,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
           <div class="verdict" id="aqiVerdict">&mdash;</div>
           <div class="detail" id="aqiDetail"></div>
         </div>
-        <div class="metrics" id="airMetrics" style="margin-top:12px"></div>
+        <div class="air-metrics" id="airMetrics"></div>
         <div class="pollen-block" id="pollenBlock">
           <div class="pollen-lbl">3-day pollen forecast</div>
           <div class="pollen-forecast" id="pollenForecast"></div>
@@ -1058,7 +1069,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '129';
+const APP_VERSION = '131';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -5774,7 +5785,7 @@ function renderAirMetricSections(sections){
     if(!sec.rows.length) return '';
     return '<div class="air-metrics-section' + (i === 0 ? ' first' : '') + '">'
       + '<div class="metrics-lbl air-metrics-lbl">' + esc(sec.title) + '</div>'
-      + '<div class="metrics air-metrics-grid">' + sec.rows.map(r =>
+      + '<div class="air-metrics-grid">' + sec.rows.map(r =>
         '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
       ).join('') + '</div></div>';
   }).join('');
@@ -5967,7 +5978,7 @@ async function loadAir(loc){
         renderPollenRows(pollen, pollenRows);
         if(pollenRows.length){
           sections.push({
-            title: 'Pollen today (Google forecast)',
+            title: 'Pollen today',
             rows: pollenRows
           });
         }
