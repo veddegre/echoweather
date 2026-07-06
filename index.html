@@ -1108,7 +1108,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '134';
+const APP_VERSION = '135';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -7229,19 +7229,24 @@ async function loadNbm(loc){
 }
 
 // ---------- USGS streamgages (US, free) ----------
+let streamLoadGen = 0;
 async function loadStreamGauges(loc){
   const panel = $('streamPanel'), list = $('streamList');
   if(!panel || !list) return;
   if(!isLikelyUS(loc)){ panel.hidden = true; return; }
-  panel.hidden = false;
-  list.textContent = 'Checking nearby gauges\u2026';
+  const gen = ++streamLoadGen;
+  panel.hidden = true;
   try{
     const pad = 0.45;
-    const bbox = (loc.lon - pad) + ',' + (loc.lat - pad) + ',' + (loc.lon + pad) + ',' + (loc.lat + pad);
-    const url = 'https://waterservices.usgs.gov/nwis/iv/?format=json&bBox=' + bbox
+    const west = (loc.lon - pad).toFixed(2);
+    const south = (loc.lat - pad).toFixed(2);
+    const east = (loc.lon + pad).toFixed(2);
+    const north = (loc.lat + pad).toFixed(2);
+    const url = 'https://waterservices.usgs.gov/nwis/iv/?format=json&bBox=' + west + ',' + south + ',' + east + ',' + north
       + '&parameterCd=00060,00065&siteStatus=active';
     const r = await fetch(url);
-    if(!r.ok) throw new Error('usgs');
+    if(gen !== streamLoadGen) return;
+    if(!r.ok) return;
     const j = await r.json();
     const sites = j.value?.timeSeries || [];
     const rows = [];
@@ -7257,7 +7262,6 @@ async function loadStreamGauges(loc){
       const last = vals[vals.length - 1];
       const val = last?.value;
       const param = ts.variable?.variableCode?.[0]?.value;
-      const unit = ts.variable?.unit?.unitCode || '';
       let row = rows.find(x => x.id === site.siteCode?.[0]?.value);
       if(!row){
         row = { id: site.siteCode?.[0]?.value, name, dist, stage: null, flow: null };
@@ -7267,17 +7271,14 @@ async function loadStreamGauges(loc){
       if(param === '00060') row.flow = val != null ? Math.round(val) + ' cfs' : null;
     });
     rows.sort((a, b) => a.dist - b.dist);
-    if(!rows.length){
-      panel.hidden = true;
-      return;
-    }
+    if(!rows.length || gen !== streamLoadGen) return;
+    panel.hidden = false;
     list.innerHTML = '<div class="metrics" style="margin-top:0">' + rows.slice(0, 6).map(g =>
       '<div class="metric"><div class="k">' + esc(g.name) + '<small> \u00B7 ' + Math.round(g.dist) + ' mi</small></div><div class="v">'
       + esc([g.stage, g.flow].filter(Boolean).join(' \u00B7 ') || 'No recent reading') + '</div></div>'
     ).join('') + '</div>';
   }catch(e){
-    panel.hidden = true;
-    console.warn('stream', e);
+    if(gen === streamLoadGen) panel.hidden = true;
   }
 }
 
