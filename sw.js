@@ -1,4 +1,4 @@
-const CACHE = 'echo-weather-v138';
+const CACHE = 'echo-weather-v139';
 const ICON_Q = '?v=86';
 const ASSETS = [
   './app.css',
@@ -59,11 +59,17 @@ self.addEventListener('fetch', e => {
   }
 
   if(isAsset(u)){
+    const isCode = /\.(js|css)$/.test(u.pathname);
     const fetchFresh = fetch(e.request).then(r => {
+      if(!r.ok) return r;
       const copy = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return r;
     });
+    if(isCode){
+      e.respondWith(fetchFresh.catch(() => caches.match(e.request)));
+      return;
+    }
     e.respondWith(
       isIconRequest(u)
         ? fetchFresh.catch(() => caches.match(e.request))

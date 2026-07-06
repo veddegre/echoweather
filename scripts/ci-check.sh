@@ -17,7 +17,7 @@ for f in index.html app.css app.js storm.js radar.js sw.js manifest.json; do
 done
 echo "OK   required static files present"
 
-if grep -q 'src="storm.js"' "$ROOT/index.html" && grep -q 'src="radar.js"' "$ROOT/index.html"; then
+if grep -q 'src="storm.js' "$ROOT/index.html" && grep -q 'src="radar.js' "$ROOT/index.html"; then
   echo "OK   index.html loads app.js, storm.js, radar.js"
 else
   echo "FAIL index.html missing storm.js or radar.js script tags" >&2
