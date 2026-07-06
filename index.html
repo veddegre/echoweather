@@ -172,7 +172,7 @@ body.mtab-now #content [data-tab="now"]{display:block!important}
 body.mtab-forecast #content [data-tab="forecast"]{display:block!important}
 body.mtab-radar #content [data-tab="radar"]{display:block!important}
 body.mtab-radar #stormLinks.visible{display:block!important}
-body.mtab-outdoor #content [data-tab="outdoor"]{display:block!important}
+body.mtab-outdoor #content [data-tab="outdoor"]:not([hidden]){display:block!important}
 body.mtab-outdoor #outdoorGrid{display:grid!important}
 body.mtab-more #content [data-tab="more"]{display:block!important}
 body.mtab-more #moonAdvGrid{display:grid!important}
@@ -831,7 +831,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '108';
+const APP_VERSION = '109';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -4841,6 +4841,8 @@ async function loadBuoyFromNws(st){
   return { rows, obsTime, note: 'NWS obs only (no wave data) \u2014 proxy /api/buoy/ on your server for full NDBC' };
 }
 async function loadBuoy(allowFallback){
+  const loc = state.locations[state.active];
+  if(!isGreatLakesLoc(loc)) return;
   if(allowFallback === undefined) allowFallback = true;
   const gen = ++buoyLoadGen;
   const st = ($('buoyId').value || '').trim();
@@ -4970,8 +4972,10 @@ function ensureTabPanels(tab){
     tabPanelsLoaded.outdoor = true;
     loadAir(loc);
     renderExposure(d);
-    loadMarine(loc);
-    loadBuoy();
+    if(isGreatLakesLoc(loc)){
+      loadMarine(loc);
+      loadBuoy();
+    }
   }
   if((all || tab === 'more') && !tabPanelsLoaded.more){
     tabPanelsLoaded.more = true;
