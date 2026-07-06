@@ -121,6 +121,10 @@ function applyRadarDeepLinkFromHash(){
   }
   const frame = params.get('frame');
   if(frame != null && frame !== '') radarDeepFrame = Math.max(0, parseInt(frame, 10) || 0);
+  const layers = params.get('layers');
+  if(layers !== null && typeof applyThreatLayersFromHash === 'function'){
+    if(applyThreatLayersFromHash(layers)) saveLocRadarPrefs();
+  }
 }
 
 function setAppTab(tab, opts){

@@ -322,6 +322,23 @@ function formatAlertWindow(p){
   }
   return formatAlertUntil(p);
 }
+function alertEndMs(p){
+  const end = alertEndIso(p);
+  if(!end) return NaN;
+  const ms = Date.parse(end);
+  return isNaN(ms) ? NaN : ms;
+}
+function formatAlertExpiresLabel(p){
+  const endMs = alertEndMs(p);
+  if(isNaN(endMs)) return '';
+  const delta = endMs - Date.now();
+  if(delta <= 0) return 'Expired';
+  if(delta < 45 * 60 * 1000) return 'Expires in ' + Math.max(1, Math.round(delta / 60000)) + ' min';
+  if(delta < 36 * 60 * 60 * 1000){
+    return 'Until ' + new Date(endMs).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  }
+  return 'Until ' + new Date(endMs).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
 function wallPartsFromForecastIso(iso){
   if(!iso || iso.length < 13) return null;
   return {

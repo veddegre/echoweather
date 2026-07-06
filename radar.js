@@ -92,6 +92,8 @@ function buildRadarHash(){
   if(radarMode) parts.push('mode=' + encodeURIComponent(radarMode));
   const n = radarFrameCount();
   if(n > 1) parts.push('frame=' + radarIdx);
+  const layers = typeof threatLayersHashParam === 'function' ? threatLayersHashParam() : '';
+  if(layers) parts.push('layers=' + encodeURIComponent(layers));
   return '#radar' + (parts.length ? '?' + parts.join('&') : '');
 }
 function applyPendingRadarFrame(){
@@ -725,6 +727,7 @@ document.querySelectorAll('[data-threat]').forEach(inp => {
     if(!(k in threatLayerOpts)) return;
     threatLayerOpts[k] = inp.checked;
     saveThreatLayerPrefs();
+    if(typeof updateRadarHash === 'function') updateRadarHash();
     if(k === 'stormReports'){
       syncStormReportMarkers();
     }else if(k === 'warnings' || k === 'watches' || k === 'advisories'){

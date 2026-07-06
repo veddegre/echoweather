@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v173** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=173` in `index.html`).
+**Current version: v174** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=174` in `index.html`).
 
 ---
 
@@ -19,7 +19,13 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v173 (latest)
+### v174 (latest)
+- **Alert timeline** — compact active-hazard strip with expiration countdown above alert cards
+- **Shareable radar URLs** — `#radar?mode=…&frame=…&layers=…` encodes threat layer toggles; hash updates when layers change
+- **SPC meso links** — mesoanalysis, surface analysis, observed soundings in storm panel when risk elevated
+- **Day 2/3 SPC discussions** — outlook discussion excerpts shown whenever parsed (not gated on point risk for days 2–3)
+
+### v173
 - **`air.js`** — AQI, pollen, UV & exposure (~530 lines)
 - **`aviation.js`** — METAR + TAF (~300 lines)
 - **Impacts UX** — aria-label copy pass; mobile deep links scroll to matching section chip (desktop unchanged)
@@ -135,12 +141,52 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 The original phased roadmap (Phases 1–4) is **largely complete**. Remaining work is **refinement and surfacing**, not greenfield features.
 
+### Phased enthusiast batch (v174–v176)
+
+| Batch | Items | Status |
+|-------|-------|--------|
+| **v174** | **1** Alert timeline/expiration · **4** Shareable radar URLs with layer state · **6** SPC meso/surface links · **7** Day 2/3 SPC discussion excerpts | **Shipped** |
+| **v175** | **2** AHPS at streamgages · **3** Winter snow accumulation · **9** NBM beyond POP | Planned |
+| **v176** | **5** Dual-pane radar · **8** CPC 6–10/8–14 teaser · **10** Mesonet · climo polish (low/precip anomaly) | Planned |
+
+#### v175 detail
+
+| # | Item | Notes |
+|---|------|--------|
+| 2 | **AHPS at streamgages** | Link USGS gauges to NWS AHPS hydrographs / flood categories where available |
+| 3 | **Winter snow accumulation** | Running snow totals / storm accumulation on forecast or Impacts when wintry |
+| 9 | **NBM beyond POP** | Surface wind, temp, sky cover strips from NBM grid (More or Forecast) |
+
+#### v176 detail
+
+| # | Item | Notes |
+|---|------|--------|
+| 5 | **Dual-pane radar** | Side-by-side or swipe compare (e.g. reflectivity + velocity, or two sites) |
+| 8 | **CPC teaser** | CPC 6–10 / 8–14 day outlook excerpt on Forecast or More |
+| 10 | **Mesonet** | Regional mesonet strip or map layer for enthusiasts |
+| — | **Climate polish** | Low/precip anomaly vs 10-yr normals; optional USDM / daily records later |
+
+### Climate (already partial)
+
+**Shipped:** `fetchClimoNormals()` + `dayClimoAnomaly()` — 10-year Open-Meteo archive; “+N° vs 10-yr avg high” on 5-day cards.
+
+**Not yet:** CPC outlooks (#8), low/precip anomaly, USDM drought, daily record highs/lows. Target **v176** with CPC + climo polish.
+
 ### Suggested next batch
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Deploy** | Push v173 when ready |
-| 2 | **Optional splits** | obs/METAR history or AFD from `app.js` if `app.js` still feels large |
+| 1 | **Deploy** | Push v174 when ready |
+| 2 | **v175** | AHPS, snow accumulation, NBM expansion |
+
+### v174 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Alert timeline + expiration labels | Done |
+| 4 | Shareable radar hash with `layers=` | Done |
+| 6 | SPC mesoanalysis / surface / soundings links | Done |
+| 7 | Day 2/3 outlook discussion excerpts | Done |
 
 ### v173 (shipped)
 
@@ -228,7 +274,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v173'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v174'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
@@ -243,7 +289,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 5. Deploy: `./update.sh --smoke`
 
 **Tabs:** `now` | `forecast` | `radar` | `impact` (label: Impacts) | `more`  
-**Deep links:** `#now`, `#forecast`, `#radar`, `#impact`, `#more`, `#radar?mode=mrms&frame=8`, `#afdPanel` → More tab; legacy `#outdoor`, `#air` → Impacts.
+**Deep links:** `#now`, `#forecast`, `#radar`, `#impact`, `#more`, `#radar?mode=mrms&frame=8&layers=warnings,watches,stormReports,spcCat`, `#afdPanel` → More tab; legacy `#outdoor`, `#air` → Impacts.
 
 **Storage keys (localStorage via `store`):** `st_locs`, `st_active`, `st_units`, `st_theme`, `st_activity_pins`, `st_radar_mode`, per-location radar/threat prefs, `st_app_ver`.
 
@@ -254,6 +300,8 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | Function | File | Purpose |
 |----------|------|---------|
 | `jumpRadarToAlertPolygon` | `radar.js` | Center radar on warning/watch polygon centroid |
+| `formatAlertExpiresLabel` / `renderAlertTimeline` | `impact.js`, `storm.js` | Active hazard countdown strip |
+| `threatLayersHashParam` / `applyThreatLayersFromHash` | `storm.js` | Shareable radar layer state in URL hash |
 | `nearestWatchPolygon` | `storm.js` | Nearest active watch geometry to pin |
 | `autoEnableStormThreatLayers` | `storm.js` | Turn on reports + SPC cat when storm mode fires |
 | `defaultRadarMode` | `app.js`, `radar.js` | MRMS for US, RainViewer elsewhere |
