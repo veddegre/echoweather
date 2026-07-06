@@ -39,6 +39,8 @@ fi
 
 RSYNC_FILES=(
   index.html
+  app.css
+  app.js
   manifest.json
   sw.js
   .htaccess
