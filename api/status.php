@@ -12,6 +12,7 @@ try {
         'airnow' => trim((string) ($cfg['airnow_api_key'] ?? '')) !== '',
         'buoy' => true,
         'pollen' => google_pollen_api_key($cfg) !== '',
+        'taf' => true,
     ], cors: true);
 } catch (Throwable $e) {
     send_api_error(500, 'Service unavailable', $e, 'status', cors: true);

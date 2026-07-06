@@ -16,3 +16,27 @@ APP_ROOT="$ROOT" bash "$ROOT/scripts/check-versions.sh"
 BASE_URL="${BASE_URL:-http://127.0.0.1}"
 BASE_URL="${BASE_URL%/}"
 SMOKE_HOST="${SMOKE_HOST:-example.com}"
+
+curl_smoke() {
+  local path="$1"
+  local expect="${2:-200}"
+  local code
+  code="$(curl -sS -o /dev/null -w '%{http_code}' -H "Host: ${SMOKE_HOST}" "${BASE_URL}${path}")"
+  if [[ "$code" != "$expect" ]]; then
+    echo "FAIL ${path} — HTTP ${code} (expected ${expect})" >&2
+    exit 1
+  fi
+  echo "OK   ${path} — HTTP ${code}"
+}
+
+echo "Smoke tests: ${BASE_URL} (Host: ${SMOKE_HOST})"
+curl_smoke "/"
+curl_smoke "/api/status"
+curl_smoke "/api/taf?ids=KGRR"
+
+taf_body="$(curl -sS -H "Host: ${SMOKE_HOST}" "${BASE_URL}/api/taf?ids=KGRR")"
+if ! printf '%s' "$taf_body" | grep -q '"icaoId":"KGRR"'; then
+  echo "FAIL /api/taf?ids=KGRR — response missing KGRR TAF payload" >&2
+  exit 1
+fi
+echo "OK   /api/taf?ids=KGRR — JSON contains KGRR"
