@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '160';
+const APP_VERSION = '161';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -4071,9 +4071,6 @@ async function renderMetarTrace(stationId){
     }
     const presLabel = state.units === 'F' ? 'Pressure (7d, inHg)' : 'Pressure (7d, hPa)';
     const presUnit = state.units === 'F' ? ' inHg' : ' hPa';
-    const weekNote = feats.length >= 48
-      ? '<div class="radar-note" style="margin-top:8px">' + feats.length + ' hourly observations over the past 7 days.</div>'
-      : '';
     const cards = [
       sparklineCard('Temperature (7d)', temps.slice(-168), 'temp', degSym(), {
         hint: 'Station METAR temperature trend',
@@ -4091,11 +4088,24 @@ async function renderMetarTrace(stationId){
         fmt: v => state.units === 'F' ? Number(v).toFixed(2) : String(Math.round(v))
       }));
     }
-    box.innerHTML = cards.join('') + weekNote;
+    box.className = 'trends metar-trends' + (cards.length === 3 ? ' metar-trends-3' : '');
+    box.innerHTML = cards.join('');
+    const foot = $('metarTraceFoot');
+    if(foot){
+      if(feats.length >= 48){
+        foot.hidden = false;
+        foot.textContent = feats.length + ' hourly observations over the past 7 days.';
+      }else{
+        foot.hidden = true;
+        foot.textContent = '';
+      }
+    }
     wrap.hidden = false;
   }catch(e){
     wrap.hidden = true;
     if(summary){ summary.hidden = true; summary.innerHTML = ''; }
+    const foot = $('metarTraceFoot');
+    if(foot){ foot.hidden = true; foot.textContent = ''; }
   }
 }
 function metarHistorySummary(feats, temps, pressures){

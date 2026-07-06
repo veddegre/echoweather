@@ -535,6 +535,8 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .hourly-lede{font-size:.75rem;color:var(--mut);margin:4px 0 10px;line-height:1.45}
 .metar-trace-note{font-size:.72rem;color:var(--dim);margin:4px 0 8px;line-height:1.4}
 .metar-trends{grid-template-columns:repeat(2,1fr)}
+.metar-trends.metar-trends-3{grid-template-columns:repeat(3,1fr)}
+.metar-trace-foot{margin-top:8px}
 .delta-up{color:var(--warn)}.delta-dn{color:var(--sky)}.delta-ok{color:var(--dim)}
 .obs-compare{display:flex;flex-direction:column;gap:8px;margin-top:10px;min-width:0}
 .obs-row{display:grid;grid-template-columns:minmax(0,56px) minmax(0,1fr) minmax(0,1fr) minmax(0,max-content);gap:6px 8px;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
