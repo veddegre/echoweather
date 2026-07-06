@@ -350,6 +350,9 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .radar-anim-ctl.hidden{display:none}
 .radar-scrub{width:100%;min-width:0;accent-color:var(--accent)}
 .radar-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;grid-column:1/-1}
+.lightning-status{color:var(--sky);font-weight:500}
+.lightning-status.wait{color:var(--mut)}
+.lightning-status.err{color:var(--warn)}
 .radar-ctl button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .leaflet-container{font-family:var(--sans);font-size:.75rem;background:var(--panel-2)}
 .lightning-canvas{position:absolute;left:0;top:0;z-index:500;pointer-events:none}
@@ -683,6 +686,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
           <div class="radar-meta">
             <span class="radar-time" id="radarTime">&mdash;</span>
             <span class="radar-note" id="radarNote">RainViewer</span>
+            <span class="radar-note lightning-status" id="lightningStatus" hidden></span>
           </div>
         </div>
       </div>
@@ -827,7 +831,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '105';
+const APP_VERSION = '106';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2507,9 +2511,10 @@ const stormState = {
 let alertLayerGroup = null;
 let lightningCanvas = null, lightningCtx = null, lightningStrikes = [];
 let lightningWs = null, lightningWsIdx = 0, lightningRcTimer = null, lightningRaf = 0;
+let lightningWsState = 'off', lightningRecentHits = [];
 let radarLightningOn = false;
 const LIGHTNING_WS = ['wss://ws1.blitzortung.org/', 'wss://ws7.blitzortung.org/', 'wss://ws8.blitzortung.org/'];
-const LIGHTNING_LIFE_MS = 2200;
+const LIGHTNING_LIFE_MS = 3500;
 let stormTrackGen = 0;
 
 function haversineMi(lat1, lon1, lat2, lon2){
@@ -2615,6 +2620,40 @@ function decodeBlitzortung(raw){
   }
   return g.join('');
 }
+function updateLightningStatus(){
+  const el = $('lightningStatus');
+  if(!el) return;
+  if(!radarLightningOn){
+    el.hidden = true;
+    el.textContent = '';
+    el.className = 'radar-note lightning-status';
+    return;
+  }
+  el.hidden = false;
+  const cut = Date.now() - 60000;
+  lightningRecentHits = lightningRecentHits.filter(t => t >= cut);
+  const n = lightningRecentHits.length;
+  if(lightningWsState === 'connecting'){
+    el.textContent = 'Lightning · connecting…';
+    el.className = 'radar-note lightning-status wait';
+  }else if(lightningWsState === 'reconnecting'){
+    el.textContent = 'Lightning · reconnecting…';
+    el.className = 'radar-note lightning-status err';
+  }else if(lightningWsState === 'live'){
+    el.textContent = n
+      ? 'Lightning live · ' + n + ' strike' + (n === 1 ? '' : 's') + ' in map (last min)'
+      : 'Lightning live · no strikes in map area';
+    el.className = 'radar-note lightning-status';
+  }else{
+    el.textContent = 'Lightning · starting…';
+    el.className = 'radar-note lightning-status wait';
+  }
+}
+function blitzortungPayload(raw){
+  if(typeof raw === 'string') return raw;
+  if(raw instanceof ArrayBuffer) return new TextDecoder().decode(raw);
+  return '' + raw;
+}
 function lightningShouldRun(){
   return radarLightningOn && map && isRadarTabVisible();
 }
@@ -2664,14 +2703,22 @@ function scheduleLightningReconnect(){
 function connectLightningWs(){
   if(!lightningShouldRun()) return;
   disconnectLightningWs();
+  lightningWsState = 'connecting';
+  updateLightningStatus();
   const url = LIGHTNING_WS[lightningWsIdx % LIGHTNING_WS.length];
   let ws;
-  try{ ws = new WebSocket(url); }catch(e){ scheduleLightningReconnect(); return; }
+  try{ ws = new WebSocket(url); }catch(e){ lightningWsState = 'reconnecting'; updateLightningStatus(); scheduleLightningReconnect(); return; }
   lightningWs = ws;
-  ws.onopen = () => { if(lightningWs === ws) ws.send(JSON.stringify({ a: 111 })); };
+  ws.onopen = () => {
+    if(lightningWs === ws){
+      lightningWsState = 'live';
+      updateLightningStatus();
+      ws.send(JSON.stringify({ a: 111 }));
+    }
+  };
   ws.onmessage = (ev) => {
     try{
-      const s = JSON.parse(decodeBlitzortung(ev.data));
+      const s = JSON.parse(decodeBlitzortung(blitzortungPayload(ev.data)));
       if(s && typeof s.lat === 'number' && typeof s.lon === 'number') addLightningStrike(s.lat, s.lon);
     }catch(e){}
   };
@@ -2679,15 +2726,21 @@ function connectLightningWs(){
   ws.onclose = () => {
     if(lightningWs === ws){
       lightningWs = null;
-      if(lightningShouldRun()) scheduleLightningReconnect();
+      if(lightningShouldRun()){
+        lightningWsState = 'reconnecting';
+        updateLightningStatus();
+        scheduleLightningReconnect();
+      }
     }
   };
 }
 function addLightningStrike(lat, lon){
   if(!map) return;
-  const bounds = map.getBounds().pad(0.35);
+  const bounds = map.getBounds().pad(0.5);
   if(!bounds.contains([lat, lon])) return;
   lightningStrikes.push({ lat, lon, t: performance.now() });
+  lightningRecentHits.push(Date.now());
+  updateLightningStatus();
   if(lightningStrikes.length > 3000) lightningStrikes.splice(0, lightningStrikes.length - 2000);
 }
 function drawLightningFrame(){
@@ -2713,7 +2766,10 @@ function drawLightningFrame(){
     ctx.fill();
   }
   lightningStrikes = lightningStrikes.filter(s => now - s.t <= LIGHTNING_LIFE_MS);
-  if(lightningShouldRun()) lightningRaf = requestAnimationFrame(drawLightningFrame);
+  if(lightningShouldRun()){
+    updateLightningStatus();
+    lightningRaf = requestAnimationFrame(drawLightningFrame);
+  }
 }
 function startLightningLoop(){
   if(lightningRaf) return;
@@ -2726,6 +2782,9 @@ function stopLightningLoop(){
     lightningCtx.clearRect(0, 0, sz.x, sz.y);
   }
   lightningStrikes = [];
+  lightningRecentHits = [];
+  lightningWsState = 'off';
+  updateLightningStatus();
 }
 function syncLightningOverlay(){
   const btn = $('radarLightning');
@@ -2744,6 +2803,7 @@ function syncLightningOverlay(){
   ensureLightningCanvas();
   connectLightningWs();
   startLightningLoop();
+  updateLightningStatus();
 }
 function setLightningOverlay(on){
   radarLightningOn = !!on;
