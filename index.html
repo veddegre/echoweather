@@ -714,7 +714,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
               <label><input type="checkbox" data-threat="warnings" checked> Warnings</label>
               <label><input type="checkbox" data-threat="watches" checked> Watches</label>
               <label><input type="checkbox" data-threat="advisories"> Advisories</label>
-              <label><input type="checkbox" data-threat="spcCat" checked> SPC Day 1 risk</label>
+              <label><input type="checkbox" data-threat="spcCat"> SPC Day 1 risk</label>
               <label><input type="checkbox" data-threat="spcTorn"> Tornado prob</label>
               <label><input type="checkbox" data-threat="spcHail"> Hail prob</label>
               <label><input type="checkbox" data-threat="spcWind"> Wind prob</label>
@@ -884,7 +884,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '110';
+const APP_VERSION = '111';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2144,7 +2144,7 @@ function renderCurrent(d){
   $('nowTitle').textContent = loc.name + ' \u2014 now';
 
   const pNow = c.pressure_msl;
-  const pPast = d.hourly.pressure_msl[Math.max(0, i-3)];
+  const pPast = d.hourly.pressure_msl?.[Math.max(0, i - 3)];
   const dp = (pNow != null && pPast != null) ? pNow - pPast : 0;
   let trend, cls;
   if(dp > 0.8){ trend = '\u25B2 rising'; cls = 'up'; }
@@ -2158,7 +2158,7 @@ function renderCurrent(d){
 
   const visUnit = (d.om && d.om.hourly_units && d.om.hourly_units.visibility) || 'm';
   let visMeters = c.visibility_m;
-  if(visMeters == null) visMeters = d.hourly.visibility[i];
+  if(visMeters == null) visMeters = d.hourly.visibility?.[i];
   if(visUnit === 'ft' && visMeters != null) visMeters = visMeters * 0.3048;
   const visMiNum = visMeters != null
     ? (state.units === 'F' ? visMeters / 1609.34 : visMeters / 1000)
@@ -2169,7 +2169,7 @@ function renderCurrent(d){
 
   const dewVal = c.dewpoint_c != null
     ? (state.units === 'F' ? Math.round(c.dewpoint_c * 9/5 + 32) : Math.round(c.dewpoint_c))
-    : Math.round(d.hourly.dew_point_2m[i] ?? 0);
+    : Math.round(d.hourly.dew_point_2m?.[i] ?? 0);
 
   renderConditionsGlance(d, c, vis, visMiNum, dewVal, inHg);
 
@@ -2179,9 +2179,9 @@ function renderCurrent(d){
     ['Wind', windCompassHtml(c.wind_direction_10m, 22) + ' ' + Math.round(c.wind_speed_10m) + '<small> ' + windUnit() + ' ' + compass(c.wind_direction_10m) + '</small>'],
     ['Gusts', Math.round(c.wind_gusts_10m ?? 0) + '<small> ' + windUnit() + '</small>'],
     ['Visibility', vis],
-    ['Cloud L/M/H', (d.hourly.cloud_cover_low[i] ?? 0) + '/' + (d.hourly.cloud_cover_mid[i] ?? 0) + '/' + (d.hourly.cloud_cover_high[i] ?? 0) + '<small>%</small> <small>(HRRR/model)</small>'],
-    ['UV index', (d.hourly.uv_index[i] ?? 0).toFixed(1) + ' <small>' + uvCat(d.hourly.uv_index[i] ?? 0) + '</small>'],
-    ['CAPE', Math.round(d.hourly.cape[i] ?? 0) + '<small> J/kg \u00B7 ' + capeCat(d.hourly.cape[i] ?? 0) + ' (HRRR)</small>'],
+    ['Cloud L/M/H', (d.hourly.cloud_cover_low?.[i] ?? 0) + '/' + (d.hourly.cloud_cover_mid?.[i] ?? 0) + '/' + (d.hourly.cloud_cover_high?.[i] ?? 0) + '<small>%</small> <small>(HRRR/model)</small>'],
+    ['UV index', (d.hourly.uv_index?.[i] ?? 0).toFixed(1) + ' <small>' + uvCat(d.hourly.uv_index?.[i] ?? 0) + '</small>'],
+    ['CAPE', Math.round(d.hourly.cape?.[i] ?? 0) + '<small> J/kg \u00B7 ' + capeCat(d.hourly.cape?.[i] ?? 0) + ' (HRRR)</small>'],
     ['Freezing lvl', state.units === 'F'
         ? (Math.round((d.hourly.freezing_level_height[i] ?? 0) * 3.281 / 100) * 100).toLocaleString() + '<small> ft</small>'
         : Math.round(d.hourly.freezing_level_height[i] ?? 0).toLocaleString() + '<small> m</small>'],
@@ -2196,6 +2196,9 @@ function renderCurrent(d){
 // ---------- render: light planner ----------
 function renderLight(d){
   const loc = state.locations[state.active];
+  if(!d || !d.daily || !d.daily.sunrise || !d.daily.sunset || !d.daily.sunrise.length){
+    return;
+  }
   const now = new Date();
   const sun = sunPosition(now, loc.lat, loc.lon);
   const sr = d.daily.sunrise[0], ss = d.daily.sunset[0];
@@ -2257,8 +2260,10 @@ function renderLight(d){
   const ssKey = ss.slice(0,13);
   let si = d.hourly.time.findIndex(t => t.slice(0,13) === ssKey);
   if(si < 0) si = nowIndex(d);
-  const lo = d.hourly.cloud_cover_low[si], mid = d.hourly.cloud_cover_mid[si], hi = d.hourly.cloud_cover_high[si];
-  const pp = d.hourly.precipitation_probability[si] ?? 0;
+  const lo = d.hourly.cloud_cover_low?.[si] ?? 0;
+  const mid = d.hourly.cloud_cover_mid?.[si] ?? 0;
+  const hi = d.hourly.cloud_cover_high?.[si] ?? 0;
+  const pp = d.hourly.precipitation_probability?.[si] ?? 0;
   const mh = mid + hi;
   let verdict, cls, detail;
   if(pp > 60 || lo > 75){
@@ -2281,12 +2286,20 @@ function renderLight(d){
 
 // ---------- render: hourly + sparkline trends ----------
 function renderHourly(d){
+  if(!d || !d.hourly || !d.hourly.time || !d.hourly.time.length){
+    $('trends').innerHTML = '';
+    $('hourly').innerHTML = '<div class="radar-note">Hourly forecast unavailable.</div>';
+    $('hourlySource').textContent = d && d.cached ? 'Cached snapshot' : '';
+    return;
+  }
   const i0 = d.hourly.anchoredNow ? 0 : nowIndex(d);
   const end = d.hourly.anchoredNow
     ? d.hourly.time.length
     : Math.min(i0 + HOURLY_HOURS + 1, d.hourly.time.length);
-  const slice = (arr, f) => arr.slice(i0, end).map(f);
-  const pres = slice(d.hourly.pressure_msl, v => v);
+  const slice = (arr, f, fb) => (arr && arr.length)
+    ? arr.slice(i0, end).map(v => (f ? f(v) : v))
+    : Array(Math.max(0, end - i0)).fill(fb ?? 0);
+  const pres = slice(d.hourly.pressure_msl, v => v, null);
   const temps = slice(d.hourly.temperature_2m, v => v);
   const dews = slice(d.hourly.dew_point_2m, v => v);
   const capes = slice(d.hourly.cape, v => v ?? 0);
@@ -2301,16 +2314,16 @@ function renderHourly(d){
 
   const out = [];
   for(let i = i0; i < end; i++){
-    const code = d.hourly.weather_code[i];
+    const code = d.hourly.weather_code?.[i] ?? 0;
     const isDay = d.hourly.is_day ? d.hourly.is_day[i] : 1;
     const [ , icon] = wmo(code, isDay);
     const tip = d.hourly.shortForecast ? d.hourly.shortForecast[i] : wmo(code)[0];
     out.push('<div class="hour' + (i === i0 ? ' now-h' : '') + '" title="' + esc(tip) + '">'
       + '<div class="t">' + (i === i0 ? 'NOW' : hourLabel(d.hourly.time[i])) + '</div>'
       + '<div class="ic">' + icon + '</div>'
-      + '<div class="tmp">' + Math.round(d.hourly.temperature_2m[i]) + '\u00B0</div>'
-      + '<div class="pp">' + (d.hourly.precipitation_probability[i] ?? 0) + '%</div>'
-      + '<div class="wd">' + windCompassHtml(d.hourly.wind_direction_10m[i], 20) + Math.round(d.hourly.wind_speed_10m[i]) + '</div>'
+      + '<div class="tmp">' + Math.round(d.hourly.temperature_2m?.[i] ?? 0) + '\u00B0</div>'
+      + '<div class="pp">' + (d.hourly.precipitation_probability?.[i] ?? 0) + '%</div>'
+      + '<div class="wd">' + windCompassHtml(d.hourly.wind_direction_10m?.[i] ?? 0, 20) + Math.round(d.hourly.wind_speed_10m?.[i] ?? 0) + '</div>'
       + '</div>');
   }
   $('hourly').innerHTML = out.join('');
@@ -2658,8 +2671,8 @@ const stormState = {
 let alertLayerGroup = null;
 let threatOverlayGroups = {};
 let nhcMarkerGroup = null;
-let glmLayer = null;
 let threatGeoCache = {};
+let threatOverlayGen = 0;
 const THREAT_GEO_TTL = 5 * 60 * 1000;
 const THREAT_LAYER_URLS = {
   spcCat: 'https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson',
@@ -2669,8 +2682,12 @@ const THREAT_LAYER_URLS = {
 };
 const threatLayerOpts = {
   warnings: true, watches: true, advisories: false,
-  spcCat: true, spcTorn: false, spcHail: false, spcWind: false, nhc: true
+  spcCat: false, spcTorn: false, spcHail: false, spcWind: false, nhc: false
 };
+function anyThreatOverlayOn(){
+  return threatLayerOpts.spcCat || threatLayerOpts.spcTorn || threatLayerOpts.spcHail
+    || threatLayerOpts.spcWind || threatLayerOpts.nhc;
+}
 function loadThreatLayerPrefs(){
   const saved = store.get('st_threat_layers');
   if(saved && typeof saved === 'object'){
@@ -2709,7 +2726,7 @@ async function fetchThreatGeo(key, url){
     return g;
   }catch(e){ return null; }
 }
-function clearThreatOverlays(){
+function removeThreatOverlays(){
   if(!map) return;
   Object.keys(threatOverlayGroups).forEach(k => {
     const grp = threatOverlayGroups[k];
@@ -2721,39 +2738,55 @@ function clearThreatOverlays(){
     nhcMarkerGroup = null;
   }
 }
+function clearThreatOverlays(){
+  threatOverlayGen++;
+  removeThreatOverlays();
+}
 function spcThreatStyle(f){
   const fill = cssColor(f.properties?.fill) || '#e8e8e8';
   const stroke = cssColor(f.properties?.stroke) || fill;
-  return { color: stroke, weight: 1.5, fillColor: fill, fillOpacity: 0.22, opacity: 0.85 };
+  const dn = f.properties?.DN || 0;
+  return {
+    color: stroke, weight: dn >= 4 ? 2 : 1.5,
+    fillColor: fill, fillOpacity: dn >= 3 ? 0.18 : 0.1, opacity: 0.9
+  };
 }
 async function syncThreatOverlays(){
-  if(!map || !isLikelyUS(state.locations[state.active])) return;
-  clearThreatOverlays();
+  if(!map || !isRadarTabVisible() || !anyThreatOverlayOn()){
+    clearThreatOverlays();
+    return;
+  }
+  const gen = ++threatOverlayGen;
+  removeThreatOverlays();
   const jobs = [];
   ['spcCat', 'spcTorn', 'spcHail', 'spcWind'].forEach(key => {
     if(!threatLayerOpts[key]) return;
     jobs.push((async () => {
-      const geo = await fetchThreatGeo(key, THREAT_LAYER_URLS[key]);
-      if(!geo || !map) return;
-      const grp = L.layerGroup();
-      L.geoJSON(geo, {
-        style: spcThreatStyle,
-        onEachFeature(f, layer){
-          const p = f.properties || {};
-          layer.bindPopup('<strong>SPC ' + esc(p.LABEL2 || p.LABEL || key) + '</strong>');
-        }
-      }).eachLayer(l => grp.addLayer(l));
-      threatOverlayGroups[key] = grp;
-      grp.addTo(map);
+      try{
+        const geo = await fetchThreatGeo(key, THREAT_LAYER_URLS[key]);
+        if(!geo || !map || gen !== threatOverlayGen) return;
+        if(!geo.features || !geo.features.length) return;
+        const grp = L.layerGroup();
+        L.geoJSON(geo, {
+          style: spcThreatStyle,
+          onEachFeature(f, layer){
+            const p = f.properties || {};
+            layer.bindPopup('<strong>SPC ' + esc(p.LABEL2 || p.LABEL || key) + '</strong>');
+          }
+        }).eachLayer(l => grp.addLayer(l));
+        if(gen !== threatOverlayGen) return;
+        threatOverlayGroups[key] = grp;
+        grp.addTo(map);
+      }catch(e){ console.warn('threat layer', key, e); }
     })());
   });
   if(threatLayerOpts.nhc){
     jobs.push((async () => {
       try{
         const r = await fetch('https://www.nhc.noaa.gov/CurrentStorms.json');
-        if(!r.ok || !map) return;
+        if(!r.ok || !map || gen !== threatOverlayGen) return;
         const storms = (await r.json()).activeStorms || [];
-        if(!storms.length) return;
+        if(!storms.length || gen !== threatOverlayGen) return;
         nhcMarkerGroup = L.layerGroup();
         storms.forEach(s => {
           if(s.latitude == null || s.longitude == null) return;
@@ -2764,31 +2797,11 @@ async function syncThreatOverlays(){
           nhcMarkerGroup.addLayer(m);
         });
         nhcMarkerGroup.addTo(map);
-      }catch(e){}
+      }catch(e){ console.warn('NHC layer', e); }
     })());
   }
   await Promise.all(jobs);
-  bringStormMapLayersFront();
-}
-function ensureGlmLayer(){
-  if(!map) return null;
-  if(!glmLayer){
-    glmLayer = L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes_east_glmfl-900913/{z}/{x}/{y}.png', {
-      opacity: 0.55, maxNativeZoom: 8, maxZoom: RADAR_ZOOM.rainviewer, zIndex: 455,
-      attribution: 'IEM / NOAA GOES-East GLM'
-    });
-  }
-  return glmLayer;
-}
-function syncGlmOverlay(){
-  if(!map) return;
-  const layer = ensureGlmLayer();
-  if(!layer) return;
-  const on = radarLightningOn && isRadarTabVisible();
-  if(on){
-    if(!map.hasLayer(layer)) layer.addTo(map);
-    layer.setOpacity(0.5);
-  }else if(map.hasLayer(layer)) map.removeLayer(layer);
+  if(gen === threatOverlayGen) bringStormMapLayersFront();
 }
 let lightningCanvas = null, lightningCtx = null, lightningStrikes = [];
 let lightningWs = null, lightningWsIdx = 0, lightningRcTimer = null, lightningRaf = 0;
@@ -2862,7 +2875,8 @@ function syncAlertPolygons(features){
   }
   const filtered = filterAlertFeatures(features);
   if(!filtered.length){
-    syncThreatOverlays();
+    if(isRadarTabVisible()) syncThreatOverlays();
+    else clearThreatOverlays();
     return;
   }
   alertLayerGroup = L.layerGroup();
@@ -2884,7 +2898,7 @@ function syncAlertPolygons(features){
     }
   }).eachLayer(l => alertLayerGroup.addLayer(l));
   alertLayerGroup.addTo(map);
-  syncThreatOverlays();
+  if(isRadarTabVisible()) syncThreatOverlays();
   bringStormMapLayersFront();
 }
 function bringStormMapLayersFront(){
@@ -2893,7 +2907,6 @@ function bringStormMapLayersFront(){
     if(grp) grp.eachLayer(l => l.bringToFront && l.bringToFront());
   });
   if(alertLayerGroup) alertLayerGroup.eachLayer(l => l.bringToFront && l.bringToFront());
-  if(glmLayer && map.hasLayer(glmLayer)) glmLayer.bringToFront && glmLayer.bringToFront();
   if(mapMarker) mapMarker.bringToFront();
 }
 function decodeBlitzortung(raw){
@@ -3102,7 +3115,6 @@ function setLightningOverlay(on){
   if(btn) btn.classList.toggle('on', radarLightningOn);
   if(!map) return;
   syncLightningOverlay();
-  syncGlmOverlay();
 }
 
 // ---------- active weather (SPC outlook + MCD at your location) ----------
@@ -4072,7 +4084,6 @@ function showFrame(i){
   bringStormMapLayersFront();
   $('radarScrub').value = i;
   updateRadarStormMark();
-  syncGlmOverlay();
 }
 $('radarMode').value = radarMode;
 $('radarMode').addEventListener('change', e => {
@@ -4117,7 +4128,11 @@ document.querySelectorAll('[data-threat]').forEach(inp => {
     if(!(k in threatLayerOpts)) return;
     threatLayerOpts[k] = inp.checked;
     saveThreatLayerPrefs();
-    syncAlertPolygons(stormState.alertFeatures);
+    if(k === 'warnings' || k === 'watches' || k === 'advisories'){
+      syncAlertPolygons(stormState.alertFeatures);
+    }else{
+      syncThreatOverlays();
+    }
   });
 });
 loadThreatLayerPrefs();
@@ -5465,15 +5480,29 @@ async function loadCoastal(loc){
 function weatherCacheKey(loc){
   return 'ew_wx_' + locKey(loc);
 }
+const HOURLY_CACHE_KEYS = [
+  'time', 'temperature_2m', 'dew_point_2m', 'pressure_msl', 'cape', 'weather_code', 'is_day',
+  'precipitation_probability', 'wind_direction_10m', 'wind_speed_10m', 'cloud_cover',
+  'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high', 'visibility', 'uv_index',
+  'freezing_level_height', 'precipitation', 'shortForecast'
+];
+function snapshotHourly(h, slots){
+  const n = Math.min(slots, h.time?.length || 0);
+  const out = { anchoredNow: !!h.anchoredNow };
+  HOURLY_CACHE_KEYS.forEach(k => {
+    if(h[k] && h[k].length) out[k] = h[k].slice(0, n);
+  });
+  return out;
+}
 function cacheWeatherSnapshot(loc, d){
-  if(!loc || !d) return;
+  if(!loc || !d || !d.hourly) return;
   try{
     store.set(weatherCacheKey(loc), {
       t: Date.now(),
       timezone: d.timezone,
       timezone_abbreviation: d.timezone_abbreviation,
       current: d.current,
-      hourly: { time: d.hourly.time.slice(0, 30), temperature_2m: d.hourly.temperature_2m.slice(0, 30) },
+      hourly: snapshotHourly(d.hourly, 30),
       daily: d.daily,
       sources: d.sources
     });
