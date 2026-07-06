@@ -4,4 +4,5 @@ RewriteBase /api/
 RewriteRule ^status$ status.php [L]
 RewriteRule ^airnow$ airnow.php [L,QSA]
 RewriteRule ^pollen$ pollen.php [L,QSA]
+RewriteRule ^taf$ taf.php [L,QSA]
 RewriteRule ^buoy/([A-Za-z0-9]{4,8})/?$ buoy.php?station=$1 [L,QSA]
