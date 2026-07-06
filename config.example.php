@@ -77,6 +77,13 @@ return [
     'rate_limit_taf' => 120,
 
     // -------------------------------------------------------------------------
+    // TAF cache — reduces AviationWeather API load
+    // -------------------------------------------------------------------------
+    // Cached on disk in cache/taf/ (one file per ICAO id set).
+    //   900 (15 min)  default
+    'taf_cache_ttl' => 900,
+
+    // -------------------------------------------------------------------------
     // CORS — browser access to /api/*
     // -------------------------------------------------------------------------
     // Replace example.com with your public hostname when copying to config.local.php.

@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=142">
+<link rel="stylesheet" href="app.css?v=143">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -187,6 +187,11 @@
       <h2>Radar <span class="panel-status" id="radarStatus"></span></h2>
       <div class="storm-mode-banner" id="stormModeBanner" role="status" aria-live="polite"></div>
       <div class="fire-mode-banner" id="fireModeBanner" role="status" aria-live="polite"></div>
+      <div class="fire-timeline" id="fireTimeline" hidden>
+        <div class="fire-timeline-lbl">Next 24h RH &amp; wind (fire weather)</div>
+        <div class="fire-timeline-bar" id="fireTimelineBar"></div>
+        <div class="fire-timeline-foot"><span>Now</span><span>+24h</span></div>
+      </div>
       <div class="radar-stage" id="radarStage">
         <div class="radar-wrap">
           <div class="radar-map-tools">
@@ -322,14 +327,16 @@
         <div id="activityList" class="radar-note is-loading">Loading activity forecast&hellip;</div>
       </section>
 
-      <section class="panel nav-target outdoor-wide" id="coastalPanel" data-tab="outdoor" aria-label="Coastal tides" hidden>
-        <h2>Coastal Tides <span class="panel-status" id="coastalStatus"></span></h2>
+      <section class="panel nav-target outdoor-wide" id="coastalPanel" data-tab="outdoor" aria-label="Coastal tides and waves" hidden>
+        <h2>Coastal <span class="panel-status" id="coastalStatus"></span></h2>
+        <p class="activity-lede" id="coastalLede">Tides from NOAA CO-OPS and nearshore waves from Open-Meteo.</p>
         <div class="outlook" style="margin-top:0">
           <div class="lbl" id="coastalStationLbl">Tide station</div>
           <div class="verdict" id="coastalVerdict">&mdash;</div>
           <div class="detail" id="coastalDetail"></div>
         </div>
         <div class="metrics" id="coastalMetrics" style="margin-top:12px"></div>
+        <div class="metrics coastal-marine-metrics" id="coastalMarine" style="margin-top:12px" hidden></div>
         <div class="radar-note" id="coastalNote" style="margin-top:8px"></div>
       </section>
 
@@ -448,9 +455,9 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=142"></script>
-<script src="storm.js?v=142"></script>
-<script src="radar.js?v=142"></script>
-<script src="boot.js?v=142"></script>
+<script src="app.js?v=143"></script>
+<script src="storm.js?v=143"></script>
+<script src="radar.js?v=143"></script>
+<script src="boot.js?v=143"></script>
 </body>
 </html>

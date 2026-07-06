@@ -564,6 +564,15 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .smoke-radar-hint p{margin:0 0 8px}
 .smoke-radar-btn{display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;border:1px solid var(--warn);background:var(--panel);color:var(--ink);font-size:.75rem;font-weight:600;font-family:inherit;cursor:pointer}
 .smoke-radar-btn:hover{border-color:var(--accent);color:var(--accent)}
+.fire-timeline{margin:0 0 10px;padding:10px 14px;border-radius:10px;border:1px solid #e67e22;background:color-mix(in srgb,#e67e22 8%,var(--panel))}
+.fire-timeline-lbl{font-size:.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);margin-bottom:8px}
+.fire-timeline-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:1px;background:var(--line)}
+.fire-timeline-bar span{flex:1;min-width:2px}
+.fire-timeline-bar span.critical{background:#c0392b}
+.fire-timeline-bar span.elevated{background:var(--warn)}
+.fire-timeline-bar span.ok{background:color-mix(in srgb,var(--good) 55%,var(--line))}
+.fire-timeline-foot{display:flex;justify-content:space-between;margin-top:4px;font-size:.5625rem;color:var(--dim)}
+.coastal-marine-metrics{border-top:1px solid var(--line);padding-top:10px}
 #winterOutlook{padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
 .aurora-hint{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
 .aurora-hint .lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}

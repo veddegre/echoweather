@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '142';
+const APP_VERSION = '143';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1717,8 +1717,20 @@ function activityAlertImpact(def, hourIso, timezone){
       apply(55, ev);
       return;
     }
-    if(['running', 'hiking', 'cycling', 'dog'].includes(actId) && /air quality|ozone|particle pollution|smoke/i.test(evL)){
+    if(['running', 'hiking', 'cycling', 'dog'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
+      apply(55, ev);
+      return;
+    }
+    if(['golf', 'yard', 'beach'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
       apply(60, ev);
+      return;
+    }
+    if(['running', 'hiking', 'cycling', 'golf', 'beach', 'dog'].includes(actId) && /dense fog|freezing fog|fog advisory|low visibility/i.test(evL)){
+      apply(52, ev);
+      return;
+    }
+    if(['running', 'hiking', 'cycling', 'golf', 'beach', 'dog'].includes(actId) && /wind advisory|high wind|strong wind|lake wind|gale/i.test(evL)){
+      apply(58, ev);
       return;
     }
     if(['running', 'yard', 'dog', 'hiking', 'golf', 'cycling'].includes(actId) && /heat advisory|excessive heat/i.test(evL)){
@@ -1731,10 +1743,6 @@ function activityAlertImpact(def, hourIso, timezone){
     }
     if(actId === 'dog' && /heat advisory|excessive heat/i.test(evL)){
       apply(50, ev);
-      return;
-    }
-    if(['cycling', 'golf'].includes(actId) && /wind advisory|high wind|lake wind/i.test(evL)){
-      apply(62, ev);
       return;
     }
     if(['hiking', 'yard', 'cycling'].includes(actId) && /red flag|fire weather/i.test(evL)){
@@ -1809,11 +1817,20 @@ function penalizeHeat(ctx, reasons, hot, extreme){
 }
 function penalizeAqi(extra, reasons, strict){
   const aqi = extra.aqi;
-  if(aqi == null) return 0;
-  if(aqi > 150){ reasons.push('Unhealthy air (AQI ' + aqi + ')'); return strict ? 45 : 35; }
-  if(aqi > 100){ reasons.push('Moderate AQI (' + aqi + ')'); return strict ? 20 : 12; }
+  const pm25 = extra.pm25;
+  let s = 0;
+  if(pm25 != null && pm25 >= 55){
+    reasons.push('High smoke / PM2.5 (' + Math.round(pm25) + ' \u00B5g/m\u00B3)');
+    s += strict ? 40 : 30;
+  }else if(pm25 != null && pm25 >= 35){
+    reasons.push('Elevated PM2.5 — smoke or haze');
+    s += strict ? 18 : 12;
+  }
+  if(aqi == null) return s;
+  if(aqi > 150){ reasons.push('Unhealthy air (AQI ' + aqi + ')'); return s + (strict ? 45 : 35); }
+  if(aqi > 100){ reasons.push('Moderate AQI (' + aqi + ')'); return s + (strict ? 20 : 12); }
   if(aqi > 75 && strict) reasons.push('Sensitive groups: elevated AQI');
-  return aqi > 75 && strict ? 8 : 0;
+  return s + (aqi > 75 && strict ? 8 : 0);
 }
 function penalizeWinter(ctx, reasons){
   let s = 0;
@@ -2559,6 +2576,7 @@ async function renderAuroraHint(loc, d){
 }
 function renderFireBanner(loc, d, spcLabel){
   const box = $('fireModeBanner');
+  const timeline = $('fireTimeline');
   if(!box || !loc || !isLikelyUS(loc) || !d) return;
   const rh = d.current.relative_humidity_2m;
   const gust = d.current.wind_gusts_10m ?? d.hourly.wind_gusts_10m?.[nowIndex(d)];
@@ -2567,13 +2585,45 @@ function renderFireBanner(loc, d, spcLabel){
   const dryWindy = rh != null && rh <= 25 && ((gust != null && gust >= 25) || (wind != null && wind >= 20));
   const inSpc = spcLabel && !/none|see text/i.test(spcLabel);
   fireState.active = redFlag || dryWindy || inSpc;
-  if(!fireState.active){ box.classList.remove('visible'); box.innerHTML = ''; return; }
+  if(!fireState.active){
+    box.classList.remove('visible');
+    box.innerHTML = '';
+    if(timeline) timeline.hidden = true;
+    return;
+  }
   const bits = [];
   if(redFlag) bits.push('Red Flag Warning active');
   if(inSpc) bits.push('SPC fire weather outlook: ' + spcLabel);
   if(dryWindy) bits.push('Very dry air (' + Math.round(rh) + '% RH) with gusty winds');
   box.innerHTML = '<strong>Fire weather</strong> ' + esc(bits.join(' · ')) + '.';
   box.classList.add('visible');
+  renderFireTimeline(d);
+}
+function renderFireTimeline(d){
+  const wrap = $('fireTimeline'), bar = $('fireTimelineBar');
+  if(!wrap || !bar || !fireState.active || !d?.hourly?.time?.length){
+    if(wrap) wrap.hidden = true;
+    return;
+  }
+  const i0 = d.hourly.anchoredNow ? 0 : nowIndex(d);
+  const end = Math.min(i0 + HOURLY_HOURS, d.hourly.time.length);
+  const segments = [];
+  for(let j = i0; j < end; j++){
+    const rh = d.hourly.relative_humidity_2m?.[j];
+    const wind = d.hourly.wind_speed_10m?.[j] ?? 0;
+    const gust = d.hourly.wind_gusts_10m?.[j] ?? wind;
+    let cls = 'ok';
+    if(rh != null && rh <= 25 && (gust >= 25 || wind >= 20)) cls = 'critical';
+    else if(rh != null && (rh <= 35 || wind >= 18 || gust >= 22)) cls = 'elevated';
+    segments.push('<span class="' + cls + '" title="'
+      + esc(new Date(d.hourly.time[j]).toLocaleString([], { hour:'numeric', minute:'2-digit' }))
+      + ' · RH ' + (rh != null ? Math.round(rh) : '—') + '% · wind '
+      + Math.round(state.units === 'F' ? wind * 2.237 : wind * 3.6) + ' ' + windUnit()
+      + '"></span>');
+  }
+  if(!segments.length){ wrap.hidden = true; return; }
+  bar.innerHTML = segments.join('');
+  wrap.hidden = false;
 }
 async function refreshFireWeather(loc, d){
   if(!isLikelyUS(loc) || !d) return;
@@ -4898,6 +4948,7 @@ async function loadCoastal(loc){
     const url = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions'
       + '&application=EchoWeather&begin_date=' + ymd + '&end_date=' + ymd
       + '&datum=MLLW&station=' + encodeURIComponent(st.id) + '&time_zone=lst_ldt&units=english&interval=hilo&format=json';
+    const marineP = fetchMarineCurrent(loc.lat, loc.lon).catch(() => null);
     try{
       const r = await fetch(url);
       if(!r.ok) throw new Error('tides HTTP ' + r.status);
@@ -4913,9 +4964,37 @@ async function loadCoastal(loc){
         '<div class="metric"><div class="k">' + esc(p.type === 'H' ? 'High' : 'Low') + ' ' + new Date(p.t).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }) + '</div>'
         + '<div class="v">' + p.v + '<small> ft</small></div></div>'
       ).join('');
-      $('coastalNote').textContent = 'NOAA CO-OPS predictions';
+      let note = 'NOAA CO-OPS tide predictions';
+      const marineBox = $('coastalMarine');
+      if(gen !== coastalLoadGen) return;
+      let c = await marineP;
+      if(c && (c.wave_height == null || c.wave_height === undefined) && st.lat != null && st.lng != null){
+        c = await fetchMarineCurrent(st.lat, st.lng).catch(() => c);
+      }
+      if(c && c.wave_height != null && c.wave_height !== undefined && marineBox){
+        const wv = state.units === 'F' ? mToFt(c.wave_height) + '<small> ft</small>' : c.wave_height + '<small> m</small>';
+        const sw = state.units === 'F' ? mToFt(c.swell_wave_height ?? 0) + '<small> ft</small>' : (c.swell_wave_height ?? 0) + '<small> m</small>';
+        const ww = state.units === 'F' ? mToFt(c.wind_wave_height ?? 0) + '<small> ft</small>' : (c.wind_wave_height ?? 0) + '<small> m</small>';
+        marineBox.hidden = false;
+        marineBox.innerHTML = [
+          ['Wave height', wv],
+          ['Wave period', (c.wave_period ?? '\u2014') + '<small> s</small>'],
+          ['Wave dir', Math.round(c.wave_direction ?? 0) + '<small>\u00B0 ' + compass(c.wave_direction ?? 0) + '</small>'],
+          ['Swell', sw],
+          ['Wind waves', ww]
+        ].map(row =>
+          '<div class="metric"><div class="k">' + row[0] + '</div><div class="v">' + row[1] + '</div></div>'
+        ).join('');
+        note += ' \u00B7 Open-Meteo marine nearshore';
+      }else if(marineBox){
+        marineBox.hidden = true;
+        marineBox.innerHTML = '';
+      }
+      $('coastalNote').textContent = note;
     }catch(e){
       $('coastalNote').textContent = 'Tide data unavailable';
+      const marineBox = $('coastalMarine');
+      if(marineBox){ marineBox.hidden = true; marineBox.innerHTML = ''; }
       console.warn('tides', e);
     }
   });
