@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=149">
+<link rel="stylesheet" href="app.css?v=150">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -81,7 +81,7 @@
     <button type="button" data-tab="now" aria-current="page"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" fill="none"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span><span class="tab-lbl">Now</span></button>
     <button type="button" data-tab="forecast"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tab-lbl">Forecast</span></button>
     <button type="button" data-tab="radar"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="none"/><path d="M12 2a10 10 0 0 1 10 10M12 6a6 6 0 0 1 6 6"/><path d="M12 10a2 2 0 0 1 2 2"/></svg></span><span class="tab-lbl">Radar</span></button>
-    <button type="button" data-tab="outdoor"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2"/><path d="M4.5 14 8.5 9l3 4 3.5-5L19 14"/><path d="M3 18h18"/></svg></span><span class="tab-lbl">Outdoor</span></button>
+    <button type="button" data-tab="outdoor"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2"/><path d="M4.5 14 8.5 9l3 4 3.5-5L19 14"/><path d="M3 18h18"/></svg></span><span class="tab-lbl">Impacts</span></button>
     <button type="button" data-tab="more"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></span><span class="tab-lbl">More</span></button>
   </nav>
 
@@ -174,6 +174,7 @@
         <span class="dc-storm"><i></i>Storm</span>
       </div>
       <div id="winterOutlook" hidden aria-label="Winter weather outlook"></div>
+      <div id="forecastAfdTeaser" hidden aria-live="polite"></div>
       <div class="daily" id="daily"></div>
     </section>
 
@@ -262,8 +263,9 @@
         <div class="radar-note" id="obsStation"></div>
         <div class="obs-compare" id="obsMetrics"></div>
         <div class="metar-trace" id="metarTrace" hidden>
-          <div class="metrics-lbl" style="margin-top:12px">Station history (past 24 hours)</div>
-          <p class="metar-trace-note">Each chart shows how temperature or wind changed at the station. Scale is the low–high range; line runs older (left) to latest (right).</p>
+          <div class="metrics-lbl" style="margin-top:12px">Station history (7 days)</div>
+          <div class="metar-summary" id="metarSummary" hidden aria-live="polite"></div>
+          <p class="metar-trace-note">Each chart shows how temperature, wind, or pressure changed at the station. Scale is the low–high range; line runs older (left) to latest (right).</p>
           <div class="trends metar-trends" id="metarTrends"></div>
         </div>
         <div class="radar-note" id="obsNote" style="margin-top:8px"></div>
@@ -402,6 +404,7 @@
         <section class="panel nav-target" id="auroraPanel" data-tab="outdoor" aria-label="Aurora outlook" hidden>
           <h2>Aurora</h2>
           <div class="aurora-hint" id="auroraOutdoor" hidden aria-live="polite"></div>
+          <div class="aurora-ovation" id="auroraOvation" hidden aria-live="polite"></div>
         </section>
       </div>
     </div>
@@ -485,9 +488,9 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=149"></script>
-<script src="storm.js?v=149"></script>
-<script src="radar.js?v=149"></script>
-<script src="boot.js?v=149"></script>
+<script src="app.js?v=150"></script>
+<script src="storm.js?v=150"></script>
+<script src="radar.js?v=150"></script>
+<script src="boot.js?v=150"></script>
 </body>
 </html>

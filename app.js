@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '149';
+const APP_VERSION = '150';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -173,6 +173,34 @@ async function panelTask(panelId, statusId, fn){
     panelPending = Math.max(0, panelPending - 1);
     updatePanelFooter();
   }
+}
+const PANEL_UNAVAIL_MSG = {
+  non_us: 'Not available outside the United States.',
+  no_grid: 'Open-Meteo has no wave grid at this point — check the NWS marine text if shown.',
+  no_station: 'No observation station found within range.',
+  api_error: 'The data source could not be reached. Try refreshing in a moment.',
+  no_obs: 'No recent METAR observations for comparison.',
+  no_monitor: 'No EPA air monitor within 50 mi — modeled AQI only.',
+  no_taf: 'Aviation forecast unavailable for the nearest field.',
+  no_tides: 'NOAA tide predictions could not be loaded.',
+  no_gauges: 'No active USGS streamgages within ~30 mi.',
+  no_waves: 'Wave model has no grid here — use buoy readings or NWS marine forecast.',
+  winter_layup: 'Buoy station is offline for winter layup.',
+  no_discussion: 'NWS forecast discussion not published for this office.',
+  no_precip_prob: 'No significant precipitation probability on the NWS grid in the next 12 hours.',
+  air_api: 'Air quality could not be loaded from AirNow or Open-Meteo.',
+  buoy_offline: 'Station may be offline or seasonal — pick another or tap Nearest.',
+  taf_proxy: 'TAF needs the server proxy — ensure /api/taf is deployed with PHP.',
+  taf_timeout: 'TAF request timed out — tap Refresh or try again in a moment.'
+};
+function panelUnavail(code, extra){
+  const msg = PANEL_UNAVAIL_MSG[code] || 'Unavailable for this location.';
+  const tail = extra ? ' ' + String(extra).trim() : '';
+  return '<p class="panel-unavail"><strong>Unavailable.</strong> ' + esc(msg) + (tail ? ' ' + esc(tail) : '') + '</p>';
+}
+function setPanelUnavail(el, code, extra){
+  if(!el) return;
+  el.innerHTML = panelUnavail(code, extra);
 }
 function updatePanelFooter(){
   $('panelStatus').textContent = panelPending > 0 ? panelPending + ' panel(s) loading\u2026' : '';
@@ -2543,9 +2571,15 @@ function renderLight(d){
 }
 async function renderAuroraHint(loc, d){
   const box = $('auroraOutdoor');
+  const ovationBox = $('auroraOvation');
   const panel = $('auroraPanel');
-  const hide = () => { if(box) box.hidden = true; if(panel) panel.hidden = true; };
-  if(!box || !panel || !loc || loc.lat < 40 || !d){ hide(); return; }
+  const hide = () => {
+    if(box) box.hidden = true;
+    if(ovationBox){ ovationBox.hidden = true; ovationBox.innerHTML = ''; }
+    if(panel) panel.hidden = true;
+  };
+  if(!box || !panel || !loc || !d){ hide(); return; }
+  if(loc.lat < 40){ hide(); return; }
   try{
     const [kpRes, ovationRes] = await Promise.all([
       fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json'),
@@ -2556,11 +2590,12 @@ async function renderAuroraHint(loc, d){
     const last = rows[rows.length - 1];
     const kp = parseFloat(last && last[1]);
     let ovationScore = 0;
+    let ovationCoords = null;
     if(ovationRes.ok){
       const ov = await ovationRes.json();
-      const coords = ov.coordinates || ov;
-      if(Array.isArray(coords)){
-        const near = coords.filter(c => Array.isArray(c) && c.length >= 3
+      ovationCoords = ov.coordinates || ov;
+      if(Array.isArray(ovationCoords)){
+        const near = ovationCoords.filter(c => Array.isArray(c) && c.length >= 3
           && Math.abs(c[1] - loc.lat) < 4 && Math.abs(c[0] - loc.lon) < 8);
         if(near.length) ovationScore = Math.max(...near.map(c => c[2] || 0));
       }
@@ -2578,9 +2613,37 @@ async function renderAuroraHint(loc, d){
     const ovationNote = ovationScore >= 25 ? ' OVATION model shows aurora potential at your latitude.' : '';
     box.innerHTML = '<div class="lbl">Northern lights</div>'
       + '<div class="verdict good">Possible tonight</div>'
-      + '<div class="detail">Planetary Kp ' + (isNaN(kp) ? '—' : kp.toFixed(1)) + ' with relatively clear skies tonight (cloud ~'
+      + '<div class="detail">Planetary Kp ' + (isNaN(kp) ? '\u2014' : kp.toFixed(1)) + ' with relatively clear skies tonight (cloud ~'
       + Math.round(nightCloud) + '%).' + ovationNote + ' Best away from city lights, facing north.</div>';
+    if(ovationBox){
+      ovationBox.hidden = false;
+      ovationBox.innerHTML = renderOvationStrip(loc, kp, ovationScore, ovationCoords);
+    }
   }catch(e){ hide(); }
+}
+function renderOvationStrip(loc, kp, ovationScore, coords){
+  const pct = Math.min(100, Math.round(ovationScore));
+  let bars = '';
+  if(Array.isArray(coords)){
+    const lats = [loc.lat + 6, loc.lat + 3, loc.lat, loc.lat - 3, loc.lat - 6];
+    const scores = lats.map(lat => {
+      const near = coords.filter(c => Array.isArray(c) && c.length >= 3
+        && Math.abs(c[1] - lat) < 2 && Math.abs(c[0] - loc.lon) < 8);
+      return near.length ? Math.max(...near.map(c => c[2] || 0)) : 0;
+    });
+    bars = '<div class="aurora-ov-bars" aria-hidden="true">' + scores.map((s, i) => {
+      const h = Math.max(4, Math.round(s / 100 * 36));
+      return '<span class="aurora-ov-bar" style="height:' + h + 'px" title="'
+        + esc(lats[i].toFixed(0) + '\u00B0N \u00B7 ' + Math.round(s) + '%') + '"></span>';
+    }).join('') + '</div>'
+      + '<div class="aurora-ov-lbls"><span>North</span><span>Your lat</span><span>South</span></div>';
+  }
+  const kpNote = !isNaN(kp) && kp >= 5 ? ' \u00B7 Kp elevated' : '';
+  return '<div class="lbl">OVATION aurora probability</div>'
+    + '<div class="aurora-ov-main">' + pct + '<small>% at your latitude</small></div>'
+    + bars
+    + '<div class="detail" style="margin-top:8px">NOAA OVATION model snapshot \u00B7 planetary Kp '
+    + (isNaN(kp) ? '\u2014' : kp.toFixed(1)) + kpNote + '</div>';
 }
 function renderFireBanner(loc, d, spcLabel){
   const box = $('fireModeBanner');
@@ -3575,7 +3638,7 @@ async function loadAir(loc){
       if(state.data) renderActivityPlanner(state.data);
     }catch(e){
       $('aqiVerdict').textContent = 'unavailable';
-      $('aqiDetail').textContent = 'Could not load air quality. Check connection and retry.';
+      $('aqiDetail').innerHTML = panelUnavail('air_api');
       $('pollenNote').textContent = '';
       renderPollenForecast(null, meteoDaily);
       $('airMetrics').innerHTML = '';
@@ -3681,39 +3744,103 @@ async function loadObs(loc){
       $('obsNote').textContent = 'Badge shows how the observation compares to the NWS forecast this hour (warmer/cooler, stronger/lighter wind, etc.).';
       await renderMetarTrace(sid);
     }catch(e){
-      $('obsNote').textContent = 'OBS UNAVAILABLE \u2014 ' + (e.message || 'check console');
+      setPanelUnavail($('obsNote'), 'no_obs', e.message || '');
       $('metarTrace').hidden = true;
       console.error('obs', e);
     }
   });
 }
 async function renderMetarTrace(stationId){
-  const wrap = $('metarTrace'), box = $('metarTrends');
+  const wrap = $('metarTrace'), box = $('metarTrends'), summary = $('metarSummary');
   if(!wrap || !box || !stationId){ if(wrap) wrap.hidden = true; return; }
   try{
     const r = await nwsFetch('https://api.weather.gov/stations/' + encodeURIComponent(stationId) + '/observations?limit=168');
     if(!r.ok) throw new Error('obs list HTTP ' + r.status);
     const feats = ((await r.json()).features || []).slice().reverse();
     if(feats.length < 3){ wrap.hidden = true; return; }
-    const temps = [], winds = [];
+    const temps = [], winds = [], pressures = [];
+    const toDispTemp = c => state.units === 'F' ? Math.round(c * 9/5 + 32) : Math.round(c);
+    const toDispWind = ms => state.units === 'F' ? Math.round(ms * 2.237) : Math.round(ms * 3.6);
     feats.forEach(f => {
       const p = f.properties || {};
       const t = nwsVal(p.temperature);
       const w = nwsVal(p.windSpeed);
-      if(t != null) temps.push(state.units === 'F' ? Math.round(t * 9/5 + 32) : Math.round(t));
-      if(w != null) winds.push(state.units === 'F' ? Math.round(w * 2.237) : Math.round(w * 3.6));
+      const pr = nwsVal(p.barometricPressure);
+      if(t != null) temps.push(toDispTemp(t));
+      if(w != null) winds.push(toDispWind(w));
+      if(pr != null){
+        const hpa = pr / 100;
+        pressures.push(state.units === 'F' ? Math.round(hpa * 0.02953 * 100) / 100 : Math.round(hpa));
+      }
     });
+    if(summary){
+      const sumHtml = metarHistorySummary(feats, temps, pressures);
+      if(sumHtml){
+        summary.hidden = false;
+        summary.innerHTML = sumHtml;
+      }else{
+        summary.hidden = true;
+        summary.innerHTML = '';
+      }
+    }
+    const presLabel = state.units === 'F' ? 'Pressure (7d, inHg)' : 'Pressure (7d, hPa)';
+    const presUnit = state.units === 'F' ? ' inHg' : ' hPa';
     const weekNote = feats.length >= 48
-      ? '<div class="radar-note" style="margin-top:8px">7-day station history (' + feats.length + ' hourly obs).</div>'
+      ? '<div class="radar-note" style="margin-top:8px">' + feats.length + ' hourly observations over the past 7 days.</div>'
       : '';
-    box.innerHTML = [
-      sparklineCard('Temperature (7d)', temps.slice(-168), 'temp', degSym()),
-      sparklineCard('Wind speed (7d)', winds.slice(-168), 'wind', ' ' + windUnit())
-    ].join('') + weekNote;
+    const cards = [
+      sparklineCard('Temperature (7d)', temps.slice(-168), 'temp', degSym(), {
+        hint: 'Station METAR temperature trend',
+        rightPrefix: 'Latest'
+      }),
+      sparklineCard('Wind speed (7d)', winds.slice(-168), 'wind', ' ' + windUnit(), {
+        hint: 'Sustained wind from METAR',
+        rightPrefix: 'Latest'
+      })
+    ];
+    if(pressures.length >= 3){
+      cards.push(sparklineCard(presLabel, pressures.slice(-168), 'pres', presUnit, {
+        hint: 'Barometric pressure at the station',
+        rightPrefix: 'Latest',
+        fmt: v => state.units === 'F' ? Number(v).toFixed(2) : String(Math.round(v))
+      }));
+    }
+    box.innerHTML = cards.join('') + weekNote;
     wrap.hidden = false;
   }catch(e){
     wrap.hidden = true;
+    if(summary){ summary.hidden = true; summary.innerHTML = ''; }
   }
+}
+function metarHistorySummary(feats, temps, pressures){
+  if(!feats.length || temps.length < 2) return '';
+  const latestT = temps[temps.length - 1];
+  const dayAgoIdx = Math.max(0, temps.length - 25);
+  const dayAgoT = temps[dayAgoIdx];
+  const delta24 = latestT - dayAgoT;
+  const weekAgoIdx = Math.max(0, temps.length - 168);
+  const weekAgoT = temps[weekAgoIdx];
+  const delta7d = latestT - weekAgoT;
+  const u = degSym();
+  const fmtDelta = d => {
+    if(!d || Math.abs(d) < 1) return 'about steady';
+    return (d > 0 ? 'up ' : 'down ') + Math.abs(Math.round(d)) + u;
+  };
+  let presLine = '';
+  if(pressures.length >= 12){
+    const pNow = pressures[pressures.length - 1];
+    const p6 = pressures[Math.max(0, pressures.length - 7)];
+    const pDelta = pNow - p6;
+    const pu = state.units === 'F' ? ' inHg' : ' hPa';
+    if(Math.abs(pDelta) >= (state.units === 'F' ? 0.03 : 1)){
+      presLine = ' Pressure ' + (pDelta > 0 ? 'rising' : 'falling') + ' (~'
+        + (state.units === 'F' ? Math.abs(pDelta).toFixed(2) : Math.abs(Math.round(pDelta))) + pu + ' in 6 h).';
+    }
+  }
+  return '<div class="lbl">24 h &amp; 7 d trend</div>'
+    + 'Temperature ' + fmtDelta(delta24) + ' vs ~24 h ago'
+    + (temps.length >= 48 ? '; ' + fmtDelta(delta7d) + ' vs ~7 d ago' : '')
+    + '.' + presLine;
 }
 
 // ---------- aviation TAF (nearest airport) ----------
@@ -3972,7 +4099,7 @@ async function loadTaf(loc){
     try{
       icaos = await resolveTafIcaos(loc);
       if(gen !== tafLoadGen) return;
-      if(!icaos.length){ box.textContent = 'No nearby airport TAF for this location.'; return; }
+      if(!icaos.length){ box.innerHTML = panelUnavail('no_taf'); return; }
       const primary = icaos[0];
       const [tafRes, metarObs] = await Promise.all([
         fetchTimeout('/api/taf?ids=' + encodeURIComponent(icaos.join(',')), {}, 20000),
@@ -3987,7 +4114,7 @@ async function loadTaf(loc){
       if(!Array.isArray(arr)) throw new Error('taf bad response');
       const taf = arr.find(t => t && (t.rawTAF || t.icaoId));
       if(!taf){
-        box.textContent = 'No TAF issued for nearby airports (' + icaos.join(', ') + ').';
+        box.innerHTML = panelUnavail('no_taf', 'No TAF issued for ' + icaos.join(', ') + '.');
         return;
       }
       if(dual){
@@ -4002,13 +4129,13 @@ async function loadTaf(loc){
       const icaoLabel = icaos.length ? icaos.join(', ') : '';
       const timedOut = e.name === 'AbortError' || e.name === 'TimeoutError';
       if(msg.includes('proxy')){
-        box.textContent = 'TAF needs the server proxy — ensure /api/taf is deployed with PHP.';
+        box.innerHTML = panelUnavail('taf_proxy');
       }else if(timedOut){
-        box.textContent = 'TAF request timed out — tap Refresh or try again in a moment.';
+        box.innerHTML = panelUnavail('taf_timeout');
       }else if(msg.startsWith('taf http ')){
-        box.textContent = 'TAF unavailable (HTTP ' + msg.slice(9) + (icaoLabel ? ', ' + icaoLabel : '') + ').';
+        box.innerHTML = panelUnavail('no_taf', 'HTTP ' + msg.slice(9) + (icaoLabel ? ', ' + icaoLabel : '') + '.');
       }else{
-        box.textContent = 'TAF unavailable' + (icaoLabel ? ' (' + icaoLabel + ')' : '') + '.';
+        box.innerHTML = panelUnavail('no_taf', icaoLabel || '');
       }
       if(timedOut) console.warn('taf', e.message || e.name);
       else console.error('taf', e);
@@ -4017,6 +4144,52 @@ async function loadTaf(loc){
 }
 
 // ---------- NWS forecast discussion (inline) ----------
+async function fetchLatestAfdText(loc){
+  if(!isLikelyUS(loc)) throw new Error('non_us');
+  const r = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
+  if(!r.ok) throw new Error('points');
+  const j = await r.json();
+  const cwa = j.properties && j.properties.cwa;
+  if(!cwa) throw new Error('no cwa');
+  const link = 'https://forecast.weather.gov/product.php?site=' + cwa + '&issuedby=' + cwa + '&product=AFD&format=CI&version=1&glossary=1';
+  const lr = await nwsFetch('https://api.weather.gov/products/types/AFD/locations/' + cwa);
+  if(!lr.ok) throw new Error('afd list');
+  const list = await lr.json();
+  const latest = (list['@graph'] || list.features || [])[0];
+  const pid = latest && (latest.id || (latest['@id'] || '').split('/').pop());
+  if(!pid) throw new Error('no afd');
+  const pr = await nwsFetch('https://api.weather.gov/products/' + pid);
+  if(!pr.ok) throw new Error('afd product');
+  const prod = await pr.json();
+  return {
+    cwa,
+    text: prod.productText || '',
+    issued: prod.issuanceTime || prod.productTimestamp || '',
+    link
+  };
+}
+async function loadForecastAfdTeaser(loc){
+  const box = $('forecastAfdTeaser');
+  if(!box) return;
+  if(!isLikelyUS(loc)){ box.hidden = true; box.innerHTML = ''; return; }
+  try{
+    const afd = await fetchLatestAfdText(loc);
+    const highlight = afdHighlightText(afd.text);
+    if(!highlight){ box.hidden = true; box.innerHTML = ''; return; }
+    const when = afd.issued
+      ? new Date(afd.issued).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' })
+      : '';
+    box.hidden = false;
+    box.innerHTML = '<div class="forecast-afd-teaser">'
+      + '<div class="lbl">From the NWS discussion \u00B7 ' + esc(afd.cwa) + (when ? ' \u00B7 ' + esc(when) : '') + '</div>'
+      + '<p>' + esc(highlight) + '</p>'
+      + '<a href="#afdPanel">Full forecast discussion \u2192</a>'
+      + '</div>';
+  }catch(e){
+    box.hidden = true;
+    box.innerHTML = '';
+  }
+}
 async function loadAFD(loc){
   return panelTask('afdPanel', 'afdStatus', async () => {
     const a = $('afdLink');
@@ -4024,24 +4197,11 @@ async function loadAFD(loc){
     $('afdText').textContent = 'Loading discussion\u2026';
     $('afdMeta').textContent = '';
     try{
-      const r = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
-      if(!r.ok) throw new Error('points');
-      const j = await r.json();
-      const cwa = j.properties && j.properties.cwa;
-      if(!cwa) throw new Error('no cwa');
-      a.href = 'https://forecast.weather.gov/product.php?site=' + cwa + '&issuedby=' + cwa + '&product=AFD&format=CI&version=1&glossary=1';
+      const afd = await fetchLatestAfdText(loc);
+      a.href = afd.link;
       a.textContent = 'Full AFD on forecast.weather.gov \u2192';
       a.style.display = 'inline';
-      const lr = await nwsFetch('https://api.weather.gov/products/types/AFD/locations/' + cwa);
-      if(!lr.ok) throw new Error('afd list');
-      const list = await lr.json();
-      const latest = (list['@graph'] || list.features || [])[0];
-      const pid = latest && (latest.id || (latest['@id'] || '').split('/').pop());
-      if(!pid) throw new Error('no afd');
-      const pr = await nwsFetch('https://api.weather.gov/products/' + pid);
-      if(!pr.ok) throw new Error('afd product');
-      const prod = await pr.json();
-      const fullText = prod.productText || '(empty)';
+      const fullText = afd.text || '(empty)';
       const highlight = afdHighlightText(fullText);
       const hlBox = $('afdHighlight');
       if(hlBox){
@@ -4054,10 +4214,11 @@ async function loadAFD(loc){
         }
       }
       $('afdText').textContent = fullText;
-      const issued = prod.issuanceTime || prod.productTimestamp || '';
-      $('afdMeta').textContent = 'NWS ' + cwa + (issued ? ' \u00B7 issued ' + new Date(issued).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' }) : '');
+      $('afdMeta').textContent = 'NWS ' + afd.cwa + (afd.issued
+        ? ' \u00B7 issued ' + new Date(afd.issued).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' })
+        : '');
     }catch(e){
-      $('afdText').textContent = 'Forecast discussion unavailable for this location.';
+      $('afdText').innerHTML = panelUnavail('no_discussion');
       console.error('afd', e);
     }
   });
@@ -4751,7 +4912,7 @@ async function loadMarine(loc){
         lakeBox.style.display = 'block';
       }
     }catch(e){
-      note.textContent = 'WAVE MODEL UNAVAILABLE';
+      setPanelUnavail(note, 'no_waves');
       console.error('marine', e);
     }
   });
@@ -4779,7 +4940,7 @@ async function loadNbm(loc){
         (p.probabilityOfPrecipitation?.value ?? 0) > 0 || /rain|shower|storm|snow|drizzle/i.test(p.shortForecast || '')
       ).slice(0, 8);
       if(!periods.length){
-        body.textContent = 'No significant precipitation probability in the next 12 hours on the NWS grid.';
+        body.innerHTML = panelUnavail('no_precip_prob');
         return;
       }
       body.innerHTML = '<div class="metrics" style="margin-top:0">' + periods.map(p => {
@@ -4790,7 +4951,8 @@ async function loadNbm(loc){
           + '</div></div>';
       }).join('') + '</div>';
     }catch(e){
-      panel.hidden = true;
+      panel.hidden = false;
+      setPanelUnavail(body, 'api_error');
       console.warn('nbm', e);
     }
   });
@@ -5067,9 +5229,9 @@ async function loadBuoy(allowFallback){
         }
       }
       const seasonal = buoyCoords(id)?.seasonal;
-      note.textContent = seasonal && isGreatLakesBuoyWinter()
-        ? 'Station pulled for winter layup — try a nearshore station or tap Nearest.'
-        : 'No current data — station may be offline or seasonal.';
+      note.innerHTML = seasonal && isGreatLakesBuoyWinter()
+        ? panelUnavail('winter_layup')
+        : panelUnavail('buoy_offline');
       return;
     }
     box.innerHTML = rows.map(r =>
@@ -5079,7 +5241,7 @@ async function loadBuoy(allowFallback){
   }catch(e){
     if(stale()) return;
     updateBuoyCard(id, await fetchBuoyStationName(id));
-    note.textContent = 'Station unavailable — pick another station or enter a custom ID.';
+    note.innerHTML = panelUnavail('buoy_offline');
     console.error('buoy', e);
   }
 }
@@ -5150,6 +5312,7 @@ function ensureTabPanels(tab){
     try{ renderForecastText(d); }catch(e){ console.error('renderForecastText', e); }
     loadObs(loc);
     loadClimoNormals(loc);
+    loadForecastAfdTeaser(loc);
   }
   if((all || tab === 'radar') && !tabPanelsLoaded.radar){
     tabPanelsLoaded.radar = true;
@@ -5310,7 +5473,7 @@ async function loadCoastal(loc){
           : ''
       });
     }catch(e){
-      $('coastalNote').textContent = 'Tide data unavailable';
+      setPanelUnavail($('coastalNote'), 'no_tides');
       const marineBox = $('coastalMarine');
       if(marineBox){ marineBox.hidden = true; marineBox.innerHTML = ''; }
       const nwsBox = $('coastalNws');
