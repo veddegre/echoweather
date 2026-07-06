@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '174';
+const APP_VERSION = '175';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2479,8 +2479,7 @@ async function renderLocCompare(){
   if(!panel || !box) return;
   if(state.locations.length < 2){ panel.hidden = true; return; }
   panel.hidden = false;
-  box.className = 'loc-compare';
-  box.innerHTML = '<div class="radar-note" style="grid-column:1/-1">Loading saved locations\u2026</div>';
+  box.innerHTML = '<div class="lc-status radar-note" style="grid-column:1/-1">Loading saved locations\u2026</div>';
   try{
     const spcGeo = await getSpcDay1Geo();
     const cards = await Promise.all(state.locations.map(async (loc, i) => {
@@ -2517,7 +2516,6 @@ async function renderLocCompare(){
       return { loc, i, temp: null, wind: null, icon: '', active: i === state.active, badges: locCompareBadges(loc, alerts, spcGeo) };
     }
   }));
-    box.className = 'loc-compare';
     box.innerHTML = cards.map(c =>
       '<div class="lc-card"' + (c.active ? ' style="border-color:var(--accent)"' : '') + '>'
       + '<div class="lc-name">' + esc(c.loc.name) + (c.active ? ' \u00B7 active' : '') + '</div>'
@@ -2527,8 +2525,7 @@ async function renderLocCompare(){
       + (c.badges || '') + '</div>'
     ).join('');
   }catch(e){
-    box.className = 'radar-note';
-    setPanelUnavail(box, 'api_error');
+    box.innerHTML = '<div class="lc-status" style="grid-column:1/-1">' + panelUnavail('api_error') + '</div>';
     console.warn('locCompare', e);
   }
 }
