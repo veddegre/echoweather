@@ -385,8 +385,14 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .trends{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 .trend{background:var(--panel-2);border-radius:8px;padding:10px 12px}
 .trend .lbl{font-size:.625rem;color:var(--dim);font-weight:500}
-.trend svg{display:block;margin-top:6px;color:var(--sky);width:100%;height:28px}
-.trend.temp svg{color:var(--sun)}.trend.dew svg{color:var(--accent)}.trend.cape svg{color:var(--warn)}
+.trend-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px}
+.trend-range{font-size:.625rem;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.trend-foot{display:flex;justify-content:space-between;margin-top:4px;font-size:.5625rem;color:var(--dim);letter-spacing:.03em}
+.trend svg{display:block;margin-top:4px;color:var(--sky);width:100%;height:28px}
+.trend.temp svg{color:var(--sun)}.trend.dew svg{color:var(--accent)}.trend.cape svg{color:var(--warn)}.trend.wind svg{color:var(--sky)}
+.obs-lede{font-size:.75rem;color:var(--mut);margin:4px 0 0;line-height:1.45}
+.metar-trace-note{font-size:.72rem;color:var(--dim);margin:4px 0 8px;line-height:1.4}
+.metar-trends{grid-template-columns:repeat(2,1fr)}
 .delta-up{color:var(--warn)}.delta-dn{color:var(--sky)}.delta-ok{color:var(--dim)}
 .obs-compare{display:flex;flex-direction:column;gap:8px;margin-top:10px;min-width:0}
 .obs-row{display:grid;grid-template-columns:minmax(0,56px) minmax(0,1fr) minmax(0,1fr) minmax(0,max-content);gap:6px 8px;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
@@ -770,12 +776,14 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 
     <div class="grid adv-only" id="obsAfdGrid" style="margin-top:16px">
       <section class="panel nav-target" id="obsPanel" data-tab="forecast" aria-label="Observations vs forecast">
-        <h2>Obs vs NWS Forecast <span class="panel-status" id="obsStatus"></span></h2>
+        <h2>Observations vs NWS forecast <span class="panel-status" id="obsStatus"></span></h2>
+        <p class="obs-lede">Latest weather-station readings compared to the National Weather Service forecast for this hour.</p>
         <div class="radar-note" id="obsStation"></div>
         <div class="obs-compare" id="obsMetrics"></div>
         <div class="metar-trace" id="metarTrace" hidden>
-          <div class="metrics-lbl" style="margin-top:12px">Last 24 hours at station</div>
-          <div class="trends" id="metarTrends"></div>
+          <div class="metrics-lbl" style="margin-top:12px">Station history (past 24 hours)</div>
+          <p class="metar-trace-note">Each chart shows how temperature or wind changed at the station. Scale is the low–high range; line runs older (left) to latest (right).</p>
+          <div class="trends metar-trends" id="metarTrends"></div>
         </div>
         <div class="radar-note" id="obsNote" style="margin-top:8px"></div>
       </section>
@@ -925,7 +933,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '119';
+const APP_VERSION = '120';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -1106,6 +1114,19 @@ function sparkline(values, w, h){
   }).join(' ');
   return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
     + '<polyline points="' + pts + '" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>';
+}
+function sparklineCard(label, values, cls, unitSuffix){
+  if(!values.length) return '';
+  const min = Math.min(...values), max = Math.max(...values);
+  const latest = values[values.length - 1];
+  const u = unitSuffix || '';
+  const rangeTxt = min === max ? (min + u) : (min + u + ' \u2013 ' + max + u);
+  return '<div class="trend ' + cls + '">'
+    + '<div class="trend-head"><div class="lbl">' + esc(label) + '</div>'
+    + '<div class="trend-range">' + esc(rangeTxt) + '</div></div>'
+    + sparkline(values, 100, 28)
+    + '<div class="trend-foot"><span>Older</span><span>Latest \u00B7 ' + esc(String(latest) + u) + '</span></div>'
+    + '</div>';
 }
 
 // ---------- helpers ----------
@@ -4915,7 +4936,7 @@ function obsCompareRow(label, obsDisp, fcDisp, bias){
   return '<div class="obs-row">'
     + '<div class="obs-label">' + label + '</div>'
     + '<div class="obs-val"><div class="n">' + (obsDisp ?? '\u2014') + '</div><div class="t">Observed</div></div>'
-    + '<div class="obs-val"><div class="n">' + (fcDisp ?? '\u2014') + '</div><div class="t">NWS fcst</div></div>'
+    + '<div class="obs-val"><div class="n">' + (fcDisp ?? '\u2014') + '</div><div class="t">NWS forecast</div></div>'
     + '<span class="obs-badge ' + bias.cls + '">' + bias.html + '</span>'
     + '</div>';
 }
@@ -4982,7 +5003,7 @@ async function loadObs(loc){
           obsBiasBadge(obsPresHpa, fcPres, 'pressure', ' hPa', 1))
       ];
       $('obsMetrics').innerHTML = rows.join('');
-      $('obsNote').textContent = 'Badge = how observation compares to NWS forecast this hour';
+      $('obsNote').textContent = 'Badge shows how the observation compares to the NWS forecast this hour (warmer/cooler, stronger/lighter wind, etc.).';
       await renderMetarTrace(sid);
     }catch(e){
       $('obsNote').textContent = 'OBS UNAVAILABLE \u2014 ' + (e.message || 'check console');
@@ -5008,11 +5029,9 @@ async function renderMetarTrace(stationId){
       if(w != null) winds.push(state.units === 'F' ? Math.round(w * 2.237) : Math.round(w * 3.6));
     });
     box.innerHTML = [
-      ['Temp (' + degSym() + ')', temps, 'temp'],
-      ['Wind (' + windUnit() + ')', winds, 'dew']
-    ].map(([lbl, vals, cls]) =>
-      '<div class="trend ' + cls + '"><div class="lbl">' + lbl + '</div>' + sparkline(vals, 100, 28) + '</div>'
-    ).join('');
+      sparklineCard('Temperature', temps, 'temp', degSym()),
+      sparklineCard('Wind speed', winds, 'wind', ' ' + windUnit())
+    ].join('');
     wrap.hidden = false;
   }catch(e){
     wrap.hidden = true;
