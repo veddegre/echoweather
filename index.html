@@ -389,8 +389,9 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .trend-range{font-size:.625rem;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
 .trend-foot{display:flex;justify-content:space-between;margin-top:4px;font-size:.5625rem;color:var(--dim);letter-spacing:.03em}
 .trend svg{display:block;margin-top:4px;color:var(--sky);width:100%;height:28px}
-.trend.temp svg{color:var(--sun)}.trend.dew svg{color:var(--accent)}.trend.cape svg{color:var(--warn)}.trend.wind svg{color:var(--sky)}
+.trend.temp svg{color:var(--sun)}.trend.dew svg{color:var(--accent)}.trend.cape svg{color:var(--warn)}.trend.wind svg{color:var(--sky)}.trend.pres svg{color:var(--dim)}
 .obs-lede{font-size:.75rem;color:var(--mut);margin:4px 0 0;line-height:1.45}
+.hourly-lede{font-size:.75rem;color:var(--mut);margin:4px 0 10px;line-height:1.45}
 .metar-trace-note{font-size:.72rem;color:var(--dim);margin:4px 0 8px;line-height:1.4}
 .metar-trends{grid-template-columns:repeat(2,1fr)}
 .delta-up{color:var(--warn)}.delta-dn{color:var(--sky)}.delta-ok{color:var(--dim)}
@@ -692,6 +693,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 
     <section class="panel full nav-target" id="hourlyPanel" data-tab="now" aria-label="Hourly forecast">
       <h2>Next 24 Hours <span class="panel-status" id="hourlySource"></span></h2>
+      <p class="hourly-lede">Hour-by-hour forecast from now. Mini charts show the expected range over the next 24 hours (left = now, right = later); scroll the row below for each hour.</p>
       <div class="trends" id="trends"></div>
       <div class="hourly-strip" id="hourly"></div>
     </section>
@@ -933,7 +935,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '120';
+const APP_VERSION = '121';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -1115,17 +1117,22 @@ function sparkline(values, w, h){
   return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
     + '<polyline points="' + pts + '" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>';
 }
-function sparklineCard(label, values, cls, unitSuffix){
-  if(!values.length) return '';
-  const min = Math.min(...values), max = Math.max(...values);
-  const latest = values[values.length - 1];
+function sparklineCard(label, values, cls, unitSuffix, opts){
+  opts = opts || {};
+  const nums = values.filter(v => v != null && !isNaN(v)).map(Number);
+  if(!nums.length) return '';
+  const fmt = opts.fmt || (v => String(Math.round(v)));
   const u = unitSuffix || '';
-  const rangeTxt = min === max ? (min + u) : (min + u + ' \u2013 ' + max + u);
+  const min = Math.min(...nums), max = Math.max(...nums);
+  const latest = nums[nums.length - 1];
+  const rangeTxt = min === max ? (fmt(min) + u) : (fmt(min) + u + ' \u2013 ' + fmt(max) + u);
+  const left = opts.left || 'Older';
+  const right = (opts.rightPrefix || 'Latest') + ' \u00B7 ' + (opts.rightTail != null ? opts.rightTail : (fmt(latest) + u));
   return '<div class="trend ' + cls + '">'
     + '<div class="trend-head"><div class="lbl">' + esc(label) + '</div>'
     + '<div class="trend-range">' + esc(rangeTxt) + '</div></div>'
-    + sparkline(values, 100, 28)
-    + '<div class="trend-foot"><span>Older</span><span>Latest \u00B7 ' + esc(String(latest) + u) + '</span></div>'
+    + sparkline(nums, 100, 28)
+    + '<div class="trend-foot"><span>' + esc(left) + '</span><span>' + esc(right) + '</span></div>'
     + '</div>';
 }
 
@@ -2427,14 +2434,14 @@ function renderHourly(d){
   const temps = slice(d.hourly.temperature_2m, v => v);
   const dews = slice(d.hourly.dew_point_2m, v => v);
   const capes = slice(d.hourly.cape, v => v ?? 0);
+  const foot = { left: 'Now', rightPrefix: 'Later' };
+  const dU = degSym();
   $('trends').innerHTML = [
-    ['Pressure (hPa)', pres, ''],
-    ['Temp', temps, 'temp'],
-    ['Dew point', dews, 'dew'],
-    ['CAPE', capes, 'cape']
-  ].map(([lbl, vals, cls]) =>
-    '<div class="trend ' + cls + '"><div class="lbl">' + lbl + '</div>' + sparkline(vals, 100, 28) + '</div>'
-  ).join('');
+    sparklineCard('Pressure', pres, 'pres', ' hPa', foot),
+    sparklineCard('Temperature', temps, 'temp', dU, foot),
+    sparklineCard('Dew point', dews, 'dew', dU, foot),
+    sparklineCard('CAPE', capes, 'cape', ' J/kg', foot)
+  ].join('');
 
   const out = [];
   for(let i = i0; i < end; i++){
