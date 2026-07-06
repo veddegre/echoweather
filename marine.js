@@ -817,7 +817,6 @@ async function loadMarine(loc){
 
 // ---------- USGS streamgages (US, free) + NWS NWPS/AHPS ----------
 let streamLoadGen = 0;
-const NWPS_GAUGE_URL = 'https://api.water.noaa.gov/nwps/v1/gauges/';
 const NWPS_FLOOD_LABEL = {
   action: 'Action stage',
   minor: 'Minor flood',
@@ -827,15 +826,34 @@ const NWPS_FLOOD_LABEL = {
   low_threshold: 'Low water'
 };
 const NWPS_FLOOD_SHOW = new Set(Object.keys(NWPS_FLOOD_LABEL));
-async function fetchNwpsGauge(usgsId){
-  if(!usgsId) return null;
+let nwpsBboxCache = { key: '', t: 0, gauges: [] };
+const NWPS_BBOX_TTL = 5 * 60 * 1000;
+async function fetchNwpsGaugesBbox(west, south, east, north){
+  const key = [west, south, east, north].join(',');
+  if(nwpsBboxCache.key === key && Date.now() - nwpsBboxCache.t < NWPS_BBOX_TTL){
+    return nwpsBboxCache.gauges;
+  }
   try{
-    const r = await fetchTimeout(NWPS_GAUGE_URL + encodeURIComponent(usgsId), {}, 6000);
-    if(!r.ok) return null;
+    const url = 'https://api.water.noaa.gov/nwps/v1/gauges?bbox.xmin=' + encodeURIComponent(west)
+      + '&bbox.ymin=' + encodeURIComponent(south) + '&bbox.xmax=' + encodeURIComponent(east)
+      + '&bbox.ymax=' + encodeURIComponent(north) + '&srid=EPSG_4326&limit=50';
+    const r = await fetchTimeout(url, {}, 8000);
+    if(!r.ok) return [];
     const j = await r.json();
-    if(j.code || !j.lid) return null;
-    return j;
-  }catch(e){ return null; }
+    const gauges = j.gauges || [];
+    nwpsBboxCache = { key, t: Date.now(), gauges };
+    return gauges;
+  }catch(e){ return []; }
+}
+function matchNwpsGauge(row, nwpsGauges){
+  if(row.lat == null || row.lon == null || !nwpsGauges.length) return null;
+  let best = null, bestMi = 0.6;
+  for(const g of nwpsGauges){
+    if(g.latitude == null || g.longitude == null) continue;
+    const d = haversineMi(row.lat, row.lon, g.latitude, g.longitude);
+    if(d < bestMi){ bestMi = d; best = g; }
+  }
+  return best;
 }
 function nwpsFloodHtml(nwps){
   const raw = nwps?.status?.observed?.floodCategory || nwps?.ObservedFloodCategory;
@@ -886,7 +904,7 @@ async function loadStreamGauges(loc){
       const param = ts.variable?.variableCode?.[0]?.value;
       let row = rows.find(x => x.id === site.siteCode?.[0]?.value);
       if(!row){
-        row = { id: site.siteCode?.[0]?.value, name, dist, stage: null, flow: null };
+        row = { id: site.siteCode?.[0]?.value, name, dist, lat, lon, stage: null, flow: null };
         rows.push(row);
       }
       if(param === '00065') row.stage = val != null ? val + ' ft' : null;
@@ -894,15 +912,15 @@ async function loadStreamGauges(loc){
     });
     rows.sort((a, b) => a.dist - b.dist);
     const top = rows.slice(0, 6);
-    const nwps = await Promise.all(top.map(g => fetchNwpsGauge(g.id)));
+    const nwpsGauges = await fetchNwpsGaugesBbox(west, south, east, north);
     if(gen !== streamLoadGen) return;
     list.className = 'stream-list';
     if(!top.length){
       setPanelUnavail(list, 'no_gauges');
       return;
     }
-    list.innerHTML = top.map((g, i) => {
-      const meta = nwps[i];
+    list.innerHTML = top.map(g => {
+      const meta = matchNwpsGauge(g, nwpsGauges);
       const usgsUrl = 'https://waterdata.usgs.gov/monitoring-location/' + encodeURIComponent(g.id) + '/';
       const ahpsUrl = meta?.lid ? 'https://water.noaa.gov/gauges/' + encodeURIComponent(meta.lid) : '';
       const links = '<div class="stream-links">'
