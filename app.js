@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '143';
+const APP_VERSION = '144';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -3804,6 +3804,107 @@ function fmtTafPeriod(from, to){
   if(b == null) return 'From ' + fmtTafWhen(a, opts);
   return fmtTafWhen(a, opts) + ' \u2013 ' + fmtTafWhen(b, opts);
 }
+function tafVisMiles(v){
+  if(v == null || v === '') return null;
+  const s = String(v).trim();
+  if(/^P6/i.test(s) || s === '6+') return 6.01;
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+function tafCeilingFt(clouds){
+  if(!clouds || !clouds.length) return null;
+  let low = null;
+  clouds.forEach(c => {
+    const cov = String(c.cover || '').toUpperCase();
+    if(!/BKN|OVC|VV/.test(cov) || c.base == null) return;
+    const ft = Number(c.base);
+    if(!isNaN(ft) && (low == null || ft < low)) low = ft;
+  });
+  return low;
+}
+function tafFlightCategory(f){
+  const visMi = tafVisMiles(f.visib);
+  const ceilFt = tafCeilingFt(f.clouds);
+  const wx = String(f.wxString || '').toUpperCase();
+  if(/\+TS|TSRA|\+SN|FZRA|FG|FZFG/.test(wx) && (visMi == null || visMi < 3)) return 'lifr';
+  if((ceilFt != null && ceilFt < 500) || (visMi != null && visMi < 1)) return 'lifr';
+  if((ceilFt != null && ceilFt < 1000) || (visMi != null && visMi < 3)) return 'ifr';
+  if((ceilFt != null && ceilFt < 3000) || (visMi != null && visMi < 5)) return 'mvfr';
+  if(ceilFt != null || visMi != null) return 'vfr';
+  return '';
+}
+const TAF_FLIGHT_LABEL = { vfr:'VFR', mvfr:'MVFR', ifr:'IFR', lifr:'LIFR' };
+function metarFlightCategoryFromObs(p){
+  if(!p) return '';
+  const visM = nwsVal(p.visibility);
+  const visMi = visM != null ? visM / 1609.34 : null;
+  const ceilFt = nwsVal(p.cloudBase);
+  if((ceilFt != null && ceilFt < 500) || (visMi != null && visMi < 1)) return 'lifr';
+  if((ceilFt != null && ceilFt < 1000) || (visMi != null && visMi < 3)) return 'ifr';
+  if((ceilFt != null && ceilFt < 3000) || (visMi != null && visMi < 5)) return 'mvfr';
+  if(ceilFt != null || visMi != null) return 'vfr';
+  return '';
+}
+function renderAviationMetarCard(icao, obs){
+  const id = esc(icao || 'Field');
+  if(!obs || !obs.props){
+    return '<div class="aviation-card aviation-metar"><h3>METAR (observed)</h3>'
+      + '<div class="av-icao">' + id + '</div>'
+      + '<div class="av-meta">No recent observation from NWS.</div></div>';
+  }
+  const p = obs.props;
+  const tempC = nwsVal(p.temperature);
+  const windMs = nwsVal(p.windSpeed);
+  const gustMs = nwsVal(p.windGust);
+  const visM = nwsVal(p.visibility);
+  const temp = tempC != null ? (state.units === 'F' ? Math.round(tempC * 9/5 + 32) : Math.round(tempC)) + degSym() : '\u2014';
+  const wind = windMs != null ? Math.round(msToDisp(windMs)) + ' ' + windUnit() : '\u2014';
+  const gust = gustMs != null ? ', gusts ' + Math.round(msToDisp(gustMs)) : '';
+  const vis = visM != null
+    ? (state.units === 'F' ? (visM / 1609.34).toFixed(1) + ' mi' : (visM / 1000).toFixed(1) + ' km')
+    : '\u2014';
+  const cat = metarFlightCategoryFromObs(p);
+  const catBadge = cat ? ' <span class="lc-badge spc">' + TAF_FLIGHT_LABEL[cat] + '</span>' : '';
+  const when = p.timestamp ? new Date(p.timestamp).toLocaleString([], { hour:'numeric', minute:'2-digit' }) : '';
+  const raw = p.rawMessage || p.textDescription || '';
+  return '<div class="aviation-card aviation-metar"><h3>METAR (observed)</h3>'
+    + '<div class="av-icao">' + id + catBadge + '</div>'
+    + '<div class="av-meta">' + esc(p.textDescription || 'Observation')
+    + (when ? ' \u00B7 ' + when : '') + '</div>'
+    + '<div class="av-meta">Temp ' + temp + ' \u00B7 Wind ' + wind + gust + ' \u00B7 Vis ' + vis + '</div>'
+    + (raw ? '<details class="av-raw"><summary>Raw METAR</summary><pre>' + esc(raw) + '</pre></details>' : '')
+    + '</div>';
+}
+function renderAviationTafSummaryCard(taf){
+  const icao = esc(taf.icaoId || taf.name || 'Airport');
+  const fcsts = (taf.fcsts || []).filter(f => tafFlightCategory(f));
+  const nowCat = fcsts.length ? tafFlightCategory(fcsts[0]) : '';
+  const catBadge = nowCat ? ' <span class="lc-badge spc">' + TAF_FLIGHT_LABEL[nowCat] + '</span>' : '';
+  const first = fcsts[0];
+  const summary = first
+    ? [decodeTafWind(first.wdir, first.wspd, first.wgst), decodeTafVis(first.visib)].filter(Boolean).join(' \u00B7 ')
+    : 'Decoded forecast below';
+  const issuedMs = tafTimeMs(taf.issueTime || taf.bulletinTime);
+  return '<div class="aviation-card aviation-taf-sum"><h3>TAF (forecast)</h3>'
+    + '<div class="av-icao">' + icao + catBadge + '</div>'
+    + '<div class="av-meta">' + esc(summary) + '</div>'
+    + (issuedMs ? '<div class="av-meta">Issued ' + esc(fmtTafWhen(issuedMs)) + '</div>' : '')
+    + '</div>';
+}
+function renderAviationFlightStrip(taf){
+  const wrap = $('aviationFlight'), bar = $('aviationFlightBar');
+  if(!wrap || !bar) return;
+  const fcsts = (taf.fcsts || []).slice(0, 12);
+  if(!fcsts.length){ wrap.hidden = true; return; }
+  const segments = fcsts.map(f => {
+    const cat = tafFlightCategory(f) || 'vfr';
+    const title = fmtTafPeriod(f.timeFrom, f.timeTo) + ' \u00B7 ' + (TAF_FLIGHT_LABEL[cat] || cat.toUpperCase())
+      + (decodeTafVis(f.visib) ? ' \u00B7 ' + decodeTafVis(f.visib) : '');
+    return '<span class="' + cat + '" title="' + esc(title) + '"></span>';
+  });
+  bar.innerHTML = segments.join('');
+  wrap.hidden = false;
+}
 function renderTafHtml(taf){
   const raw = taf.rawTAF || '';
   const issuedMs = tafTimeMs(taf.issueTime || taf.bulletinTime);
@@ -3846,31 +3947,46 @@ async function loadTaf(loc){
   const gen = ++tafLoadGen;
   return panelTask('tafPanel', 'tafStatus', async () => {
     const box = $('tafText');
+    const dual = $('aviationDual');
+    const flight = $('aviationFlight');
     if(!box) return;
     if(gen !== tafLoadGen) return;
     if(!isLikelyUS(loc)){
-      box.textContent = 'TAF is available for US airport locations.';
+      if(dual) dual.hidden = true;
+      if(flight) flight.hidden = true;
+      box.textContent = 'Aviation METAR/TAF is available for US airport locations.';
       return;
     }
-    box.textContent = 'Loading TAF\u2026';
+    box.textContent = 'Loading aviation data\u2026';
+    if(dual) dual.hidden = true;
+    if(flight) flight.hidden = true;
     let icaos = [];
     try{
       icaos = await resolveTafIcaos(loc);
       if(gen !== tafLoadGen) return;
       if(!icaos.length){ box.textContent = 'No nearby airport TAF for this location.'; return; }
-      const r = await fetchTimeout('/api/taf?ids=' + encodeURIComponent(icaos.join(',')), {}, 20000);
+      const primary = icaos[0];
+      const [tafRes, metarObs] = await Promise.all([
+        fetchTimeout('/api/taf?ids=' + encodeURIComponent(icaos.join(',')), {}, 20000),
+        fetchStationLatestObs(primary).then(props => props ? { id: primary, props } : null).catch(() => null)
+      ]);
       if(gen !== tafLoadGen) return;
-      if(!r.ok){
-        if(r.status === 404) throw new Error('taf proxy missing');
-        throw new Error('taf http ' + r.status);
+      if(!tafRes.ok){
+        if(tafRes.status === 404) throw new Error('taf proxy missing');
+        throw new Error('taf http ' + tafRes.status);
       }
-      const arr = await r.json();
+      const arr = await tafRes.json();
       if(!Array.isArray(arr)) throw new Error('taf bad response');
       const taf = arr.find(t => t && (t.rawTAF || t.icaoId));
       if(!taf){
         box.textContent = 'No TAF issued for nearby airports (' + icaos.join(', ') + ').';
         return;
       }
+      if(dual){
+        dual.hidden = false;
+        dual.innerHTML = renderAviationMetarCard(primary, metarObs) + renderAviationTafSummaryCard(taf);
+      }
+      renderAviationFlightStrip(taf);
       box.innerHTML = renderTafHtml(taf);
     }catch(e){
       if(gen !== tafLoadGen) return;
@@ -4613,32 +4729,80 @@ async function loadStreamGauges(loc){
 }
 
 // ---------- saved location comparison ----------
+let spcDay1GeoCache = null;
+async function getSpcDay1Geo(){
+  if(spcDay1GeoCache) return spcDay1GeoCache;
+  try{
+    const r = await fetch('https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson');
+    if(r.ok) spcDay1GeoCache = await r.json();
+  }catch(e){ /* ignore */ }
+  return spcDay1GeoCache;
+}
+async function fetchLocAlerts(loc){
+  if(!isLikelyUS(loc)) return [];
+  try{
+    const r = await nwsFetch('https://api.weather.gov/alerts/active?point=' + loc.lat + ',' + loc.lon);
+    if(!r.ok) return [];
+    return (await r.json()).features || [];
+  }catch(e){ return []; }
+}
+function locCompareBadges(loc, alerts, spcGeo){
+  const badges = [];
+  if(isLikelyUS(loc) && alerts.length){
+    const warns = alerts.filter(f => /warning/i.test(f.properties?.event || '')).length;
+    const watches = alerts.filter(f => /watch/i.test(f.properties?.event || '')).length;
+    if(warns) badges.push('<span class="lc-badge alert">' + warns + ' warning' + (warns > 1 ? 's' : '') + '</span>');
+    if(watches) badges.push('<span class="lc-badge warn">' + watches + ' watch' + (watches > 1 ? 'es' : '') + '</span>');
+    const adv = alerts.length - warns - watches;
+    if(adv > 0) badges.push('<span class="lc-badge">' + adv + ' advisory' + (adv > 1 ? 'ies' : '') + '</span>');
+  }
+  if(isLikelyUS(loc) && spcGeo && typeof spcRiskAtPoint === 'function'){
+    const risk = spcRiskAtPoint(loc.lon, loc.lat, spcGeo);
+    if(risk && risk.dn >= 2){
+      badges.push('<span class="lc-badge spc">SPC ' + esc(risk.label2 || risk.label || 'elevated') + '</span>');
+    }
+  }
+  return badges.length ? '<div class="lc-storm">' + badges.join('') + '</div>' : '';
+}
 async function renderLocCompare(){
   const panel = $('locComparePanel'), box = $('locCompare');
   if(!panel || !box) return;
   if(state.locations.length < 2){ panel.hidden = true; return; }
   panel.hidden = false;
   box.innerHTML = '<div class="radar-note">Loading saved locations\u2026</div>';
+  const spcGeo = await getSpcDay1Geo();
   const cards = await Promise.all(state.locations.map(async (loc, i) => {
+    const alertsP = fetchLocAlerts(loc);
     if(i === state.active && state.data){
       const t = Math.round(state.data.current.temperature_2m);
       const w = Math.round(state.data.current.wind_speed_10m);
       const [, ic] = wmo(state.data.current.weather_code);
-      return { loc, i, temp: t, wind: w, icon: ic, active: true };
+      const alerts = await alertsP;
+      return { loc, i, temp: t, wind: w, icon: ic, active: true, badges: locCompareBadges(loc, alerts, spcGeo) };
     }
     try{
-      const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + loc.lat + '&longitude=' + loc.lon
-        + '&current=temperature_2m,weather_code,wind_speed_10m&temperature_unit='
-        + (state.units === 'F' ? 'fahrenheit' : 'celsius')
-        + '&wind_speed_unit=' + (state.units === 'F' ? 'mph' : 'kmh') + '&timezone=auto';
-      const r = await fetch(url);
-      if(!r.ok) throw new Error('wx');
-      const j = await r.json();
+      const [wxRes, alerts] = await Promise.all([
+        fetch('https://api.open-meteo.com/v1/forecast?latitude=' + loc.lat + '&longitude=' + loc.lon
+          + '&current=temperature_2m,weather_code,wind_speed_10m&temperature_unit='
+          + (state.units === 'F' ? 'fahrenheit' : 'celsius')
+          + '&wind_speed_unit=' + (state.units === 'F' ? 'mph' : 'kmh') + '&timezone=auto'),
+        alertsP
+      ]);
+      if(!wxRes.ok) throw new Error('wx');
+      const j = await wxRes.json();
       const c = j.current || {};
       const [, ic] = wmo(c.weather_code ?? 0);
-      return { loc, i, temp: Math.round(c.temperature_2m), wind: Math.round(c.wind_speed_10m), icon: ic, active: i === state.active };
+      return {
+        loc, i,
+        temp: Math.round(c.temperature_2m),
+        wind: Math.round(c.wind_speed_10m),
+        icon: ic,
+        active: i === state.active,
+        badges: locCompareBadges(loc, alerts, spcGeo)
+      };
     }catch(e){
-      return { loc, i, temp: null, wind: null, icon: '', active: i === state.active };
+      const alerts = await alertsP;
+      return { loc, i, temp: null, wind: null, icon: '', active: i === state.active, badges: locCompareBadges(loc, alerts, spcGeo) };
     }
   }));
   box.innerHTML = cards.map(c =>
@@ -4646,7 +4810,8 @@ async function renderLocCompare(){
     + '<div class="lc-name">' + esc(c.loc.name) + (c.active ? ' \u00B7 active' : '') + '</div>'
     + '<div class="lc-temp">' + (c.icon ? '<span aria-hidden="true">' + c.icon + '</span> ' : '')
     + (c.temp != null ? c.temp + degSym() : '\u2014') + '</div>'
-    + '<div class="lc-meta">' + (c.wind != null ? 'Wind ' + c.wind + ' ' + windUnit() : 'Unavailable') + '</div></div>'
+    + '<div class="lc-meta">' + (c.wind != null ? 'Wind ' + c.wind + ' ' + windUnit() : 'Unavailable') + '</div>'
+    + (c.badges || '') + '</div>'
   ).join('');
 }
 
@@ -4949,6 +5114,17 @@ async function loadCoastal(loc){
       + '&application=EchoWeather&begin_date=' + ymd + '&end_date=' + ymd
       + '&datum=MLLW&station=' + encodeURIComponent(st.id) + '&time_zone=lst_ldt&units=english&interval=hilo&format=json';
     const marineP = fetchMarineCurrent(loc.lat, loc.lon).catch(() => null);
+    let pointsProps = state.data?.nwsPoints;
+    const nwsMarineP = (async () => {
+      if(!isLikelyUS(loc)) return null;
+      if(!pointsProps){
+        try{
+          const pr = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
+          if(pr.ok) pointsProps = (await pr.json()).properties;
+        }catch(e){ /* ignore */ }
+      }
+      return fetchNwsMarineText(loc, pointsProps).catch(() => null);
+    })();
     try{
       const r = await fetch(url);
       if(!r.ok) throw new Error('tides HTTP ' + r.status);
@@ -4990,11 +5166,24 @@ async function loadCoastal(loc){
         marineBox.hidden = true;
         marineBox.innerHTML = '';
       }
+      const nwsBox = $('coastalNws');
+      const nwsMarine = await nwsMarineP;
+      if(gen !== coastalLoadGen) return;
+      if(nwsMarine && nwsBox){
+        nwsBox.hidden = false;
+        nwsBox.innerHTML = '<strong>' + esc(nwsMarine.source) + '</strong>\n' + esc(nwsMarine.text);
+        note += ' \u00B7 ' + nwsMarine.source;
+      }else if(nwsBox){
+        nwsBox.hidden = true;
+        nwsBox.innerHTML = '';
+      }
       $('coastalNote').textContent = note;
     }catch(e){
       $('coastalNote').textContent = 'Tide data unavailable';
       const marineBox = $('coastalMarine');
       if(marineBox){ marineBox.hidden = true; marineBox.innerHTML = ''; }
+      const nwsBox = $('coastalNws');
+      if(nwsBox){ nwsBox.hidden = true; nwsBox.innerHTML = ''; }
       console.warn('tides', e);
     }
   });

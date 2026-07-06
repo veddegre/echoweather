@@ -84,6 +84,15 @@ return [
     'taf_cache_ttl' => 900,
 
     // -------------------------------------------------------------------------
+    // AirNow cache — reduces EPA API load
+    // -------------------------------------------------------------------------
+    // Cached on disk in cache/airnow/ (one file per grid cell + search radius).
+    //   1800 (30 min)  default
+    //   airnow_cache_grid — same idea as pollen_cache_grid (0–2 decimal places)
+    'airnow_cache_ttl' => 1800,
+    'airnow_cache_grid' => 1,
+
+    // -------------------------------------------------------------------------
     // CORS — browser access to /api/*
     // -------------------------------------------------------------------------
     // Replace example.com with your public hostname when copying to config.local.php.

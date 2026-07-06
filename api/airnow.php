@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/lib/bootstrap.php';
 require_once dirname(__DIR__) . '/lib/http.php';
 require_once dirname(__DIR__) . '/lib/ratelimit.php';
+require_once dirname(__DIR__) . '/lib/airnow_cache.php';
 
 handle_cors_preflight();
 
@@ -35,7 +36,15 @@ if ($apiKey === '') {
 
 try {
     enforce_rate_limit('airnow', rate_limit_for($cfg, 'rate_limit_airnow'));
+    $ttl = airnow_cache_ttl($cfg);
+    $grid = airnow_cache_grid($cfg);
+    $cacheKey = airnow_cache_key((float) $lat, (float) $lon, $distance, $grid);
+    $cached = read_airnow_cache($cacheKey, $ttl);
+    if ($cached !== null) {
+        send_json(200, $cached['data'], cors: true);
+    }
     $data = fetch_airnow((float) $lat, (float) $lon, $distance, $apiKey);
+    write_airnow_cache($cacheKey, $data);
     send_json(200, $data, cors: true);
 } catch (RateLimitExceeded $e) {
     send_api_error(429, 'Too many requests', $e, 'airnow/rate-limit', cors: true);

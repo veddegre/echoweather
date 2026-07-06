@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=143">
+<link rel="stylesheet" href="app.css?v=144">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -329,7 +329,7 @@
 
       <section class="panel nav-target outdoor-wide" id="coastalPanel" data-tab="outdoor" aria-label="Coastal tides and waves" hidden>
         <h2>Coastal <span class="panel-status" id="coastalStatus"></span></h2>
-        <p class="activity-lede" id="coastalLede">Tides from NOAA CO-OPS and nearshore waves from Open-Meteo.</p>
+        <p class="activity-lede" id="coastalLede">Tides from NOAA CO-OPS, nearshore waves from Open-Meteo, and NWS marine zone forecast when available.</p>
         <div class="outlook" style="margin-top:0">
           <div class="lbl" id="coastalStationLbl">Tide station</div>
           <div class="verdict" id="coastalVerdict">&mdash;</div>
@@ -337,6 +337,7 @@
         </div>
         <div class="metrics" id="coastalMetrics" style="margin-top:12px"></div>
         <div class="metrics coastal-marine-metrics" id="coastalMarine" style="margin-top:12px" hidden></div>
+        <div class="coastal-nws" id="coastalNws" hidden></div>
         <div class="radar-note" id="coastalNote" style="margin-top:8px"></div>
       </section>
 
@@ -384,7 +385,7 @@
 
     <section class="panel full nav-target" id="locComparePanel" data-tab="more" aria-label="Saved location comparison" hidden>
       <h2>Compare locations</h2>
-      <p class="activity-lede">Current conditions across your saved places — tap a chip above to switch the active site.</p>
+      <p class="activity-lede">Current conditions and storm context across saved places — warnings, SPC Day 1 risk, temp, and wind.</p>
       <div class="loc-compare" id="locCompare"></div>
     </section>
 
@@ -416,9 +417,15 @@
 
     <div id="afdPanelWrap" style="margin-top:16px">
       <section class="panel full nav-target" id="tafPanel" data-tab="more" aria-label="Aviation forecast">
-        <h2>Aviation TAF <span class="panel-status" id="tafStatus"></span></h2>
-        <p class="taf-lede" id="tafLede">Decoded airport forecast for the nearest field with a TAF — wind, visibility, clouds, and weather on the airfield.</p>
-        <div id="tafText" class="radar-note">Loading TAF&hellip;</div>
+        <h2>Aviation <span class="panel-status" id="tafStatus"></span></h2>
+        <p class="taf-lede" id="tafLede">METAR and TAF for the nearest field — observed conditions, decoded forecast, and flight categories.</p>
+        <div class="aviation-dual" id="aviationDual" hidden></div>
+        <div class="aviation-flight" id="aviationFlight" hidden>
+          <div class="aviation-flight-lbl">TAF flight categories</div>
+          <div class="aviation-flight-bar" id="aviationFlightBar"></div>
+          <div class="aviation-flight-foot"><span>Now</span><span>Later</span></div>
+        </div>
+        <div id="tafText" class="radar-note">Loading aviation data&hellip;</div>
       </section>
       <section class="panel full nav-target" id="afdPanel" data-tab="more" aria-label="Forecast discussion">
         <h2>NWS Forecast Discussion <span class="panel-status" id="afdStatus"></span></h2>
@@ -455,9 +462,9 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=143"></script>
-<script src="storm.js?v=143"></script>
-<script src="radar.js?v=143"></script>
-<script src="boot.js?v=143"></script>
+<script src="app.js?v=144"></script>
+<script src="storm.js?v=144"></script>
+<script src="radar.js?v=144"></script>
+<script src="boot.js?v=144"></script>
 </body>
 </html>
