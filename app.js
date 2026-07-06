@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '165';
+const APP_VERSION = '166';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -198,7 +198,8 @@ const PANEL_UNAVAIL_MSG = {
   radar_vel_site: 'No radar site resolved for this pin — velocity needs a US location.',
   radar_load: 'Radar tiles could not be loaded — try another source or refresh.',
   radar_rainviewer: 'RainViewer rate limited — switched to IEM NEXRAD reflectivity.',
-  metar_history: 'METAR observation history could not be loaded for this station.'
+  metar_history: 'METAR observation history could not be loaded for this station.',
+  aurora_api: 'NOAA space weather data could not be reached — try again later.'
 };
 function panelUnavail(code, extra){
   const msg = PANEL_UNAVAIL_MSG[code] || 'Unavailable for this location.';
@@ -2857,14 +2858,20 @@ function renderLight(d){
   v.textContent = verdict; v.className = 'verdict ' + cls;
   $('verdictDetail').textContent = detail;
 }
+function syncOutdoorSkyGroup(){
+  const grp = $('outdoorSkyGroup');
+  const panel = $('auroraPanel');
+  if(grp && panel) grp.hidden = panel.hidden;
+}
 async function renderAuroraHint(loc, d){
   const box = $('auroraOutdoor');
   const ovationBox = $('auroraOvation');
   const panel = $('auroraPanel');
   const hide = () => {
-    if(box) box.hidden = true;
+    if(box){ box.hidden = true; box.innerHTML = ''; }
     if(ovationBox){ ovationBox.hidden = true; ovationBox.innerHTML = ''; }
     if(panel) panel.hidden = true;
+    syncOutdoorSkyGroup();
   };
   if(!box || !panel || !loc || !d){ hide(); return; }
   if(loc.lat < 40){ hide(); return; }
@@ -2907,7 +2914,16 @@ async function renderAuroraHint(loc, d){
       ovationBox.hidden = false;
       ovationBox.innerHTML = renderOvationStrip(loc, kp, ovationScore, ovationCoords);
     }
-  }catch(e){ hide(); }
+    syncOutdoorSkyGroup();
+  }catch(e){
+    if(panel) panel.hidden = false;
+    if(ovationBox){ ovationBox.hidden = true; ovationBox.innerHTML = ''; }
+    if(box){
+      box.hidden = false;
+      setPanelUnavail(box, 'aurora_api');
+    }
+    syncOutdoorSkyGroup();
+  }
 }
 function renderOvationStrip(loc, kp, ovationScore, coords){
   const pct = Math.min(100, Math.round(ovationScore));
@@ -3364,7 +3380,7 @@ function renderDaily(d){
   }).join('');
   }catch(e){
     console.error('renderDaily', e);
-    $('daily').innerHTML = '<p class="radar-note">Could not render daily forecast.</p>';
+    $('daily').innerHTML = panelUnavail('api_error');
   }
   $('dailySource').textContent = (d.sources && d.sources.forecast === 'nws') ? 'NWS' : 'Open-Meteo';
   renderWinterOutlook(d);
@@ -5615,7 +5631,8 @@ async function renderLocCompare(){
   if(!panel || !box) return;
   if(state.locations.length < 2){ panel.hidden = true; return; }
   panel.hidden = false;
-  box.innerHTML = '<div class="radar-note">Loading saved locations\u2026</div>';
+  box.className = 'radar-note';
+  box.textContent = 'Loading saved locations\u2026';
   const spcGeo = await getSpcDay1Geo();
   const cards = await Promise.all(state.locations.map(async (loc, i) => {
     const alertsP = fetchLocAlerts(loc);

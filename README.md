@@ -570,6 +570,7 @@ panels appear in one scrollable page with a compacting sticky header.
   notes).
 - **Aurora** *(latitude ≥ 40°N, when active)* — NOAA planetary Kp ≥ 4 and
   relatively clear skies tonight; OVATION probability strip when available.
+  Sky section hides when inactive; SWPC API failures show clear unavailable copy.
 - **Coastal tides** *(coastal US)* — NOAA CO-OPS tide predictions for the
   nearest station; next high/low outlook.
 - **Great Lakes** *(within ~50 nm of shore)* — NWS GLF or marine zone text,
@@ -602,7 +603,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v163`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v166`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the

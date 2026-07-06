@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v165** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=165` in `index.html`).
+**Current version: v166** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=166` in `index.html`).
 
 ---
 
@@ -19,7 +19,11 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v165 (latest)
+### v166 (latest)
+- **Aurora panelUnavail** when NOAA SWPC APIs fail (≥40°N); **Sky** group hides when aurora panel inactive
+- **panelUnavail** on daily forecast render failure; loc compare loading state cleanup
+
+### v165
 - **Auto-enable watches layer** in watch-only storm mode (no active warning); warnings layer when warnings active
 - **panelUnavail** — METAR 7-day history load failure; air quality uses styled unavailable when both sources fail
 
@@ -109,13 +113,20 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 The original phased roadmap (Phases 1–4) is **largely complete**. Remaining work is **refinement and surfacing**, not greenfield features.
 
-### Suggested next batch — v166+ (not started)
+### Suggested next batch — v167+ (not started)
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Code maintenance** | Optional further split from `app.js` |
-| 2 | **panelUnavail pass** | Aurora SWPC API failure (optional), remaining edge cases |
-| 3 | **README** | Keep in sync as batches ship |
+| 1 | **Code maintenance** | Optional split from `app.js` (outdoor/marine/nav modules) |
+| 2 | **Polish** | Any remaining silent panel hides on user-visible failures |
+| 3 | **Deploy / commit** | When ready — version sync through v166 |
+
+### v166 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Aurora SWPC panelUnavail | Done |
+| 2 | Sky group visibility + daily/loc compare polish | Done |
 
 ### v165 (shipped)
 
@@ -175,7 +186,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v165'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v166'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
