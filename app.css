@@ -443,7 +443,9 @@ body.radar-expanded{overflow:hidden}
 .activity-why .why-poor strong{color:var(--warn)}
 #activityList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-height:8rem}
 #activityList.is-loading{min-height:28rem}
-#activityList .activity-card{margin-top:0}
+#activityList .activity-card,#impactList .activity-card{margin-top:0}
+.planner-card-list .activity-card + .activity-card{margin-top:10px}
+.outdoor-group-plan .panel + .panel{margin-top:16px}
 .activity-bar span.na{background:var(--line);opacity:.45}
 @media (max-width:720px){#activityList{grid-template-columns:1fr}}
 footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}

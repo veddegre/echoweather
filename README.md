@@ -438,9 +438,10 @@ Stations without a TAF return an empty array (`[]`), not 502. The client tries u
 
 **Fire weather layer 404 in console.** SPC fire outlook GeoJSON must use `day1fw_windrh.lyr.geojson` (older `fwdy1otlk_*` URLs are dead). Pull latest `index.html` if you still see 404s.
 
-**Impact hours look wrong or spike during an advisory.** Cards score heat, wind,
-smoke, storms, cold, and UV — not lifestyle activities. NWS advisories (heat,
-wind, air quality) are applied from `effective` through `ends`.
+**Activity or impact hours look wrong during an advisory.** Lifestyle cards score
+good/fair/poor for outdoor activities; impact cards score low/moderate/high for
+heat, wind, smoke, storms, cold, and UV. NWS advisories are applied from
+`effective` through `ends`.
 
 **Great Lakes panel missing inland.** The panel appears only within **~50 nm** of
 a Great Lakes shore — inland cities (e.g. Mount Pleasant, MI) no longer show lake
@@ -464,7 +465,7 @@ panels appear in one scrollable page with a compacting sticky header.
 | **Now** | Current conditions, storm setup *(when relevant)*, Sun & Light, next 24 hours |
 | **Forecast** | 5-day visual forecast, detailed NWS text, observations vs forecast |
 | **Radar** | Animated radar (RainViewer / MRMS / IEM), threat layers, storm & fire banners, convective outlook |
-| **Impacts** | Impact hours, air quality & pollen, UV & exposure, aurora *(when active)*, water/coast/rivers |
+| **Impacts** | Activity planner, impact hours, air quality & pollen, UV & exposure, aurora *(when active)*, water/coast/rivers |
 | **More** | Moon, advanced atmosphere (HRRR), aviation TAF, NWS forecast discussion |
 
 - **Deep links** — `#now`, `#forecast`, `#radar`, `#outdoor`, `#more`; radar state
@@ -546,12 +547,16 @@ panels appear in one scrollable page with a compacting sticky header.
 
 ### Impacts
 
+- **Activity planner** — Best times in the next 24 hours for **golf, hiking, yard
+  work, running, beach/pool, cycling, dog walks, stargazing**, and *(when the
+  local forecast is cold or snowy)* **skiing/sledding** and **snow shoveling**.
+  Per-hour **green / amber / red** bars (good / fair / poor); gray = after dark
+  or outside usual hours. Pin up to four favorites. NWS advisories factor into
+  scoring from issuance through hazard end.
 - **Impact hours** — Hourly weather stress for **heat, wind, smoke & air,
   lightning & storms, cold exposure, and UV**. Green = low impact, amber =
   moderate, red = high; gray = not applicable (e.g. UV at night). Pin up to four
-  hazards to watch. Expandable **Why** explains each window with times and
-  human-readable reasons. NWS advisories (heat, wind, air quality) factor into
-  scoring from issuance through hazard end.
+  hazards to watch. Expandable **Why** on each card.
 - **Air Quality & Pollen** — AirNow (via PHP proxy) or Open-Meteo modeled AQI;
   pollutant breakdown; smoke/haze row when PM2.5 is high; **year-round** 3-day
   pollen forecast (Google via proxy when configured, otherwise modeled/off-season
@@ -559,12 +564,6 @@ panels appear in one scrollable page with a compacting sticky header.
 - **UV & Exposure** — Current UV index and category; humidity, dew point,
   visibility, wet bulb; **outdoor rest-of-today** hourly strip (UV, RH, comfort
   notes).
-- **Impact hours** — Hourly weather stress for **heat, wind, smoke & air,
-  lightning & storms, cold exposure, and UV**. Green = low impact, amber =
-  moderate, red = high; gray = not applicable (e.g. UV at night). Pin up to four
-  hazards to watch. Expandable **Why** explains each window with times and
-  human-readable reasons. NWS advisories factor into scoring from issuance
-  through hazard end.
 - **Aurora** *(latitude ≥ 40°N, when active)* — NOAA planetary Kp ≥ 4 and
   relatively clear skies tonight; OVATION probability strip when available.
 - **Coastal tides** *(coastal US)* — NOAA CO-OPS tide predictions for the
