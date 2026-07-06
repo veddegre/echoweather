@@ -457,7 +457,7 @@ The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works.
 ### Radar & storm tracking
 
 - **Radar** — RainViewer (animated + optional satellite IR) or IEM NEXRAD base/composite; scrubber, play/pause, fullscreen expand, center on location.
-- **Lightning** — Optional GOES GLM strike overlay (IEM tiles).
+- **Lightning** — Optional live strike overlay (Blitzortung community network; connects only while the toggle is on).
 - **Alert polygons** — Active NWS warning/watch/advisory boundaries drawn on the map (tap for headline).
 - **Storm mode banner** — Appears when warnings/watches are active, SPC risk is elevated, MCDs apply, or CAPE is high; summarizes the situation above the map.
 - **Convective outlook** — SPC Day 1–3 categorical risk at your pin; shows at *slight* risk or higher (muted style on quiet days, full emphasis in storm mode). Includes:
@@ -491,4 +491,4 @@ The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works.
 
 ## Data sources
 
-NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (categorical + probabilistic outlooks, mesoscale discussions, storm reports CSV), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR, GLM lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.
+NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (categorical + probabilistic outlooks, mesoscale discussions, storm reports CSV), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.

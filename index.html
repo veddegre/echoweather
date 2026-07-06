@@ -352,6 +352,7 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .radar-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;grid-column:1/-1}
 .radar-ctl button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .leaflet-container{font-family:var(--sans);font-size:.75rem;background:var(--panel-2)}
+.lightning-canvas{position:absolute;left:0;top:0;z-index:500;pointer-events:none}
 .radar-wrap{position:relative}
 .radar-wrap .leaflet-control-zoom{border:none;box-shadow:var(--card-shadow)}
 .radar-wrap .leaflet-control-zoom a{width:34px;height:34px;line-height:34px;background:var(--panel);color:var(--ink);border:1px solid var(--line);font-size:18px}
@@ -826,7 +827,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '104';
+const APP_VERSION = '105';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2504,8 +2505,11 @@ const stormState = {
   maxDn: 0, stormMode: false, loaded: false
 };
 let alertLayerGroup = null;
-let lightningLayer = null;
+let lightningCanvas = null, lightningCtx = null, lightningStrikes = [];
+let lightningWs = null, lightningWsIdx = 0, lightningRcTimer = null, lightningRaf = 0;
 let radarLightningOn = false;
+const LIGHTNING_WS = ['wss://ws1.blitzortung.org/', 'wss://ws7.blitzortung.org/', 'wss://ws8.blitzortung.org/'];
+const LIGHTNING_LIFE_MS = 2200;
 let stormTrackGen = 0;
 
 function haversineMi(lat1, lon1, lat2, lon2){
@@ -2594,30 +2598,161 @@ function syncAlertPolygons(features){
 function bringStormMapLayersFront(){
   if(!map) return;
   if(alertLayerGroup) alertLayerGroup.eachLayer(l => l.bringToFront && l.bringToFront());
-  if(lightningLayer && map.hasLayer(lightningLayer)) lightningLayer.bringToFront();
   if(mapMarker) mapMarker.bringToFront();
 }
-function setLightningOverlay(on){
-  radarLightningOn = !!on;
+function decodeBlitzortung(raw){
+  const d = ('' + raw).split('');
+  let c = d[0], f = c, g = [c], o = 256;
+  const e = {};
+  for(let i = 1; i < d.length; i++){
+    let a = d[i].charCodeAt(0);
+    a = a < 256 ? d[i] : (e[a] || f + c);
+    g.push(a);
+    c = a.charAt(0);
+    e[o] = f + c;
+    o++;
+    f = a;
+  }
+  return g.join('');
+}
+function lightningShouldRun(){
+  return radarLightningOn && map && isRadarTabVisible();
+}
+function sizeLightningCanvas(){
+  if(!lightningCanvas || !map) return;
+  const sz = map.getSize();
+  const dpr = window.devicePixelRatio || 1;
+  lightningCanvas.width = sz.x * dpr;
+  lightningCanvas.height = sz.y * dpr;
+  lightningCanvas.style.width = sz.x + 'px';
+  lightningCanvas.style.height = sz.y + 'px';
+  if(lightningCtx) lightningCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function ensureLightningCanvas(){
+  if(!map) return;
+  if(!lightningCanvas){
+    lightningCanvas = document.createElement('canvas');
+    lightningCanvas.className = 'lightning-canvas';
+    lightningCanvas.setAttribute('aria-hidden', 'true');
+    map.getContainer().appendChild(lightningCanvas);
+    lightningCtx = lightningCanvas.getContext('2d');
+    map.on('move zoom resize', sizeLightningCanvas);
+  }
+  sizeLightningCanvas();
+}
+function removeLightningCanvas(){
+  if(lightningCanvas && lightningCanvas.parentNode) lightningCanvas.parentNode.removeChild(lightningCanvas);
+  lightningCanvas = null;
+  lightningCtx = null;
+}
+function disconnectLightningWs(){
+  clearTimeout(lightningRcTimer);
+  lightningRcTimer = null;
+  if(lightningWs){
+    try{
+      lightningWs.onopen = lightningWs.onmessage = lightningWs.onerror = lightningWs.onclose = null;
+      lightningWs.close();
+    }catch(e){}
+    lightningWs = null;
+  }
+}
+function scheduleLightningReconnect(){
+  clearTimeout(lightningRcTimer);
+  lightningWsIdx++;
+  lightningRcTimer = setTimeout(connectLightningWs, 2500);
+}
+function connectLightningWs(){
+  if(!lightningShouldRun()) return;
+  disconnectLightningWs();
+  const url = LIGHTNING_WS[lightningWsIdx % LIGHTNING_WS.length];
+  let ws;
+  try{ ws = new WebSocket(url); }catch(e){ scheduleLightningReconnect(); return; }
+  lightningWs = ws;
+  ws.onopen = () => { if(lightningWs === ws) ws.send(JSON.stringify({ a: 111 })); };
+  ws.onmessage = (ev) => {
+    try{
+      const s = JSON.parse(decodeBlitzortung(ev.data));
+      if(s && typeof s.lat === 'number' && typeof s.lon === 'number') addLightningStrike(s.lat, s.lon);
+    }catch(e){}
+  };
+  ws.onerror = () => { try{ ws.close(); }catch(e){} };
+  ws.onclose = () => {
+    if(lightningWs === ws){
+      lightningWs = null;
+      if(lightningShouldRun()) scheduleLightningReconnect();
+    }
+  };
+}
+function addLightningStrike(lat, lon){
+  if(!map) return;
+  const bounds = map.getBounds().pad(0.35);
+  if(!bounds.contains([lat, lon])) return;
+  lightningStrikes.push({ lat, lon, t: performance.now() });
+  if(lightningStrikes.length > 3000) lightningStrikes.splice(0, lightningStrikes.length - 2000);
+}
+function drawLightningFrame(){
+  lightningRaf = 0;
+  if(!lightningCtx || !map || !radarLightningOn) return;
+  const ctx = lightningCtx, sz = map.getSize(), now = performance.now();
+  ctx.clearRect(0, 0, sz.x, sz.y);
+  for(let i = 0; i < lightningStrikes.length; i++){
+    const s = lightningStrikes[i];
+    const age = now - s.t;
+    if(age > LIGHTNING_LIFE_MS) continue;
+    const pt = map.latLngToContainerPoint([s.lat, s.lon]);
+    if(pt.x < -40 || pt.y < -40 || pt.x > sz.x + 40 || pt.y > sz.y + 40) continue;
+    const p = age / LIGHTNING_LIFE_MS, fade = 1 - p;
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 2 + p * 18, 0, 7);
+    ctx.strokeStyle = 'rgba(120,210,255,' + (fade * 0.55) + ')';
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 3.2 * (1 - p * 0.45), 0, 7);
+    ctx.fillStyle = 'rgba(255,245,210,' + Math.min(1, fade * 1.5) + ')';
+    ctx.fill();
+  }
+  lightningStrikes = lightningStrikes.filter(s => now - s.t <= LIGHTNING_LIFE_MS);
+  if(lightningShouldRun()) lightningRaf = requestAnimationFrame(drawLightningFrame);
+}
+function startLightningLoop(){
+  if(lightningRaf) return;
+  lightningRaf = requestAnimationFrame(drawLightningFrame);
+}
+function stopLightningLoop(){
+  if(lightningRaf){ cancelAnimationFrame(lightningRaf); lightningRaf = 0; }
+  if(lightningCtx && map){
+    const sz = map.getSize();
+    lightningCtx.clearRect(0, 0, sz.x, sz.y);
+  }
+  lightningStrikes = [];
+}
+function syncLightningOverlay(){
   const btn = $('radarLightning');
   if(btn) btn.classList.toggle('on', radarLightningOn);
+  if(!radarLightningOn || !lightningShouldRun()){
+    stopLightningLoop();
+    disconnectLightningWs();
+    if(!radarLightningOn) removeLightningCanvas();
+    return;
+  }
   if(!map){
-    if(btn && radarLightningOn) btn.classList.remove('on');
+    if(btn) btn.classList.remove('on');
     radarLightningOn = false;
     return;
   }
-  if(lightningLayer && map.hasLayer(lightningLayer)) map.removeLayer(lightningLayer);
-  lightningLayer = null;
-  if(!radarLightningOn) return;
-  lightningLayer = L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes_east_glmfl-900913/{z}/{x}/{y}.png', {
-    opacity: 0.58,
-    zIndex: 455,
-    maxNativeZoom: 8,
-    maxZoom: radarMaxZoom(),
-    attribution: 'IEM / NOAA GLM'
-  });
-  lightningLayer.addTo(map);
-  bringStormMapLayersFront();
+  ensureLightningCanvas();
+  connectLightningWs();
+  startLightningLoop();
+}
+function setLightningOverlay(on){
+  radarLightningOn = !!on;
+  if(!map){
+    const btn = $('radarLightning');
+    if(btn) btn.classList.toggle('on', radarLightningOn);
+    return;
+  }
+  syncLightningOverlay();
 }
 
 // ---------- active weather (SPC outlook + MCD at your location) ----------
@@ -3276,7 +3411,12 @@ function isRadarTabVisible(){
 }
 function refreshRadarMapSize(){
   if(!map) return;
-  requestAnimationFrame(() => { if(map) map.invalidateSize({ animate: false }); });
+  requestAnimationFrame(() => {
+    if(map){
+      map.invalidateSize({ animate: false });
+      sizeLightningCanvas();
+    }
+  });
 }
 function activateRadarPanel(){
   const loc = state.locations[state.active];
@@ -5062,6 +5202,7 @@ function setAppTab(tab, opts){
     if(location.hash !== next) history.replaceState(null, '', next);
   }
   if(tab === 'radar') activateRadarPanel();
+  else if(radarLightningOn) syncLightningOverlay();
   else if(map) refreshRadarMapSize();
   ensureTabPanels(tab);
   syncChromeHeight();
