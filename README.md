@@ -3,7 +3,7 @@
 Personal weather PWA with a small PHP integration layer for server-side
 secrets and CORS relief. No API keys required for core features.
 
-**Home:** [echoweather.com](https://echoweather.com) · **Source:** [github.com/your-user/echoweather](https://github.com/your-user/echoweather)
+**Home:** [echoweather.com](https://echoweather.com) · **Source:** [github.com/veddegre/echoweather](https://github.com/veddegre/echoweather)
 
 ```
   browser ──────────────▶  Apache (or php -S locally)
@@ -11,14 +11,14 @@ secrets and CORS relief. No API keys required for core features.
                               └─ /api/status|airnow|pollen|buoy (PHP proxies)
 ```
 
-`index.html` is the entire weather app — forecasts, radar, marine, alerts,
-and more, mostly fetched client-side from public APIs.
+`index.html` is the entire weather app — forecasts, radar, storm tracking, outdoor
+conditions, marine, alerts, and more, mostly fetched client-side from public APIs.
 
 `api/*.php` is a thin PHP layer that:
 
 - Proxies **AirNow** (keeps your API key off the browser)
 - Proxies **NDBC buoys** (NDBC has no browser CORS)
-- Proxies **Google Pollen** (5-day tree/grass/weed forecast; server-side cache)
+- Proxies **Google Pollen** (3-day tree/grass/weed forecast in the app; server-side cache)
 - Exposes `/api/status` so the app knows what's configured
 
 ## Files
@@ -37,6 +37,8 @@ and more, mostly fetched client-side from public APIs.
 | `scripts/update-server.sh` | Server-side update logic (called by `update.sh`) |
 | `scripts/fix-permissions.sh` | Repair `.git` / cache ownership after a bad `chown` |
 | `scripts/check-versions.sh` | Verify `APP_VERSION` and `sw.js` `CACHE` stay in sync |
+| `scripts/render-icons.sh` | Regenerate PWA PNG icons from `icon.svg` |
+| `scripts/render-og-image.sh` | Regenerate `og-image.png` for social previews |
 | `scripts/smoke.sh` | Post-deploy health checks |
 | `config.example.php` | Config template — merge new keys into `config.local.php` on the server |
 | `config.local.php` | Server secrets (gitignored — lives only on the server) |
@@ -58,8 +60,7 @@ Production uses a **git clone directly in the web root** (e.g. `/var/www/echowea
 
 Deploy examples below use **`example.com`** as a placeholder — substitute your real
 hostname everywhere (Apache `ServerName`, Cloudflare Tunnel, `SMOKE_HOST`, and
-`cors_origins` in `config.local.php`). Clone URLs use **`your-user`** — substitute
-your GitHub username or org.
+`cors_origins` in `config.local.php`).
 
 ### 1. Install Apache + PHP (Debian / Ubuntu)
 
@@ -78,7 +79,7 @@ On the server:
 ```bash
 sudo mkdir -p /var/www/echoweather
 sudo chown $USER:www-data /var/www/echoweather
-git clone https://github.com/your-user/echoweather.git /var/www/echoweather
+git clone https://github.com/veddegre/echoweather.git /var/www/echoweather
 cd /var/www/echoweather
 
 cp config.example.php config.local.php
@@ -221,7 +222,7 @@ into `config.local.php` by hand.
 When you change `index.html` or `sw.js`, bump **both**:
 
 - `APP_VERSION` in `index.html`
-- `CACHE` name in `sw.js` (e.g. `echo-weather-v38` → `echo-weather-v39`)
+- `CACHE` name in `sw.js` (e.g. `echo-weather-v102` → `echo-weather-v103`)
 
 Verify before deploy:
 
@@ -229,7 +230,7 @@ Verify before deploy:
 ./scripts/check-versions.sh
 ```
 
-`update.sh`, `deploy.sh`, and `smoke.sh` run this automatically. Deploy `index.html` and `sw.js` together. Users can hard-refresh or use the in-app **Update app** link.
+`update.sh`, `deploy.sh`, and `smoke.sh` run this automatically. Deploy `index.html` and `sw.js` together. Users can hard-refresh or use the in-app **Update app** link. After icon or manifest changes, iOS home-screen shortcuts may need to be removed and re-added to pick up the new icon.
 
 ---
 
@@ -260,7 +261,7 @@ and use `update.sh` going forward.
 ## Local development
 
 ```bash
-git clone https://github.com/your-user/echoweather.git
+git clone https://github.com/veddegre/echoweather.git
 cd echoweather
 cp config.example.php config.local.php
 # Edit config.local.php — add airnow_api_key and/or google_pollen_api_key
@@ -307,7 +308,7 @@ Every key is optional.
 #### Google Pollen API (optional)
 
 - [Pollen API overview](https://developers.google.com/maps/documentation/pollen/overview)
-- Enables 5-day **tree / grass / weed** pollen forecast
+- Enables 5-day **tree / grass / weed** pollen from Google (app displays 3 days)
 - Proxied at `/api/pollen`
 - Enable in [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Library → "Pollen API"
 
@@ -403,9 +404,9 @@ ownership — see the install steps above.
 **Air Quality hint still shows.** Set `airnow_api_key` in `config.local.php`.
 Verify `curl -H "Host: example.com" http://127.0.0.1/api/status` shows `"airnow":true`.
 
-**Pollen panel empty.** Set `google_pollen_api_key` in `config.local.php`.
-Enable Pollen API in Google Cloud Console. Verify
-`curl -H "Host: example.com" http://127.0.0.1/api/status` shows `"pollen":true`.
+**Pollen shows modeled data or off-season message.** Without `google_pollen_api_key`, the app uses Open-Meteo modeled pollen or an off-season placeholder — that is expected. For live Google pollen, set `google_pollen_api_key` in `config.local.php`, enable Pollen API in Google Cloud Console, and verify `curl -H "Host: example.com" http://127.0.0.1/api/status` shows `"pollen":true`.
+
+**Pollen panel completely empty.** Check browser console for JS errors; confirm location is set. If Google is configured but quota is exhausted, the app may show a paused notice or fall back to modeled data.
 
 **503 on `/api/pollen`.** Key not set — configure `google_pollen_api_key`.
 
@@ -426,28 +427,68 @@ be reached with no stale cache for that grid cell. Check Apache error log and
 
 ## What the app includes
 
-| Section | What it shows |
+Echo Weather is a single-page PWA (`index.html`). On phones and narrow screens (≤860px), content is organized into five tabs; on wider screens the same panels appear in one scrollable page.
+
+### Tabs (mobile)
+
+| Tab | Panels |
 |---|---|
-| **Now** | Current conditions, glance metrics, CAPE, clouds, UV |
-| **Sun & Light** | Sun arc, golden/blue hour bar, compass, sunset outlook |
-| **Hourly / 7-Day** | 48-hour strip; 7-day bars |
-| **Detailed Forecast** | NWS zone text (US) |
-| **Radar** | RainViewer + IEM NEXRAD |
-| **Obs / Discussion** | METAR vs NWS; AFD text |
-| **Air / Moon** | AirNow or modeled AQI; Google Pollen forecast; moon phase |
-| **Advanced** | HRRR metrics |
-| **Great Lakes** | GLF text, waves, buoy — basin only |
-| **Convective outlook** | SPC Day 1–3 |
+| **Now** | Current conditions, storm setup (when relevant), Sun & Light, next 24 hours |
+| **Forecast** | 5-day visual forecast, detailed NWS text, obs vs forecast |
+| **Radar** | Animated radar, storm mode banner, convective outlook, alert polygons on the map |
+| **Outdoor** | Air quality & pollen, UV & exposure, Great Lakes water (basin only) |
 
-Active NWS warnings appear in the top banner. Location via geolocation or search;
-default fallback Allendale, MI. Light / Dark / System themes. Installable PWA.
+The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works.
+| **More** | Moon, advanced atmosphere (HRRR), NWS forecast discussion |
 
-Shareable URLs: `?lat=42.9721&lon=-85.9536&name=Allendale`
+### Now
+
+- **Current conditions** — METAR when available (US), otherwise Open-Meteo; feels-like, pressure trend, glance metrics (wind, humidity, visibility, AQI teaser).
+- **Storm setup** *(conditional)* — CAPE, freezing level, wind shear, moisture, and Day 1 SPC probabilistic risks when convective weather is possible.
+- **Sun & Light** — Sun arc, golden/blue hour bar, sky compass, sunset outlook.
+- **Next 24 Hours** — Hourly strip anchored at *now* (NWS periods overlaid on Open-Meteo timing); correct day/night icons.
+
+### Forecast
+
+- **5-Day Forecast** — Visual day cards with condition strip, temperature sparkline, and hourly ticks; thunderstorm hours highlighted in red; “now” marker on Today.
+- **Detailed Forecast** — NWS zone periods (US): days 1–3 inline, days 4–7 expandable.
+- **Obs vs NWS Forecast** — METAR vs NWS hourly for temp, wind, and pressure.
+
+### Radar & storm tracking
+
+- **Radar** — RainViewer (animated + optional satellite IR) or IEM NEXRAD base/composite; scrubber, play/pause, fullscreen expand, center on location.
+- **Lightning** — Optional GOES GLM strike overlay (IEM tiles).
+- **Alert polygons** — Active NWS warning/watch/advisory boundaries drawn on the map (tap for headline).
+- **Storm mode banner** — Appears when warnings/watches are active, SPC risk is elevated, MCDs apply, or CAPE is high; summarizes the situation above the map.
+- **Convective outlook** — SPC Day 1–3 categorical risk at your pin; shows at *slight* risk or higher (muted style on quiet days, full emphasis in storm mode). Includes:
+  - Day 1 **tornado / hail / wind** probabilistic risks
+  - **Best storm window today** (hourly CAPE + storm-code heuristic)
+  - **Nearby SPC storm reports** (within ~120 mi)
+  - **Lake-effect potential** for Great Lakes locations (cold air over warm water)
+  - Active **mesoscale discussions** and outlook discussion text when risk ≥ marginal
+
+### Outdoor
+
+- **Air Quality & Pollen** — AirNow (via PHP proxy) or Open-Meteo modeled AQI; pollutant breakdown; **year-round** 3-day pollen forecast (Google Pollen API when configured, Open-Meteo fallback, or off-season placeholder).
+- **UV & Exposure** — Current UV, humidity, dew point, visibility, wet bulb; **outdoor rest-of-today** hourly strip (UV, RH, comfort).
+- **Great Lakes** *(basin only)* — NWS GLF or marine zone text, wave model, lake–air delta outlook, NDBC buoy picker with live obs.
+
+### More
+
+- **Moon** — Phase, illumination, rise/set, compass.
+- **Advanced Atmosphere** — HRRR fields: wet bulb, boundary layer, soil, upper winds.
+- **NWS Forecast Discussion** — Full AFD text for the forecast office.
+
+### Alerts & global UX
+
+- **NWS alerts** — Warnings, watches, and advisories in a top banner (US point lookup).
+- **Locations** — Geolocation, search (Open-Meteo geocoding), multiple saved chips with collapsible “More” list; shareable URLs: `?lat=42.97&lon=-85.92&name=Allendale`.
+- **Themes** — Light / Dark / System; °F / °C.
+- **PWA** — Installable; service worker caches shell assets; in-app **Update app** link and auto-reload when a new version is detected near the top of the page; footer shows app version (e.g. `v104`) and a **Source** link to the GitHub repo for self-hosting. Platform-specific **Add to home screen** hint when not installed.
+- **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels (forecast, radar, outdoor, more) on first visit or idle prefetch.
 
 ---
 
 ## Data sources
 
-NWS, METAR, SPC, Open-Meteo/HRRR, RainViewer, IEM, AirNow (optional),
-Google Pollen API (optional), NDBC buoys (via PHP proxy), Open-Meteo geocoding,
-CARTO basemap.
+NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (categorical + probabilistic outlooks, mesoscale discussions, storm reports CSV), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR, GLM lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.

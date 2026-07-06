@@ -2,5 +2,8 @@
 config.local.php
 cache/
 
+# Icon build temps (scripts/render-icons.sh)
+.render-icon-*.html
+
 # OS
 .DS_Store
