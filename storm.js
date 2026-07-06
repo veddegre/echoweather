@@ -104,6 +104,15 @@ function loadThreatLayerPrefs(){
 function saveThreatLayerPrefs(){
   saveLocRadarPrefs();
 }
+function enableHmsSmokeLayer(){
+  if(threatLayerOpts.hmsSmoke) return false;
+  threatLayerOpts.hmsSmoke = true;
+  const inp = document.querySelector('[data-threat="hmsSmoke"]');
+  if(inp) inp.checked = true;
+  saveLocRadarPrefs();
+  syncThreatOverlays();
+  return true;
+}
 function filterAlertFeatures(feats){
   return (feats || []).filter(f => {
     if(!f.geometry) return false;

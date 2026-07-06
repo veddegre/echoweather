@@ -560,6 +560,10 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .fire-mode-banner{display:none;margin-bottom:10px;padding:10px 14px;border-radius:10px;border:1px solid #e67e22;background:color-mix(in srgb,#e67e22 10%,var(--panel));font-size:.8125rem;line-height:1.45;color:var(--ink)}
 .fire-mode-banner.visible{display:block}
 .fire-mode-banner strong{color:#e67e22;font-weight:600}
+.smoke-radar-hint{margin:10px 0 0;padding:10px 14px;border-radius:10px;border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 12%,var(--panel));font-size:.8125rem;line-height:1.45;color:var(--ink)}
+.smoke-radar-hint p{margin:0 0 8px}
+.smoke-radar-btn{display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;border:1px solid var(--warn);background:var(--panel);color:var(--ink);font-size:.75rem;font-weight:600;font-family:inherit;cursor:pointer}
+.smoke-radar-btn:hover{border-color:var(--accent);color:var(--accent)}
 #winterOutlook{padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
 .aurora-hint{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
 .aurora-hint .lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}

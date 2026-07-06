@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '141';
+const APP_VERSION = '142';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1367,6 +1367,29 @@ function renderExposure(d){
 
 // ---------- outdoor activity planner ----------
 let outdoorAir = { aqi: null, pm25: null };
+function syncSmokeRadarHint(pm25, aqi){
+  const box = $('smokeRadarHint'), text = $('smokeRadarHintText');
+  if(!box || !text) return;
+  const loc = state.locations[state.active];
+  if(!loc || !isLikelyUS(loc)){
+    box.hidden = true;
+    return;
+  }
+  const elevated = (pm25 != null && pm25 >= 35) || (aqi != null && aqi >= 101);
+  if(!elevated){
+    box.hidden = true;
+    return;
+  }
+  const high = (pm25 != null && pm25 >= 55) || (aqi != null && aqi >= 151);
+  text.textContent = high
+    ? 'High fine particles detected — wildfire smoke may be affecting air quality. View the NOAA HMS smoke analysis on radar.'
+    : 'Elevated fine particles — smoke or haze may be nearby. View the NOAA HMS smoke analysis on radar.';
+  box.hidden = false;
+  if(threatLayerOpts.hmsSmoke){
+    const btn = $('smokeRadarBtn');
+    if(btn) btn.textContent = 'Smoke layer on — open radar';
+  }
+}
 function isRainWxCode(c){
   return (c >= 51 && c <= 67) || (c >= 80 && c <= 82);
 }
@@ -3490,6 +3513,7 @@ async function loadAir(loc){
       $('airMetrics').innerHTML = renderAirMetricSections(sections);
       renderAirnowKey();
       outdoorAir = { aqi: aqi ?? null, pm25: c?.pm2_5 ?? null };
+      syncSmokeRadarHint(outdoorAir.pm25, outdoorAir.aqi);
       if(state.data) renderActivityPlanner(state.data);
     }catch(e){
       $('aqiVerdict').textContent = 'unavailable';
@@ -3498,6 +3522,7 @@ async function loadAir(loc){
       renderPollenForecast(null, meteoDaily);
       $('airMetrics').innerHTML = '';
       $('airnowRow').style.display = 'none';
+      syncSmokeRadarHint(null, null);
       console.error('air', e);
     }
   });
@@ -5363,6 +5388,11 @@ function initPageNav(){
 
   document.addEventListener('keydown', e => {
     if(e.key === 'Escape' && $('radarStage')?.classList.contains('expanded')) toggleRadarExpand();
+  });
+
+  $('smokeRadarBtn')?.addEventListener('click', () => {
+    enableHmsSmokeLayer();
+    setAppTab('radar');
   });
 
   let siteTopCompact = false;
