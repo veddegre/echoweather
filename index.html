@@ -831,7 +831,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '107';
+const APP_VERSION = '108';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -1597,7 +1597,7 @@ function buildHourlyFromNws(periods, om){
   const hourly = {
     time: [], temperature_2m: [], precipitation_probability: [], weather_code: [], is_day: [],
     wind_speed_10m: [], wind_direction_10m: [], shortForecast: [],
-    dew_point_2m: [], pressure_msl: [], cape: [], cloud_cover_low: [], cloud_cover_mid: [], cloud_cover_high: [],
+    dew_point_2m: [], pressure_msl: [], cape: [], wind_gusts_10m: [], cloud_cover_low: [], cloud_cover_mid: [], cloud_cover_high: [],
     precipitation: [], visibility: [], uv_index: [], freezing_level_height: [],
     wet_bulb_temperature_2m: [], relative_humidity_2m: [],
     anchoredNow: true
@@ -1621,6 +1621,7 @@ function buildHourlyFromNws(periods, om){
     hourly.dew_point_2m.push(omH.dew_point_2m[i] ?? null);
     hourly.pressure_msl.push(omH.pressure_msl[i] ?? null);
     hourly.cape.push(omH.cape[i] ?? 0);
+    hourly.wind_gusts_10m.push(omH.wind_gusts_10m?.[i] ?? 0);
     hourly.cloud_cover_low.push(omH.cloud_cover_low[i] ?? 0);
     hourly.cloud_cover_mid.push(omH.cloud_cover_mid[i] ?? 0);
     hourly.cloud_cover_high.push(omH.cloud_cover_high[i] ?? 0);
@@ -3037,10 +3038,10 @@ function isStormCode(code){
 }
 function hourStormScore(d, j){
   const h = d.hourly;
-  const cape = h.cape[j] ?? 0;
-  const code = h.weather_code[j] ?? 0;
-  const pop = h.precipitation_probability[j] ?? 0;
-  const gust = h.wind_gusts_10m[j] ?? 0;
+  const cape = h.cape?.[j] ?? 0;
+  const code = h.weather_code?.[j] ?? 0;
+  const pop = h.precipitation_probability?.[j] ?? 0;
+  const gust = h.wind_gusts_10m?.[j] ?? 0;
   let score = 0;
   if(isStormCode(code)) score += 3;
   else if(code >= 80) score += 1;
@@ -3933,6 +3934,25 @@ function meteoWeedPollen(daily, i){
   const vals = [daily.ragweed_pollen[i], daily.mugwort_pollen[i]].filter(v => v != null);
   return meteoPollenLevel(vals.length ? Math.max(...vals) : 0);
 }
+function meteoPollenDailyFromHourly(h){
+  if(!h || !h.time || !h.time.length) return null;
+  const keys = ['alder_pollen', 'birch_pollen', 'grass_pollen', 'mugwort_pollen', 'olive_pollen', 'ragweed_pollen'];
+  const byDay = new Map();
+  h.time.forEach((t, i) => {
+    const day = t.slice(0, 10);
+    if(!byDay.has(day)) byDay.set(day, { time: day });
+    const row = byDay.get(day);
+    keys.forEach(k => {
+      const v = h[k] && h[k][i];
+      if(v != null) row[k] = Math.max(row[k] ?? 0, v);
+    });
+  });
+  const days = [...byDay.values()].slice(0, 3);
+  if(!days.length) return null;
+  const out = { time: days.map(d => d.time) };
+  keys.forEach(k => { out[k] = days.map(d => d[k] ?? 0); });
+  return out;
+}
 function pollenDayLabel(dateStr, i){
   if(i === 0) return 'Today';
   const d = new Date(dateStr + 'T12:00:00');
@@ -4027,10 +4047,10 @@ async function loadAir(loc){
         );
       }
       const url = 'https://air-quality-api.open-meteo.com/v1/air-quality'
-        + '?latitude=' + loc.lat + '&longitude=' + loc.lon
+        + '?latitude=' + Number(loc.lat).toFixed(4) + '&longitude=' + Number(loc.lon).toFixed(4)
         + '&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
-        + '&daily=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
-        + '&timezone=auto';
+        + '&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
+        + '&forecast_days=3&timezone=auto';
       let j = null;
       if(!aqi || !pollen || !meteoDaily){
         try{
@@ -4039,7 +4059,7 @@ async function loadAir(loc){
         }catch(e){ console.warn('meteo air', e); }
       }
       const c = j ? j.current : null;
-      meteoDaily = j ? j.daily : meteoDaily;
+      meteoDaily = j ? (meteoPollenDailyFromHourly(j.hourly) || j.daily) : meteoDaily;
       if(airLoadGen !== gen) return;
       if(!aqi && c && c.us_aqi != null){
         aqi = c.us_aqi;
