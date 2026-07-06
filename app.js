@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '140';
+const APP_VERSION = '141';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -121,7 +121,9 @@ async function nwsFetch(url){
 }
 async function fetchTimeout(url, opts, ms){
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), ms || 8000);
+  const timer = setTimeout(() => {
+    ctrl.abort(new DOMException('Request timed out after ' + (ms || 8000) + 'ms', 'TimeoutError'));
+  }, ms || 8000);
   try{
     return await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
   }finally{
@@ -3660,6 +3662,7 @@ async function resolveTafIcaos(loc){
   }
   return out.slice(0, 3);
 }
+let tafLoadGen = 0;
 const TAF_WX_PHRASES = {
   VCSH:'Showers nearby', VCTS:'Thunderstorms nearby', VCFG:'Fog nearby',
   '-SHRA':'Light rain showers', SHRA:'Rain showers', '+SHRA':'Heavy rain showers',
@@ -3765,9 +3768,11 @@ function renderTafHtml(taf){
   return html;
 }
 async function loadTaf(loc){
+  const gen = ++tafLoadGen;
   return panelTask('tafPanel', 'tafStatus', async () => {
     const box = $('tafText');
     if(!box) return;
+    if(gen !== tafLoadGen) return;
     if(!isLikelyUS(loc)){
       box.textContent = 'TAF is available for US airport locations.';
       return;
@@ -3776,8 +3781,10 @@ async function loadTaf(loc){
     let icaos = [];
     try{
       icaos = await resolveTafIcaos(loc);
+      if(gen !== tafLoadGen) return;
       if(!icaos.length){ box.textContent = 'No nearby airport TAF for this location.'; return; }
-      const r = await fetchTimeout('/api/taf?ids=' + encodeURIComponent(icaos.join(',')), {}, 12000);
+      const r = await fetchTimeout('/api/taf?ids=' + encodeURIComponent(icaos.join(',')), {}, 20000);
+      if(gen !== tafLoadGen) return;
       if(!r.ok){
         if(r.status === 404) throw new Error('taf proxy missing');
         throw new Error('taf http ' + r.status);
@@ -3791,18 +3798,21 @@ async function loadTaf(loc){
       }
       box.innerHTML = renderTafHtml(taf);
     }catch(e){
+      if(gen !== tafLoadGen) return;
       const msg = String(e.message || '');
       const icaoLabel = icaos.length ? icaos.join(', ') : '';
+      const timedOut = e.name === 'AbortError' || e.name === 'TimeoutError';
       if(msg.includes('proxy')){
         box.textContent = 'TAF needs the server proxy — ensure /api/taf is deployed with PHP.';
-      }else if(e.name === 'AbortError'){
-        box.textContent = 'TAF request timed out — try again.';
+      }else if(timedOut){
+        box.textContent = 'TAF request timed out — tap Refresh or try again in a moment.';
       }else if(msg.startsWith('taf http ')){
         box.textContent = 'TAF unavailable (HTTP ' + msg.slice(9) + (icaoLabel ? ', ' + icaoLabel : '') + ').';
       }else{
         box.textContent = 'TAF unavailable' + (icaoLabel ? ' (' + icaoLabel + ')' : '') + '.';
       }
-      console.error('taf', e);
+      if(timedOut) console.warn('taf', e.message || e.name);
+      else console.error('taf', e);
     }
   });
 }
