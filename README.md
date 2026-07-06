@@ -1,9 +1,16 @@
 # Echo Weather
 
-Personal weather PWA with a small PHP integration layer for server-side
-secrets and CORS relief. No API keys required for core features.
+Personal weather PWA built for enthusiasts — forecasts, radar, storm tracking,
+outdoor planning, marine, aviation, and more. No API keys required for core
+features; optional server-side proxies add AirNow, Google Pollen, NDBC buoys,
+and aviation TAF.
 
-**Home:** [echoweather.com](https://echoweather.com) · **Source:** [github.com/veddegre/echoweather](https://github.com/veddegre/echoweather)
+**Home:** [echoweather.com](https://echoweather.com) · **Source:** [github.com/veddegre/echoweather](https://github.com/veddegre/echoweather) · **Contact:** [contact@echoweather.com](mailto:contact@echoweather.com)
+
+**Highlights:** NWS forecasts & alerts · animated radar with threat layers ·
+activity planner with NWS advisory awareness · 5-day visual forecast · METAR
+observations · SPC convective outlook · UV & air quality · Great Lakes &
+coastal · aviation TAF · installable PWA with offline cache
 
 ```
   browser ──────────────▶  Apache (or php -S locally)
@@ -223,7 +230,7 @@ into `config.local.php` by hand.
 When you change `index.html` or `sw.js`, bump **both**:
 
 - `APP_VERSION` in `index.html`
-- `CACHE` name in `sw.js` (e.g. `echo-weather-v126` → `echo-weather-v127`)
+- `CACHE` name in `sw.js` (e.g. `echo-weather-v128` → `echo-weather-v129`)
 
 Verify before deploy:
 
@@ -431,7 +438,15 @@ Stations without a TAF return an empty array (`[]`), not 502. The client tries u
 
 **Fire weather layer 404 in console.** SPC fire outlook GeoJSON must use `day1fw_windrh.lyr.geojson` (older `fwdy1otlk_*` URLs are dead). Pull latest `index.html` if you still see 404s.
 
-**Activity planner shows wrong season.** Season follows the **local forecast** for the active location (5-day highs/lows, snow depth), not a national calendar — Florida in January can still show golf; Michigan shows ski/shovel when cold or snowy.
+**Activity planner shows wrong season or beach rating.** Season follows the
+**local forecast** for the active location (5-day highs/lows, snow depth), not a
+national calendar. NWS advisories (e.g. Beach Hazards Statement) are scored from
+`effective` through `ends` — not the shorter `expires` feed time. Inland locations
+can still match county-wide beach advisories.
+
+**Great Lakes panel missing inland.** The panel appears only within **~50 nm** of
+a Great Lakes shore — inland cities (e.g. Mount Pleasant, MI) no longer show lake
+weather by bounding-box alone.
 
 **500 / 502 with generic message.** Check Apache error log for details:
 `sudo tail -f /var/log/apache2/error.log`
@@ -440,70 +455,143 @@ Stations without a TAF return an empty array (`[]`), not 502. The client tries u
 
 ## What the app includes
 
-Echo Weather is a single-page PWA (`index.html`). On phones and narrow screens (≤860px), content is organized into five tabs; on wider screens the same panels appear in one scrollable page.
+Echo Weather is a single-page PWA (`index.html`). On phones and narrow screens
+(≤860px), content is organized into five bottom tabs; on wider screens the same
+panels appear in one scrollable page with a compacting sticky header.
 
-### Tabs (mobile)
+### Navigation & layout
 
 | Tab | Panels |
 |---|---|
-| **Now** | Current conditions, storm setup (when relevant), Sun & Light, next 24 hours |
+| **Now** | Current conditions, storm setup *(when relevant)*, Sun & Light, next 24 hours |
 | **Forecast** | 5-day visual forecast, detailed NWS text, observations vs forecast |
 | **Radar** | Animated radar (RainViewer / MRMS / IEM), threat layers, storm & fire banners, convective outlook |
-| **Outdoor** | Air quality & pollen, UV & exposure, **activity planner**, coastal tides, Great Lakes (basin only) |
+| **Outdoor** | Air quality & pollen, UV & exposure, activity planner, aurora *(when active)*, coastal tides, Great Lakes *(nearshore)* |
 | **More** | Moon, advanced atmosphere (HRRR), aviation TAF, NWS forecast discussion |
 
-The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works. Radar deep links use `#radar?mode=iem-n0q&frame=8`.
+- **Deep links** — `#now`, `#forecast`, `#radar`, `#outdoor`, `#more`; radar state
+  `#radar?mode=iem-n0q&frame=8`; legacy `#air` → Outdoor tab.
+- **Locations** — Geolocation, Open-Meteo search, multiple saved chips, shareable
+  URLs (`?lat=42.97&lon=-85.92&name=Allendale`).
+- **Themes & units** — Light / Dark / System; °F / °C.
+- **Mobile chrome** — Sticky location/search bar; bottom tab bar; single-column
+  sparklines on narrow screens.
 
 ### Now
 
-- **Current conditions** — METAR when available (US), otherwise Open-Meteo; feels-like, pressure trend, glance metrics (wind, humidity, visibility, AQI teaser).
-- **Storm setup** *(conditional)* — CAPE, freezing level, wind shear, moisture, and Day 1 SPC probabilistic risks when convective weather is possible.
-- **Sun & Light** — Sun arc, golden/blue hour bar, sky compass, twilight/darkness estimate, sunset outlook.
-- **Next 24 Hours** — Hourly strip anchored at *now* (NWS periods overlaid on Open-Meteo timing); correct day/night icons; source labels on hover. Mini sparklines (pressure, temp, dew point, CAPE) show **low–high range** and **Now → Later** axis labels.
+- **Current conditions** — METAR when available (US), otherwise Open-Meteo;
+  feels-like, short today outlook, pressure trend (rising/falling/steady).
+- **Glance row** — Wind (with compass), humidity, dew point, visibility, air
+  quality teaser, and related quick metrics.
+- **More detail** — Pressure, wind gusts, cloud cover, and other surface fields.
+- **Storm setup** *(conditional)* — Appears when convection is possible: HRRR
+  CAPE category, freezing level, wind shear, moisture, environment indices, and
+  SPC Day 1 probabilistic tornado/hail/wind when relevant.
+- **Sun & Light** — Sun arc with now marker; 24-hour daylight bar (civil/nautical/
+  astronomical bands); sky compass; golden & blue hour times; twilight grid;
+  darkness estimate; tonight's sunset outlook (cloud/visibility verdict).
+- **Next 24 Hours** — Scrollable hourly strip anchored at *now* (NWS periods
+  overlaid on Open-Meteo timing); correct day/night icons; wind compass per hour;
+  source labels. Four mini sparklines (pressure, temperature, dew point, CAPE)
+  with **Now → Later** axes; pressure/temp/dew auto-scale with minimum span so
+  flat lines stay readable; **CAPE uses a fixed 0–2500 J/kg scale** with dashed
+  reference lines at 300 / 1000 / 2500 and stability category badge.
 
 ### Forecast
 
-- **5-Day Forecast** — Visual day cards with condition strip, temperature sparkline, and hourly ticks; thunderstorm hours highlighted in red; “now” marker on Today.
-- **Winter weather outlook** *(conditional)* — Snowfall, ice/freezing-rain signals, wind chill, and lake-effect wording when relevant.
-- **Detailed Forecast** — NWS zone periods (US): days 1–3 inline, days 4–7 expandable.
-- **Observations vs NWS Forecast** — Latest station reading compared to the NWS hourly forecast for temp, dew point, wind, and pressure; plain-language bias badges. **Station history** sparklines (temp, wind) with range and Older → Latest labels.
+- **5-Day Forecast** — Day cards with condition text, high/low and time-of-extrema,
+  rain/wind meta, and an **hour-by-hour sky-condition strip** (clear, partly
+  cloudy, cloudy, fog, rain, snow, storm) with a color legend and readable
+  light/dark/mobile palettes; temperature sparkline with hourly ticks; **now**
+  marker on Today (distinct from storm red).
+- **Winter weather outlook** *(conditional)* — Snowfall, ice/freezing-rain
+  signals, wind chill, and lake-effect wording when the forecast supports it.
+- **Detailed Forecast** — NWS zone periods (US): days 1–3 inline, days 4–7 in
+  expandable blocks.
+- **Observations vs NWS Forecast** — Latest station reading compared to the NWS
+  hourly forecast for temperature, dew point, wind, and pressure; plain-language
+  bias badges (higher/lower/close). **Station history** sparklines (temperature,
+  wind) over the past 24 hours with range labels.
 
 ### Radar & storm tracking
 
-- **Radar sources** — RainViewer (animated + optional satellite IR), **MRMS** composite (live CONUS), IEM NEXRAD base/composite (50‑min animation), or **site velocity** (nearest NEXRAD, live).
-- **Reflectivity ↔ velocity toggle** — Quick switch between IEM base reflectivity and nearest-site velocity (US).
-- **Animation** — Scrubber, play/pause, storm-window marker on the timeline, fullscreen expand, center on location.
-- **Deep links** — Share radar state: `#radar?mode=iem-n0q&frame=8` restores source and scrub position.
-- **Lightning** — Optional live strike overlay (Blitzortung; connects only while the toggle is on).
-- **Map threat layers** — Toggle warnings/watches/advisories, SPC Day 1 risk and probabilistic tornado/hail/wind, **storm reports** (SPC CSV markers), **WPC excessive rainfall**, **SPC fire weather**, and NHC tropical systems.
-- **Storm mode banner** — Appears when warnings/watches are active, SPC risk is elevated, MCDs apply, or CAPE is high; threat narrative summarizes the setup.
-- **Fire weather banner** — Red Flag warnings, dry/windy conditions, or SPC fire outlook at your location.
-- **Convective outlook panel** — SPC Day 1–3 categorical risk; Day 1 tornado/hail/wind probs; best storm window; nearby SPC reports; lake-effect hints; MCDs; flood signal when NWS text mentions heavy rain.
+- **Radar sources** — RainViewer (animated + optional GOES IR satellite),
+  **MRMS** composite (live CONUS), IEM NEXRAD base/composite (50‑min animation),
+  or **nearest-site velocity** (live US).
+- **Reflectivity ↔ velocity toggle** — Quick switch between IEM base
+  reflectivity and nearest NEXRAD velocity.
+- **Animation** — Scrubber, play/pause, storm-window marker on the timeline,
+  fullscreen expand, center on location.
+- **Lightning** — Optional live strike overlay (Blitzortung; connects only while
+  the toggle is on).
+- **Map threat layers** — Toggle warnings/watches/advisories (including alert
+  polygons on the map), SPC Day 1 categorical and probabilistic tornado/hail/
+  wind, **storm reports** (SPC CSV markers), **WPC excessive rainfall**, **SPC
+  fire weather**, and NHC tropical systems.
+- **Storm mode banner** — Active warnings/watches, elevated SPC risk, overhead
+  mesoscale discussions, severe window, and CAPE-driven threat narrative.
+- **Fire weather banner** — Red Flag warnings, dry/windy conditions, or SPC fire
+  outlook at your location.
+- **Convective outlook panel** — SPC Day 1–3 categorical risk; Day 1 tornado/
+  hail/wind probabilities; best storm window; nearby SPC reports; lake-effect
+  hints; mesoscale discussions with expandable discussion text; flood signal
+  when NWS text mentions heavy rain.
 
 ### Outdoor
 
-- **Air Quality & Pollen** — AirNow (via PHP proxy) or Open-Meteo modeled AQI; pollutant breakdown; smoke/haze row when PM2.5 is high; **year-round** 3-day pollen forecast.
-- **UV & Exposure** — Current UV, humidity, dew point, visibility, wet bulb; **outdoor rest-of-today** hourly strip (UV, RH, comfort).
-- **Activity planner** — Best times in the next 24 hours for golf, hiking, yard work, running, beach/pool, cycling, dog walks, stargazing, and (when the **local forecast** is cold or snowy) skiing/sledding and snow shoveling. Per-hour scores use rain, wind, heat, UV, AQI, wind chill, ice, and snow; **daytime-only** activities skip after-dark hours (gray bar on timeline). Warm-season activities (golf, yard, beach) hide when winter conditions apply at **this location**; winter activities hide when it is warm (e.g. golf in Florida in January). Expandable **Why** explains top window and conditions.
-- **Aurora** *(lat ≥ 40°N, when active)* — NOAA planetary Kp ≥ 4 and relatively clear skies tonight; panel appears above the activity planner when conditions align.
-- **Coastal tides** *(coastal US)* — NOAA CO-OPS tide predictions for the nearest station.
-- **Great Lakes** *(basin only)* — NWS GLF or marine zone text, wave model, lake–air delta outlook, NDBC buoy picker with live obs.
+- **Air Quality & Pollen** — AirNow (via PHP proxy) or Open-Meteo modeled AQI;
+  pollutant breakdown; smoke/haze row when PM2.5 is high; **year-round** 3-day
+  pollen forecast (Google via proxy when configured, otherwise modeled/off-season
+  messaging).
+- **UV & Exposure** — Current UV index and category; humidity, dew point,
+  visibility, wet bulb; **outdoor rest-of-today** hourly strip (UV, RH, comfort
+  notes).
+- **Activity planner** — Best times in the next 24 hours for **golf, hiking, yard
+  work, running, beach/pool, cycling, dog walks, stargazing**, and *(when the
+  local forecast is cold or snowy)* **skiing/sledding** and **snow shoveling**.
+  - Per-hour **green / amber / red** bars with clock-time labels; gray = after
+    dark or outside usual hours.
+  - Scoring uses rain, wind, heat, afternoon heat penalty, UV, AQI, wind chill,
+    ice, snow depth, and **active NWS advisories** (e.g. beach hazards, heat)
+    from issuance through hazard end (`effective` → `ends`).
+  - Season follows the **local 5-day forecast** (not a national calendar).
+  - Expandable **Why** explains each good/fair/poor window with times and
+    human-readable reasons tied to the colored bar.
+- **Aurora** *(latitude ≥ 40°N, when active)* — NOAA planetary Kp ≥ 4 and
+  relatively clear skies tonight.
+- **Coastal tides** *(coastal US)* — NOAA CO-OPS tide predictions for the
+  nearest station; next high/low outlook.
+- **Great Lakes** *(within ~50 nm of shore)* — NWS GLF or marine zone text,
+  Open-Meteo wave model, lake–air temperature delta outlook, **NDBC buoy picker**
+  with live observations (proxied via `/api/buoy`).
 
 ### More
 
 - **Moon** — Phase, illumination, rise/set, compass.
-- **Advanced Atmosphere** — HRRR fields: wet bulb, boundary layer, soil, upper winds.
-- **Aviation TAF** — Nearest airport(s) with a TAF (up to three ICAO codes per request); **decoded** periods (wind, visibility, weather, clouds) plus collapsible raw aviation code. Proxied at `/api/taf` because AviationWeather.gov blocks browser CORS.
-- **NWS Forecast Discussion** — Full AFD text for the forecast office.
+- **Advanced Atmosphere** — HRRR fields: wet bulb, boundary layer height,
+  sunshine vs daylight, snow depth, soil temperature/moisture, winds at 80 / 120 /
+  180 m.
+- **Aviation TAF** — Nearest airport(s) with a TAF (up to three ICAO codes per
+  request); **decoded** periods (wind, visibility, weather, clouds) plus
+  collapsible raw aviation code. Proxied at `/api/taf` (AviationWeather.gov
+  blocks browser CORS).
+- **NWS Forecast Discussion** — Full AFD text for your forecast office.
 
 ### Alerts & global UX
 
-- **NWS alerts** — Warnings, watches, and advisories in a top banner (US point lookup).
-- **Offline cache** — Last good weather snapshot in localStorage; tab dots and panel labels show **cached** when serving stored data. Fetch and render errors are handled separately so a render bug does not falsely trigger offline mode.
-- **Locations** — Geolocation, search (Open-Meteo geocoding), multiple saved chips; shareable URLs: `?lat=42.97&lon=-85.92&name=Allendale`.
-- **Themes** — Light / Dark / System; °F / °C.
-- **PWA** — Installable; service worker caches shell assets; in-app **Update app** link; footer shows app version (e.g. `v126`).
-- **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on first visit or idle prefetch.
+- **NWS alerts** — Warnings, watches, and advisories in a top banner with
+  effective window times (`onset`–`ends`); expandable description and precautionary
+  actions; alert polygons on the radar map when the Radar tab is open.
+- **Offline cache** — Last good weather snapshot in `localStorage`; tab dots and
+  panel status labels show **cached** when serving stored data. Fetch and render
+  errors are handled separately so a render bug does not falsely trigger offline
+  mode.
+- **PWA** — Installable; service worker caches shell assets; in-app **Update app**
+  link when a new service worker is waiting; footer shows app version (e.g. `v129`).
+- **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
+  first visit or idle prefetch.
+- **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the
+  footer.
 
 ---
 

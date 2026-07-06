@@ -128,12 +128,10 @@ a{color:var(--sky)}
 button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .wrap{max-width:1120px;margin:0 auto;padding:0 20px 64px;min-width:0}
-#content{min-width:0;overflow-x:clip;overflow-anchor:auto}
-.site-top{position:sticky;top:0;z-index:920;background:color-mix(in srgb,var(--bg) 96%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);transition:border-color .2s}
-header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:24px 0 20px;transition:padding .2s}
+#content{min-width:0;overflow-x:clip;overflow-anchor:none}
+.site-top{position:sticky;top:0;z-index:920;background:color-mix(in srgb,var(--bg) 96%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:24px 0 20px}
 body.scrolled header{padding:10px 0 8px}
-.brand-icon{transition:width .2s,height .2s,border-radius .2s}
-.brand-icon-wrap{transition:width .2s,height .2s}
 body.scrolled .brand-icon-wrap{width:48px;height:48px}
 body.scrolled .brand-name{font-size:1.65rem}
 body.scrolled .tagline{display:none}
@@ -609,7 +607,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   body.scrolled .brand-name{font-size:1.2rem}
   .brand-mark{gap:10px;flex-shrink:0}
   .brand-block{flex-shrink:0;min-width:auto}
-  .site-top{position:static;background:transparent;border-bottom:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .site-top{position:static;display:contents;background:transparent;border-bottom:none;backdrop-filter:none;-webkit-backdrop-filter:none}
   .site-top > header{
     flex-wrap:nowrap;align-items:center;
     margin:0 -20px;padding:calc(10px + env(safe-area-inset-top,0px)) 20px 10px;
@@ -1018,6 +1016,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 
   <footer>
     Echo Weather &middot; NWS &middot; METAR &middot; HRRR &middot; Open-Meteo &middot; IEM &middot; RainViewer &middot; NDBC
+    &middot; <a href="mailto:contact@echoweather.com">contact@echoweather.com</a>
     &middot; <a href="#" id="installBtn" style="display:none">Install app</a>
     &middot; <a href="#" id="updateAppBtn">Update app</a>
     &middot; <a href="https://github.com/veddegre/echoweather" target="_blank" rel="noopener noreferrer">Source</a>
@@ -7585,8 +7584,8 @@ function initPageNav(){
   });
 
   let siteTopCompact = false;
-  const SCROLL_COMPACT_AT = 88;
-  const SCROLL_EXPAND_AT = 24;
+  const SCROLL_COMPACT_AT = 100;
+  const SCROLL_EXPAND_AT = 16;
   const syncSiteTop = () => {
     if(isMobileTabLayout()) return;
     const y = window.scrollY;
@@ -7595,15 +7594,15 @@ function initPageNav(){
     else if(siteTopCompact && y < SCROLL_EXPAND_AT) compact = false;
     if(compact !== siteTopCompact){
       const top = $('siteTop');
+      const y0 = window.scrollY;
       const beforeH = top ? top.offsetHeight : 0;
       siteTopCompact = compact;
       document.body.classList.toggle('scrolled', compact);
+      if(top) void top.offsetHeight;
+      const afterH = top ? top.offsetHeight : 0;
+      const delta = afterH - beforeH;
+      if(delta) window.scrollTo({ top: Math.max(0, y0 + delta), behavior: 'instant' });
       scheduleSyncChromeHeight();
-      requestAnimationFrame(() => {
-        const afterH = top ? top.offsetHeight : 0;
-        const delta = afterH - beforeH;
-        if(delta) window.scrollBy(0, delta);
-      });
     }
   };
 
