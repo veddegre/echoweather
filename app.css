@@ -407,6 +407,7 @@ body.radar-expanded{overflow:hidden}
 .activity-summary{margin:0 0 12px;padding:12px 14px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--accent);font-size:.8125rem;line-height:1.45;color:var(--ink)}
 .activity-summary strong{font-weight:600}
 .activity-summary.muted{background:var(--panel-2);border-color:var(--line);color:var(--mut)}
+.activity-summary.warn{background:color-mix(in srgb,var(--warn) 14%,var(--panel));border-color:color-mix(in srgb,var(--warn) 45%,var(--line));color:var(--ink)}
 .activity-pin-bar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 .activity-pin-bar button{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--mut);font-size:.6875rem;font-weight:600;cursor:pointer}
 .activity-pin-bar button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}

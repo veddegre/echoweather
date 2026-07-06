@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '152';
+const APP_VERSION = '153';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1537,24 +1537,45 @@ function buildOutdoorWindowSummary(d, defs, extra, impact){
     if(aNow !== bNow) return aNow ? -1 : 1;
     return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
   };
-  let bestGood = null, bestFair = null;
+  let bestGood = null, bestFair = null, worstPoor = null, worstFair = null;
   for(const def of targets){
     const hours = buildActivityHours(d, def, extra);
     const windows = mergeActivityWindows(hours);
     const good = windows.filter(w => w.grade === 'good').sort(windowSort);
     const fair = windows.filter(w => w.grade === 'fair').sort(windowSort);
+    const poor = windows.filter(w => w.grade === 'poor').sort(windowSort);
+    if(impact && poor.length){
+      const w = poor[0];
+      const sample = sampleHourInWindow(w, hours, def);
+      const score = sample?.score ?? 0;
+      if(!worstPoor || score < worstPoor.score) worstPoor = { def, window: w, score };
+    }
+    if(impact && fair.length){
+      const w = fair[0];
+      const sample = sampleHourInWindow(w, hours, def);
+      const score = sample?.score ?? 100;
+      if(!worstFair || score < worstFair.score) worstFair = { def, window: w, score };
+    }
     if(good.length){
       const w = good[0];
-      const sample = sampleHourInWindow(w, hours);
+      const sample = sampleHourInWindow(w, hours, def);
       const score = sample?.score ?? 0;
       if(!bestGood || score > bestGood.score) bestGood = { def, window: w, score };
     }
     if(fair.length){
       const w = fair[0];
-      const sample = sampleHourInWindow(w, hours);
+      const sample = sampleHourInWindow(w, hours, def);
       const score = sample?.score ?? 0;
       if(!bestFair || score > bestFair.score) bestFair = { def, window: w, score };
     }
+  }
+  if(impact && worstPoor){
+    return { cls: 'warn', html: 'Peak hazard: <strong>' + esc(worstPoor.def.name)
+      + '</strong> <strong>' + esc(fmtActWindow(worstPoor.window)) + '</strong>.' };
+  }
+  if(impact && worstFair){
+    return { cls: 'muted', html: 'Moderate hazard: <strong>' + esc(worstFair.def.name)
+      + '</strong> <strong>' + esc(fmtActWindow(worstFair.window)) + '</strong>.' };
   }
   if(bestGood){
     const names = targets.filter(def => {
@@ -1612,6 +1633,9 @@ function activityOverallGrade(def, eligible, d){
       return activityGrade(Math.min(peak, Math.max(alertPeak, 55)));
     }
     return activityGrade(Math.min(peak, alertPeak));
+  }
+  if(isImpactDef(def)){
+    return activityGrade(Math.min(...eligible.map(h => h.score)));
   }
   return activityGrade(Math.max(...eligible.map(h => h.score)));
 }
@@ -1805,6 +1829,26 @@ function activityAlertImpact(def, hourIso, timezone){
       apply(55, ev);
       return;
     }
+    if(actId === 'heat' && /heat advisory|excessive heat/i.test(evL)){
+      apply(40, ev);
+      return;
+    }
+    if(actId === 'wind' && /wind advisory|high wind|strong wind|lake wind|gale/i.test(evL)){
+      apply(45, ev);
+      return;
+    }
+    if(actId === 'air' && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
+      apply(45, ev);
+      return;
+    }
+    if(actId === 'storms' && /severe thunderstorm|tornado watch|tornado warning|severe weather/i.test(evL)){
+      apply(35, ev);
+      return;
+    }
+    if(actId === 'cold' && /wind chill|extreme cold|freeze warning|frost advisory|winter storm|blizzard|ice storm|cold advisory/i.test(evL)){
+      apply(40, ev);
+      return;
+    }
     if(/tornado|severe thunderstorm|flash flood|hurricane|blizzard|ice storm|winter storm/.test(evL)){
       apply(30, ev);
     }else if(/warning/.test(evL)){
@@ -1862,13 +1906,16 @@ function penalizeWind(ctx, reasons, mphStrong, mphBreeze){
   if(ctx.gust >= mphStrong + 8) reasons.push('Gusty winds');
   return s;
 }
-function penalizeHeat(ctx, reasons, hot, extreme){
+function penalizeHeat(ctx, reasons, hot, extreme, opts){
+  opts = opts || {};
   let s = 0;
   if(ctx.wetBulb >= 82 || ctx.temp >= 95){ s += 35; reasons.push('Extreme heat stress'); }
   else if(ctx.wetBulb >= 78 || ctx.temp >= 88){ s += 20; reasons.push('Very hot and humid'); }
   else if(ctx.temp >= hot){ s += 10; reasons.push('Quite warm'); }
-  if(ctx.temp <= 25){ s += 30; reasons.push('Very cold'); }
-  else if(ctx.temp <= 38){ s += 15; reasons.push('Cold'); }
+  if(!opts.heatOnly){
+    if(ctx.temp <= 25){ s += 30; reasons.push('Very cold'); }
+    else if(ctx.temp <= 38){ s += 15; reasons.push('Cold'); }
+  }
   return s;
 }
 function penalizeAqi(extra, reasons, strict){
@@ -2050,7 +2097,10 @@ const ACTIVITY_SCORERS = {
   heat(ctx, extra){
     let s = 100;
     const reasons = [];
-    s -= penalizeHeat(ctx, reasons, 82, 90);
+    if(ctx.wetBulb < 65 && ctx.temp < 75){
+      return { score: 92, reasons: ['Cool conditions — minimal heat stress'] };
+    }
+    s -= penalizeHeat(ctx, reasons, 82, 90, { heatOnly: true });
     s -= penalizeAfternoonHeat(ctx, reasons, { hot: 84, extreme: 92, hotPenalty: 18, extremePenalty: 35 });
     if(ctx.wetBulb >= 82){ s -= 20; reasons.push('Extreme wet-bulb heat stress'); }
     if(ctx.temp >= 95 && ctx.isDay){ s -= 15; reasons.push('Afternoon heat peak'); }
@@ -2087,6 +2137,9 @@ const ACTIVITY_SCORERS = {
   cold(ctx, extra){
     let s = 100;
     const reasons = [];
+    if(ctx.temp >= 55 && (activityWindChillF(ctx) == null || activityWindChillF(ctx) > 25)){
+      return { score: 90, reasons: ['Mild conditions — limited cold stress'] };
+    }
     s -= penalizeWinter(ctx, reasons);
     if(ctx.temp <= 20){ s -= 25; reasons.push('Bitter cold'); }
     else if(ctx.temp <= 32){ s -= 12; reasons.push('Freezing temperatures'); }
@@ -2097,11 +2150,19 @@ const ACTIVITY_SCORERS = {
   uv(ctx, extra){
     let s = 100;
     const reasons = [];
-    if(ctx.uv >= 10){ s -= 45; reasons.push('Extreme UV'); }
-    else if(ctx.uv >= 8){ s -= 30; reasons.push('Very high UV'); }
-    else if(ctx.uv >= 6){ s -= 15; reasons.push('High UV'); }
-    if(ctx.cloud >= 70 && ctx.isDay) s += 0; // clouds noted in reasons via score
-    if(ctx.cloud > 80) reasons.push('Heavy cloud cover');
+    let uv = ctx.uv;
+    if(ctx.cloud >= 85) uv *= 0.35;
+    else if(ctx.cloud >= 70) uv *= 0.5;
+    else if(ctx.cloud >= 50) uv *= 0.72;
+    else if(ctx.cloud >= 30) uv *= 0.88;
+    if(uv >= 11){ s -= 72; reasons.push('Extreme UV (' + Math.round(uv) + ')'); }
+    else if(uv >= 8){ s -= 52; reasons.push('Very high UV (' + Math.round(uv) + ')'); }
+    else if(uv >= 6){ s -= 38; reasons.push('High UV (' + Math.round(uv) + ')'); }
+    else if(uv >= 3){ s -= 20; reasons.push('Moderate UV (' + Math.round(uv) + ')'); }
+    else if(uv >= 1){ s -= 6; reasons.push('Low UV'); }
+    if(ctx.cloud >= 70 && ctx.uv >= 3 && uv < ctx.uv - 0.5){
+      reasons.push('Cloud cover reduces surface UV');
+    }
     return { score: clampActScore(s), reasons };
   }
 };
@@ -2246,19 +2307,28 @@ function summarizeActivityWindows(windows, hours, def){
   const fair = windows.filter(w => w.grade === 'fair').sort(windowSort);
   const poor = windows.filter(w => w.grade === 'poor').sort(windowSort);
   const parts = [];
-  if(good.length) parts.push((isImpactDef(def) ? 'Low ' : 'Best ') + good.slice(0, 2).map(fmtActWindow).join(', '));
-  if(fair.length) parts.push((isImpactDef(def) ? 'Moderate ' : 'Fair ') + fair.slice(0, 2).map(fmtActWindow).join(', '));
-  if(poor.length) parts.push((isImpactDef(def) ? 'High ' : 'Poor ') + poor.slice(0, 2).map(fmtActWindow).join(', '));
+  if(isImpactDef(def)){
+    if(poor.length) parts.push('High ' + poor.slice(0, 2).map(fmtActWindow).join(', '));
+    if(fair.length) parts.push('Moderate ' + fair.slice(0, 2).map(fmtActWindow).join(', '));
+    if(good.length) parts.push('Low ' + good.slice(0, 2).map(fmtActWindow).join(', '));
+  }else{
+    if(good.length) parts.push('Best ' + good.slice(0, 2).map(fmtActWindow).join(', '));
+    if(fair.length) parts.push('Fair ' + fair.slice(0, 2).map(fmtActWindow).join(', '));
+    if(poor.length) parts.push('Poor ' + poor.slice(0, 2).map(fmtActWindow).join(', '));
+  }
   if(!parts.length) return isImpactDef(def) ? 'High impact throughout the forecast window' : 'Poor conditions during recommended hours';
   return parts.join(' \u00B7 ');
 }
 function activityWxLabel(ctx){
   return wmo(ctx.code, ctx.isDay)[0];
 }
-function sampleHourInWindow(w, hours){
+function sampleHourInWindow(w, hours, def){
   const inWin = hours.filter(h => !h.ineligible && h.time >= w.start && h.time <= w.end);
   if(!inWin.length) return null;
-  if(w.grade === 'poor'){
+  if(w.grade === 'poor' || (isImpactDef(def) && w.grade === 'fair')){
+    return inWin.reduce((a, h) => (h.score < a.score ? h : a), inWin[0]);
+  }
+  if(w.grade === 'good' && isImpactDef(def)){
     return inWin.reduce((a, h) => (h.score < a.score ? h : a), inWin[0]);
   }
   if(w.grade === 'good'){
@@ -2281,7 +2351,7 @@ function weatherSnapshotPhrase(ctx){
   return line;
 }
 function describeActivityWindow(def, w, hours, d, extra){
-  const sample = sampleHourInWindow(w, hours);
+  const sample = sampleHourInWindow(w, hours, def);
   if(!sample) return 'Outside the hours we usually score for this activity.';
   const idx = d.hourly.time.indexOf(sample.time);
   const ctx = idx >= 0 ? activityHourContext(d, idx) : null;
@@ -2304,8 +2374,11 @@ function describeActivityWindow(def, w, hours, d, extra){
     if(reasons.length){
       sentences.push(reasons.slice(0, 2).join('; ').replace(/;$/, '') + '.');
     }
-    if(snap) sentences.push('Still workable then (' + snap + ').');
-    else if(!sentences.length) sentences.push('Mixed signals — doable if you adjust timing or pace.');
+    if(isImpactDef(def)){
+      if(!sentences.length) sentences.push('Moderate hazard — limit exposure or use protection.');
+    }else if(snap){
+      sentences.push('Still workable then (' + snap + ').');
+    }else if(!sentences.length) sentences.push('Mixed signals — doable if you adjust timing or pace.');
   }else{
     if(alert.notes.length && alert.cap < 70){
       sentences.push(alert.notes[0] + ' in effect — wait until it ends.');
@@ -2313,9 +2386,11 @@ function describeActivityWindow(def, w, hours, d, extra){
     if(reasons.length){
       sentences.push(reasons.slice(0, 3).join('; ').replace(/;$/, '') + '.');
     }else if(snap){
-      sentences.push('Tough stretch — ' + snap + '.');
+      sentences.push(isImpactDef(def) ? 'High impact — ' + snap + '.' : 'Tough stretch — ' + snap + '.');
     }else{
-      sentences.push('Several factors stack up against going out then.');
+      sentences.push(isImpactDef(def)
+        ? 'High impact — limit time outside.'
+        : 'Several factors stack up against going out then.');
     }
   }
   return sentences.join(' ');
