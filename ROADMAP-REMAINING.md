@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v166** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=166` in `index.html`).
+**Current version: v170** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=170` in `index.html`).
 
 ---
 
@@ -11,7 +11,7 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 **Four pillars:** Hazard intelligence · Radar & mesoscale · Forecast literacy · Regional context.
 
-**Tab naming:** The visible tab label is **Impacts** (not "Outdoor"). Internal ids stay `outdoor` (`data-tab="outdoor"`, `#outdoor`, `mtab-outdoor`, deep link `#outdoor`, legacy `#air` → Impacts tab).
+**Tab naming:** Visible label **Impacts**; internal tab id **`impact`** (`data-tab="impact"`, `#impact`, `mtab-impact`). Legacy deep links `#outdoor` and `#air` still open Impacts.
 
 **Deprioritized:** Push notifications, global alerts parity, international AQI, lifestyle-first outdoor framing.
 
@@ -19,7 +19,16 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v166 (latest)
+### v170 (latest)
+- **`outdoor` → `impact` rename** — tab id, `impact.js`, CSS/HTML ids (`impactsGrid`, `impact-section-nav`, …); canonical hash `#impact`; legacy `#outdoor` / `#air` preserved
+
+### v169
+- **Mobile planner collapse** — unpinned activity/impact cards collapse when pins exist; all cards expanded when none pinned
+- **Shorter Impacts ledes** on mobile (dual long/short copy in HTML)
+- **`impact.js`** — activity/impact planners, aurora, section chips (~1.5k lines)
+- **`nav.js`** — tab bar, hash deep links, chrome height sync
+
+### v167–v168
 - **Aurora panelUnavail** when NOAA SWPC APIs fail (≥40°N); **Sky** group hides when aurora panel inactive
 - **panelUnavail** on daily forecast render failure; loc compare loading state cleanup
 
@@ -117,7 +126,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Code maintenance** | Optional split from `app.js` (outdoor/marine/nav modules) |
+| 1 | **Code maintenance** | Optional split from `app.js` (marine module) |
 | 2 | **Polish** | Any remaining silent panel hides on user-visible failures |
 | 3 | **Deploy / commit** | When ready — version sync through v166 |
 
@@ -182,16 +191,18 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 |------|------|
 | `index.html` | Shell, tab bar, panel markup |
 | `app.css` | All styles |
-| `app.js` | Core app: state, fetch, render, tabs, most panels (~6k lines) |
+| `app.js` | Core app: state, fetch, render, tabs, most panels (~5k lines) |
+| `nav.js` | In-page nav: tabs, hash deep links, chrome height |
+| `impact.js` | Impacts: activity/impact planners, aurora, section chips |
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v166'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v170'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
 
-**Script load order:** `app.js` → `storm.js` → `radar.js` → `boot.js`
+**Script load order:** `app.js` → `nav.js` → `impact.js` → `storm.js` → `radar.js` → `boot.js`
 
 **Version bump checklist:**
 1. `APP_VERSION` in `app.js`
@@ -200,8 +211,8 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 4. Run `./scripts/check-versions.sh && ./scripts/ci-check.sh`
 5. Deploy: `./update.sh --smoke`
 
-**Tabs:** `now` | `forecast` | `radar` | `outdoor` (label: Impacts) | `more`  
-**Deep links:** `#now`, `#forecast`, `#radar`, `#outdoor`, `#more`, `#radar?mode=mrms&frame=8`, `#afdPanel` → More tab, legacy `#air` → Impacts.
+**Tabs:** `now` | `forecast` | `radar` | `impact` (label: Impacts) | `more`  
+**Deep links:** `#now`, `#forecast`, `#radar`, `#impact`, `#more`, `#radar?mode=mrms&frame=8`, `#afdPanel` → More tab; legacy `#outdoor`, `#air` → Impacts.
 
 **Storage keys (localStorage via `store`):** `st_locs`, `st_active`, `st_units`, `st_theme`, `st_activity_pins`, `st_radar_mode`, per-location radar/threat prefs, `st_app_ver`.
 

@@ -468,7 +468,7 @@ panels appear in one scrollable page with a compacting sticky header.
 | **Impacts** | Activity planner, impact hours, air quality & pollen, UV & exposure, aurora *(when active)*, water/coast/rivers |
 | **More** | Moon, advanced atmosphere (HRRR), aviation TAF, NWS forecast discussion |
 
-- **Deep links** — `#now`, `#forecast`, `#radar`, `#outdoor`, `#more`; radar state
+- **Deep links** — `#now`, `#forecast`, `#radar`, `#impact`, `#more`; legacy `#outdoor` and `#air` → Impacts; radar state
   `#radar?mode=iem-n0q&frame=8`; legacy `#air` → Impacts tab.
 - **Locations** — Geolocation, Open-Meteo search, multiple saved chips, shareable
   URLs (`?lat=42.97&lon=-85.92&name=Allendale`).
@@ -551,12 +551,14 @@ panels appear in one scrollable page with a compacting sticky header.
 
 ### Impacts
 
+- **Section chips** *(mobile)* — Sticky **Plan · Air · Water · Sky** jump links at the top of the tab.
 - **Activity planner** — Best times in the next 24 hours for **golf, hiking, yard
   work, running, beach/pool, cycling, dog walks, stargazing**, and *(when the
   local forecast is cold or snowy)* **skiing/sledding** and **snow shoveling**.
   Per-hour **green / amber / red** bars (good / fair / poor); gray = after dark
-  or outside usual hours. Pin up to four favorites. NWS advisories factor into
-  scoring from issuance through hazard end.
+  or outside usual hours. Pin up to four favorites — on mobile, **pinned cards stay
+  expanded** and unpinned cards collapse (all cards stay expanded when nothing is pinned).
+  NWS advisories factor into scoring from issuance through hazard end.
 - **Impact hours** — Hourly weather stress for **heat, wind, smoke & air,
   lightning & storms, cold exposure, and UV**. Green = low impact, amber =
   moderate, red = high; gray = not applicable (e.g. UV at night). Pin up to four

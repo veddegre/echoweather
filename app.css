@@ -170,16 +170,16 @@ body.mtab-now #content [data-tab="now"]{display:block!important}
 body.mtab-forecast #content [data-tab="forecast"]{display:block!important}
 body.mtab-radar #content [data-tab="radar"]{display:block!important}
 body.mtab-radar #stormLinks.visible{display:block!important}
-body.mtab-outdoor #content [data-tab="outdoor"]:not([hidden]){display:block!important}
-body.mtab-outdoor #outdoorGrid{display:flex!important;flex-direction:column;gap:22px}
+body.mtab-impact #content [data-tab="impact"]:not([hidden]){display:block!important}
+body.mtab-impact #impactsGrid{display:flex!important;flex-direction:column;gap:22px}
 body.mtab-more #content [data-tab="more"]{display:block!important}
 body.mtab-more #moonAdvGrid{display:grid!important}
 body.mtab-more #afdPanelWrap{display:block!important}
-body.mtab-now #obsAfdGrid,body.mtab-now #outdoorGrid,body.mtab-now #moonAdvGrid,body.mtab-now #afdPanelWrap,
-body.mtab-radar #obsAfdGrid,body.mtab-radar #outdoorGrid,body.mtab-radar #moonAdvGrid,body.mtab-radar #afdPanelWrap,
-body.mtab-forecast #outdoorGrid,body.mtab-forecast #moonAdvGrid,body.mtab-forecast #afdPanelWrap,
-body.mtab-outdoor #obsAfdGrid,body.mtab-outdoor #moonAdvGrid,body.mtab-outdoor #afdPanelWrap,
-body.mtab-more #obsAfdGrid,body.mtab-more #outdoorGrid{display:none!important}
+body.mtab-now #obsAfdGrid,body.mtab-now #impactsGrid,body.mtab-now #moonAdvGrid,body.mtab-now #afdPanelWrap,
+body.mtab-radar #obsAfdGrid,body.mtab-radar #impactsGrid,body.mtab-radar #moonAdvGrid,body.mtab-radar #afdPanelWrap,
+body.mtab-forecast #impactsGrid,body.mtab-forecast #moonAdvGrid,body.mtab-forecast #afdPanelWrap,
+body.mtab-impact #obsAfdGrid,body.mtab-impact #moonAdvGrid,body.mtab-impact #afdPanelWrap,
+body.mtab-more #obsAfdGrid,body.mtab-more #impactsGrid{display:none!important}
 body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .nav-target,[id].panel{scroll-margin-top:calc(var(--chrome-h) + 10px)}
 .alert{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;background:var(--panel)}
@@ -262,27 +262,27 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .outlook .verdict.good{color:var(--good)}.outlook .verdict.warn{color:var(--warn)}.outlook .verdict.mid{color:var(--warm)}
 .water-verdict-source{font-size:.75rem;color:var(--dim);margin-top:8px;line-height:1.45}
 .outlook .detail{font-size:.8125rem;color:var(--mut);margin-top:6px;line-height:1.45}
-.outdoor-layout{display:flex;flex-direction:column;gap:22px;min-width:0}
-.outdoor-group{display:flex;flex-direction:column;gap:12px;min-width:0}
-.outdoor-group-lbl{margin:0;padding:0 2px;font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
-.outdoor-group-plan .panel{border-color:color-mix(in srgb,var(--accent) 35%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent)}
-.outdoor-impacts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;min-width:0}
-.outdoor-group-water:not(:has(.panel:not([hidden]))),
-.outdoor-group-sky:not(:has(.panel:not([hidden]))){display:none}
-.outdoor-group-water .panel,.outdoor-group-sky .panel{margin-top:0}
-.outdoor-group-plan,.outdoor-group-impacts,#outdoorWaterGroup,#outdoorSkyGroup{scroll-margin-top:calc(var(--chrome-h) + 54px)}
-.outdoor-section-nav{display:none;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 10px;margin:0 0 4px;position:sticky;top:calc(var(--chrome-h) + 2px);z-index:800;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-.outdoor-section-nav button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--mut);font-size:.75rem;font-weight:600;font-family:inherit;padding:7px 14px;cursor:pointer;white-space:nowrap}
-.outdoor-section-nav button.on{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
-.outdoor-section-nav button[hidden]{display:none}
+.impact-layout{display:flex;flex-direction:column;gap:22px;min-width:0}
+.impact-group{display:flex;flex-direction:column;gap:12px;min-width:0}
+.impact-group-lbl{margin:0;padding:0 2px;font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.impact-group-plan .panel{border-color:color-mix(in srgb,var(--accent) 35%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent)}
+.impact-panels-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;min-width:0}
+.impact-group-water:not(:has(.panel:not([hidden]))),
+.impact-group-sky:not(:has(.panel:not([hidden]))){display:none}
+.impact-group-water .panel,.impact-group-sky .panel{margin-top:0}
+.impact-group-plan,.impact-group-air,#impactWaterGroup,#impactSkyGroup{scroll-margin-top:calc(var(--chrome-h) + 54px)}
+.impact-section-nav{display:none;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 10px;margin:0 0 4px;position:sticky;top:calc(var(--chrome-h) + 2px);z-index:800;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.impact-section-nav button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--mut);font-size:.75rem;font-weight:600;font-family:inherit;padding:7px 14px;cursor:pointer;white-space:nowrap}
+.impact-section-nav button.on{color:var(--ink);background:var(--accent-soft);border-color:var(--accent)}
+.impact-section-nav button[hidden]{display:none}
 @media (max-width:860px){
-  body.mtab-outdoor .outdoor-section-nav{display:flex}
-  body.mtab-outdoor .outdoor-section-nav[hidden]{display:none!important}
+  body.mtab-impact .impact-section-nav{display:flex}
+  body.mtab-impact .impact-section-nav[hidden]{display:none!important}
 }
 @media (max-width:520px){
-  .outdoor-section-nav{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
+  .impact-section-nav{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
 }
-@media (max-width:720px){.outdoor-impacts-grid{grid-template-columns:1fr}}
+@media (max-width:720px){.impact-panels-grid{grid-template-columns:1fr}}
 .air-metrics{display:flex;flex-direction:column;gap:0;margin-top:12px;width:100%;min-width:0}
 .air-metrics-section{width:100%;min-width:0}
 .air-metrics-section .metrics-lbl.air-metrics-lbl{margin-top:14px;margin-bottom:6px}
@@ -418,6 +418,15 @@ body.radar-expanded{overflow:hidden}
 .uv-day-now{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:3,2}
 @media (max-width:520px){.uv-day-ticks{overflow-x:auto;justify-content:flex-start;padding-bottom:4px;-webkit-overflow-scrolling:touch}.uv-day-tick{flex:0 0 auto;min-width:3rem}}
 .activity-lede{font-size:.75rem;color:var(--mut);margin:4px 0 12px;line-height:1.45}
+.lede-short{display:none}
+@media (max-width:860px){
+  .activity-lede .lede-long{display:none}
+  .activity-lede .lede-short{display:inline}
+}
+.activity-card-compact > details > summary{list-style:none;cursor:pointer}
+.activity-card-compact > details > summary::-webkit-details-marker{display:none}
+.activity-card-compact .activity-compact-body{padding-top:8px;border-top:1px solid var(--line);margin-top:8px}
+.planner-list-compact .activity-compact-hint{margin:0 0 10px;font-size:.72rem;color:var(--dim);line-height:1.4}
 .activity-summary{margin:0 0 12px;padding:12px 14px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--accent);font-size:.8125rem;line-height:1.45;color:var(--ink)}
 .activity-summary strong{font-weight:600}
 .activity-summary.muted{background:var(--panel-2);border-color:var(--line);color:var(--mut)}
@@ -460,7 +469,7 @@ body.radar-expanded{overflow:hidden}
 #activityList.is-loading{min-height:28rem}
 #activityList .activity-card,#impactList .activity-card{margin-top:0}
 .planner-card-list .activity-card + .activity-card{margin-top:10px}
-.outdoor-group-plan .panel + .panel{margin-top:16px}
+.impact-group-plan .panel + .panel{margin-top:16px}
 .activity-bar span.na{background:var(--line);opacity:.45}
 @media (max-width:720px){#activityList{grid-template-columns:1fr}}
 footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
