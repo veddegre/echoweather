@@ -733,7 +733,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
         <div class="hourly-strip" id="exposureUvStrip"></div>
       </section>
 
-      <section class="panel nav-target outdoor-wide" id="marinePanel" data-tab="outdoor" aria-label="Great Lakes water conditions">
+      <section class="panel nav-target outdoor-wide" id="marinePanel" data-tab="outdoor" aria-label="Great Lakes water conditions" hidden>
         <h2><span id="marineTitle">Great Lakes</span> <span class="panel-status" id="marineStatus"></span></h2>
         <div class="outlook" id="lakeOutlook" style="margin-top:0;display:none">
           <div class="lbl">Lake-air delta</div>
@@ -831,7 +831,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '106';
+const APP_VERSION = '107';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2563,6 +2563,7 @@ async function loadAlerts(loc){
       stormState.alertFeatures = feats;
       renderAlertsBox(feats);
       syncAlertPolygons(feats.filter(f => f.geometry));
+      if(isRadarTabVisible()) showStormPanelPending(loc);
       return feats.length;
     }catch(e){
       stormState.alertFeatures = [];
@@ -3263,6 +3264,7 @@ function updateStormUi(loc, d){
     || stormState.stormMode || !!stormState.severeWindow || !!stormState.lakeEffect;
   if(!show){
     box.classList.remove('visible');
+    box.innerHTML = '';
     return;
   }
   renderStormPanel(box, loc, {
@@ -3318,16 +3320,30 @@ async function refreshStormTracking(loc, d){
   }catch(e){
     console.error('storm intel', e);
     stormState.loaded = false;
-    $('stormLinks')?.classList.remove('visible');
+    const box = $('stormLinks');
+    if(box){
+      box.classList.remove('visible');
+      box.innerHTML = '';
+    }
   }
 }
 async function loadStormIntel(loc, d){
+  showStormPanelPending(loc);
   if(stormState.loaded && state.data === d){
     updateStormUi(loc, d);
     syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
     return;
   }
   return refreshStormTracking(loc, d || state.data);
+}
+function showStormPanelPending(loc){
+  const box = $('stormLinks');
+  if(!box || stormState.loaded) return;
+  const activeWx = stormState.alertFeatures.some(f => /warning|watch/i.test(f.properties?.event || ''));
+  if(!activeWx && stormState.maxDn < 2) return;
+  box.classList.add('visible');
+  box.innerHTML = '<div class="storm-head"><div class="lbl">Convective outlook</div>'
+    + '<div class="storm-meta">Loading SPC outlook and storm reports…</div></div>';
 }
 
 // ---------- radar (RainViewer + IEM NEXRAD) ----------
@@ -3850,6 +3866,9 @@ function renderMoon(loc){
 }
 
 // ---------- air quality (AirNow US + Open-Meteo fallback) ----------
+function fmtVal(v){
+  return v == null || v === '' ? '\u2014' : v;
+}
 async function fetchAirNow(loc){
   if(!isLikelyUS(loc)) return null;
   try{
@@ -3883,7 +3902,7 @@ async function fetchPollen(loc){
 }
 function renderPollenRows(pollen, rows){
   const today = pollen.days[0];
-  if(!today) return;
+  if(!today || !Array.isArray(today.types)) return;
   today.types.forEach(t => {
     if(!t.inSeason && !t.index) return;
     rows.push([t.name + ' pollen', t.index + '<small> \u2014 ' + t.category + '</small>']);
@@ -3920,6 +3939,7 @@ function pollenDayLabel(dateStr, i){
   return d.toLocaleDateString([], { weekday: 'short' });
 }
 function pollenTypeVal(types, code){
+  if(!Array.isArray(types)) return { text: '\u2014', cls: 'pd-none' };
   const t = types.find(x => x.code === code);
   if(!t) return { text: '\u2014', cls: 'pd-none' };
   if(!t.inSeason && !t.index) return { text: 'Off', cls: 'pd-none' };
@@ -4011,14 +4031,17 @@ async function loadAir(loc){
         + '&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
         + '&daily=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
         + '&timezone=auto';
-      const needMeteo = !aqi || !pollen;
-      const r = needMeteo ? await fetch(url) : null;
-      if(r && !r.ok && !airNow) throw new Error('AQ HTTP ' + r.status);
-      const j = r && r.ok ? await r.json() : null;
+      let j = null;
+      if(!aqi || !pollen || !meteoDaily){
+        try{
+          const r = await fetch(url);
+          if(r.ok) j = await r.json();
+        }catch(e){ console.warn('meteo air', e); }
+      }
       const c = j ? j.current : null;
-      meteoDaily = j ? j.daily : null;
+      meteoDaily = j ? j.daily : meteoDaily;
       if(airLoadGen !== gen) return;
-      if(!aqi && c){
+      if(!aqi && c && c.us_aqi != null){
         aqi = c.us_aqi;
         source = 'Open-Meteo modeled';
         detail = isLikelyUS(loc)
@@ -4027,10 +4050,19 @@ async function loadAir(loc){
             : 'Modeled AQI (Open-Meteo).')
           : 'Composite of PM, ozone, NO\u2082 and more (EPA scale).';
         rows = [
-          ['PM2.5', c.pm2_5 + '<small> \u00B5g/m\u00B3</small>'],
-          ['PM10', c.pm10 + '<small> \u00B5g/m\u00B3</small>'],
-          ['Ozone', c.ozone + '<small> \u00B5g/m\u00B3</small>'],
-          ['NO\u2082', c.nitrogen_dioxide + '<small> \u00B5g/m\u00B3</small>']
+          ['PM2.5', fmtVal(c.pm2_5) + '<small> \u00B5g/m\u00B3</small>'],
+          ['PM10', fmtVal(c.pm10) + '<small> \u00B5g/m\u00B3</small>'],
+          ['Ozone', fmtVal(c.ozone) + '<small> \u00B5g/m\u00B3</small>'],
+          ['NO\u2082', fmtVal(c.nitrogen_dioxide) + '<small> \u00B5g/m\u00B3</small>']
+        ];
+      } else if(!aqi && c){
+        source = source || 'Open-Meteo modeled';
+        detail = detail || 'Modeled pollutants (US AQI unavailable for this point).';
+        rows = rows.length ? rows : [
+          ['PM2.5', fmtVal(c.pm2_5) + '<small> \u00B5g/m\u00B3</small>'],
+          ['PM10', fmtVal(c.pm10) + '<small> \u00B5g/m\u00B3</small>'],
+          ['Ozone', fmtVal(c.ozone) + '<small> \u00B5g/m\u00B3</small>'],
+          ['NO\u2082', fmtVal(c.nitrogen_dioxide) + '<small> \u00B5g/m\u00B3</small>']
         ];
       }
       if(pollen){
@@ -4054,20 +4086,29 @@ async function loadAir(loc){
         $('pollenNote').textContent = 'Levels are low or off-season.';
       }
       if(airLoadGen !== gen) return;
-      const cat = AQI_CATS.find(x => aqi <= x[0]) || AQI_CATS[AQI_CATS.length - 1];
       const v = $('aqiVerdict');
-      v.textContent = aqi + ' \u2014 ' + cat[1];
-      v.className = 'verdict ' + cat[2];
-      $('aqiDetail').textContent = source + (detail ? ' \u00B7 ' + detail : '');
+      if(aqi == null){
+        v.textContent = 'No data';
+        v.className = 'verdict';
+        $('aqiDetail').textContent = source
+          ? source + (detail ? ' \u00B7 ' + detail : '')
+          : 'Air quality unavailable from AirNow and Open-Meteo.';
+      }else{
+        const cat = AQI_CATS.find(x => aqi <= x[0]) || AQI_CATS[AQI_CATS.length - 1];
+        v.textContent = aqi + ' \u2014 ' + cat[1];
+        v.className = 'verdict ' + cat[2];
+        $('aqiDetail').textContent = source + (detail ? ' \u00B7 ' + detail : '');
+      }
       $('airMetrics').innerHTML = rows.map(r =>
         '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
       ).join('');
       renderAirnowKey();
     }catch(e){
       $('aqiVerdict').textContent = 'unavailable';
-      $('aqiDetail').textContent = '';
+      $('aqiDetail').textContent = 'Could not load air quality. Check connection and retry.';
       $('pollenNote').textContent = '';
       renderPollenForecast(null, meteoDaily);
+      $('airMetrics').innerHTML = '';
       $('airnowRow').style.display = 'none';
       console.error('air', e);
     }
@@ -4617,11 +4658,8 @@ async function loadMarine(loc){
   const gen = ++marineLoadGen;
   const panel = $('marinePanel');
   const lake = greatLakeName(loc.lat, loc.lon);
-  if(!lake || !isLikelyUS(loc)){
-    panel.style.display = 'none';
-    return;
-  }
-  panel.style.display = '';
+  syncMarinePanelVisibility(loc);
+  if(!lake || !isLikelyUS(loc)) return;
   if(!($('buoyId').value || '').trim()) applyBuoyForLocation(loc);
   const buoyId = ($('buoyId').value || '').trim().toUpperCase();
   const buoyMeta = buoyCoords(buoyId);
@@ -4942,9 +4980,17 @@ function scheduleIdleStormPrefetch(loc){
 function isGreatLakesLoc(loc){
   return loc && isLikelyUS(loc) && !!greatLakeName(loc.lat, loc.lon);
 }
+function syncMarinePanelVisibility(loc){
+  const panel = $('marinePanel');
+  if(!panel) return;
+  const show = loc && isGreatLakesLoc(loc);
+  panel.hidden = !show;
+  panel.style.display = show ? '' : 'none';
+}
 async function loadAll(){
   const loc = state.locations[state.active];
   const reloadBuoy = tabPanelsLoaded.outdoor;
+  syncMarinePanelVisibility(loc);
   stormState.loaded = false;
   stormTrackGen++;
   const setup = $('stormSetup');
@@ -5359,6 +5405,7 @@ if(urlLoc){
 initBuoySelect();
 migrateBuoyPins();
 syncBuoyForLocation(state.locations[state.active], false);
+syncMarinePanelVisibility(state.locations[state.active]);
 try{ localStorage.removeItem('st_airnow_key'); }catch(e){}
 $('unitF').classList.toggle('on', state.units === 'F');
 $('unitC').classList.toggle('on', state.units === 'C');
