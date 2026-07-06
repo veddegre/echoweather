@@ -1,8 +1,4 @@
 // ---------- in-page nav ----------
-  }catch(e){ console.warn('sw', e); }
-}
-
-// ---------- in-page nav ----------
 const APP_TABS = ['now', 'forecast', 'radar', 'impact', 'more'];
 
 function syncChromeHeight(){
