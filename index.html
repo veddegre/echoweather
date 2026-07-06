@@ -50,11 +50,11 @@
   --on-accent:#FFFFFF;
   --now-mark:#001845;--now-mark-halo:#FFFFFF;
   --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
-  --dc-partly-bg:#7EC0FF;--dc-partly-fg:#062E5C;
-  --dc-cloudy-bg:#8B939E;--dc-cloudy-fg:#1A222C;
-  --dc-fog-bg:#B8A4CC;--dc-fog-fg:#342448;
-  --dc-rain-bg:#3B8FD9;--dc-rain-fg:#F2F9FF;
-  --dc-snow-bg:#D0EBFA;--dc-snow-fg:#0C4060;
+  --dc-partly-bg:#5AB0FF;--dc-partly-fg:#042E58;
+  --dc-cloudy-bg:#7A8490;--dc-cloudy-fg:#141C24;
+  --dc-fog-bg:#C9A8E0;--dc-fog-fg:#3A1848;
+  --dc-rain-bg:#0D5A8C;--dc-rain-fg:#E8F6FF;
+  --dc-snow-bg:#DCE8E2;--dc-snow-fg:#1E4034;
   --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
 }
 html[data-theme="dark"] {
@@ -70,11 +70,11 @@ html[data-theme="dark"] {
   --on-accent:#001845;
   --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
   --dc-clear-bg:#6B5520;--dc-clear-fg:#FFE9A8;
-  --dc-partly-bg:#2D75B8;--dc-partly-fg:#D8ECFF;
+  --dc-partly-bg:#3D9AE6;--dc-partly-fg:#E8F4FF;
   --dc-cloudy-bg:#5A626C;--dc-cloudy-fg:#E8EAED;
-  --dc-fog-bg:#6E5A88;--dc-fog-fg:#EDE6F5;
-  --dc-rain-bg:#1E5A9E;--dc-rain-fg:#E8F4FF;
-  --dc-snow-bg:#A8D4E8;--dc-snow-fg:#0A2840;
+  --dc-fog-bg:#7A5A98;--dc-fog-fg:#F2E8FA;
+  --dc-rain-bg:#051E38;--dc-rain-fg:#B8DCFF;
+  --dc-snow-bg:#8AAC9C;--dc-snow-fg:#0A2018;
   --dc-storm-bg:#8B3838;--dc-storm-fg:#FFE8E8;
 }
 @media (prefers-color-scheme: dark) {
@@ -91,11 +91,11 @@ html[data-theme="dark"] {
     --on-accent:#001845;
     --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
     --dc-clear-bg:#6B5520;--dc-clear-fg:#FFE9A8;
-    --dc-partly-bg:#2D75B8;--dc-partly-fg:#D8ECFF;
+    --dc-partly-bg:#3D9AE6;--dc-partly-fg:#E8F4FF;
     --dc-cloudy-bg:#5A626C;--dc-cloudy-fg:#E8EAED;
-    --dc-fog-bg:#6E5A88;--dc-fog-fg:#EDE6F5;
-    --dc-rain-bg:#1E5A9E;--dc-rain-fg:#E8F4FF;
-    --dc-snow-bg:#A8D4E8;--dc-snow-fg:#0A2840;
+    --dc-fog-bg:#7A5A98;--dc-fog-fg:#F2E8FA;
+    --dc-rain-bg:#051E38;--dc-rain-fg:#B8DCFF;
+    --dc-snow-bg:#8AAC9C;--dc-snow-fg:#0A2018;
     --dc-storm-bg:#8B3838;--dc-storm-fg:#FFE8E8;
   }
 }
@@ -112,11 +112,11 @@ html[data-theme="dark"] {
     --on-accent:#FFFFFF;
     --now-mark:#001845;--now-mark-halo:#FFFFFF;
     --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
-    --dc-partly-bg:#7EC0FF;--dc-partly-fg:#062E5C;
-    --dc-cloudy-bg:#8B939E;--dc-cloudy-fg:#1A222C;
-    --dc-fog-bg:#B8A4CC;--dc-fog-fg:#342448;
-    --dc-rain-bg:#3B8FD9;--dc-rain-fg:#F2F9FF;
-    --dc-snow-bg:#D0EBFA;--dc-snow-fg:#0C4060;
+    --dc-partly-bg:#5AB0FF;--dc-partly-fg:#042E58;
+    --dc-cloudy-bg:#7A8490;--dc-cloudy-fg:#141C24;
+    --dc-fog-bg:#C9A8E0;--dc-fog-fg:#3A1848;
+    --dc-rain-bg:#0D5A8C;--dc-rain-fg:#E8F6FF;
+    --dc-snow-bg:#DCE8E2;--dc-snow-fg:#1E4034;
     --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
   }
 }
@@ -320,6 +320,7 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-card-meta .day-rain{color:var(--sky);font-weight:600}
 .day-summary{font-size:.75rem;color:var(--mut);margin-bottom:10px;line-height:1.45}
 .day-summary strong{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.day-cond-wrap{position:relative}
 .day-cond-strip{position:relative;display:flex;height:32px;border-radius:8px;overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
 .day-seg{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden;border-right:1px solid color-mix(in srgb,var(--ink) 8%,transparent)}
 .day-seg:last-child{border-right:none}
@@ -342,7 +343,9 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-legend .dc-snow i{background:var(--dc-snow-bg)}
 .day-legend .dc-storm i{background:var(--dc-storm-bg)}
 .day-legend-lede{font-size:.72rem;color:var(--dim);margin:0 0 8px;line-height:1.4}
-.day-now{position:absolute;top:0;bottom:0;width:2px;background:var(--now-mark);transform:translateX(-50%);z-index:2;pointer-events:none;box-shadow:0 0 0 1px var(--now-mark-halo),0 0 0 2px color-mix(in srgb,var(--now-mark) 28%,transparent)}
+.day-timeline-wrap{position:relative;padding-top:22px;margin-bottom:4px}
+.day-now{position:absolute;top:0;bottom:0;width:2px;background:var(--now-mark);transform:translateX(-50%);z-index:4;pointer-events:none;box-shadow:0 0 0 1px var(--now-mark-halo),0 0 0 2px color-mix(in srgb,var(--now-mark) 28%,transparent)}
+.day-now-lbl{position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:.5625rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--panel);border:1px solid var(--accent);border-radius:4px;padding:2px 6px;line-height:1.2;white-space:nowrap;box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 10%,transparent)}
 .day-temp-chart{margin-top:10px}
 .day-temp-line{height:36px;color:var(--accent)}
 .day-temp-line svg{display:block;width:100%;height:100%}
@@ -387,6 +390,11 @@ body.radar-expanded{overflow:hidden}
 .exposure-hour .ex-v.uv-low{color:var(--good)}.exposure-hour .ex-v.uv-mid{color:var(--warm)}.exposure-hour .ex-v.uv-high{color:var(--warn)}
 .exposure-hour .ex-note{font-size:.625rem;color:var(--mut);margin-top:5px;line-height:1.25}
 .exposure-strip-note{font-size:.6875rem;color:var(--dim);margin:-6px 0 8px;line-height:1.4}
+.uv-day-chart{margin:8px 0 14px;padding:10px 12px;background:var(--panel-2);border-radius:8px;border:1px solid var(--line)}
+.uv-day-chart svg{display:block;width:100%;height:64px;color:var(--sun)}
+.uv-day-chart-foot{display:flex;justify-content:space-between;margin-top:6px;font-size:.5625rem;color:var(--dim);letter-spacing:.03em}
+.uv-day-chart-note{font-size:.625rem;color:var(--dim);margin-top:4px;line-height:1.35}
+.uv-day-now{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:3,2}
 .activity-lede{font-size:.75rem;color:var(--mut);margin:4px 0 12px;line-height:1.45}
 .activity-card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;background:var(--panel-2)}
 .activity-card:first-child{margin-top:0}
@@ -904,6 +912,10 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
           <div class="detail" id="uvDetail"></div>
         </div>
         <div class="metrics" id="exposureMetrics" style="margin-top:12px"></div>
+        <div id="uvDayChartBlock">
+          <div class="metrics-lbl">UV through today</div>
+          <div class="uv-day-chart" id="uvDayChart" aria-label="UV index through today"></div>
+        </div>
         <div class="metrics-lbl">Outdoor rest of today</div>
         <div class="exposure-strip-note">UV, humidity, and comfort each hour</div>
         <div class="hourly-strip" id="exposureUvStrip"></div>
@@ -2177,6 +2189,51 @@ function uvExposureNote(u){
   if(u < 11) return 'Reduce sun exposure 10am\u20134pm \u00B7 protection essential.';
   return 'Avoid midday sun \u00B7 high burn risk in minutes.';
 }
+function uvDayChartHtml(h, nowIdx, todayKey){
+  const pts = [];
+  for(let j = 0; j < h.time.length; j++){
+    if(h.time[j].slice(0, 10) !== todayKey) continue;
+    pts.push({ idx: j, uv: h.uv_index?.[j] ?? 0, t: h.time[j] });
+  }
+  if(!pts.length) return '';
+  const w = 320, height = 64, maxUv = 11;
+  const yOf = u => (height - 4 - (Math.min(Math.max(u, 0), maxUv) / maxUv) * (height - 8)).toFixed(1);
+  let bands = '';
+  [3, 6, 8].forEach(v => {
+    bands += '<line x1="0" y1="' + yOf(v) + '" x2="' + w + '" y2="' + yOf(v)
+      + '" stroke="currentColor" stroke-opacity=".15" stroke-dasharray="2,3" vector-effect="non-scaling-stroke"/>';
+  });
+  const linePts = pts.map((p, k) => {
+    const x = pts.length < 2 ? w / 2 : (k / (pts.length - 1)) * w;
+    return x.toFixed(1) + ',' + yOf(p.uv);
+  });
+  const area = '0,' + height + ' ' + linePts.join(' ') + ' ' + w + ',' + height;
+  const nowK = pts.findIndex(p => p.idx === nowIdx);
+  let nowLine = '';
+  if(nowK >= 0 && pts.length > 1){
+    const nx = ((nowK / (pts.length - 1)) * w).toFixed(1);
+    nowLine = '<line class="uv-day-now" x1="' + nx + '" y1="2" x2="' + nx + '" y2="' + (height - 2)
+      + '" vector-effect="non-scaling-stroke"/>';
+  }
+  const peak = pts.reduce((a, p) => p.uv > a.uv ? p : a, pts[0]);
+  const tickStep = Math.max(1, Math.ceil(pts.length / 8));
+  const tickLabels = [];
+  for(let k = 0; k < pts.length; k += tickStep){
+    tickLabels.push(hourLabelCompact(pts[k].t));
+  }
+  if(tickLabels[tickLabels.length - 1] !== hourLabelCompact(pts[pts.length - 1].t)){
+    tickLabels.push(hourLabelCompact(pts[pts.length - 1].t));
+  }
+  const svg = '<svg viewBox="0 0 ' + w + ' ' + height + '" preserveAspectRatio="none" role="img" aria-label="UV index from '
+    + tickLabels[0] + ' to ' + tickLabels[tickLabels.length - 1] + ', peak ' + peak.uv.toFixed(1) + '">'
+    + bands + '<polygon points="' + area + '" fill="currentColor" opacity=".18"/>'
+    + '<polyline points="' + linePts.join(' ') + '" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>'
+    + nowLine + '</svg>';
+  return svg
+    + '<div class="uv-day-chart-foot"><span>' + esc(tickLabels[0]) + '</span><span>' + esc(tickLabels[tickLabels.length - 1]) + '</span></div>'
+    + '<div class="uv-day-chart-note">Peak ' + peak.uv.toFixed(1) + ' near ' + hourLabelCompact(peak.t)
+    + ' \u00B7 dashed lines at 3 / 6 / 8 (low / high / very high)</div>';
+}
 function hourlyComfortNote(temp, dew){
   const spread = temp - dew;
   if(spread <= 3) return 'Muggy';
@@ -2244,6 +2301,19 @@ function renderExposure(d){
       '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div>'
       + (r[2] ? '<div class="s">' + esc(r[2]) + '</div>' : '') + '</div>'
     ).join('');
+  }
+
+  const uvChart = $('uvDayChart');
+  const uvBlock = $('uvDayChartBlock');
+  if(uvChart){
+    const chartHtml = uvDayChartHtml(h, i, todayKey);
+    if(chartHtml){
+      uvChart.innerHTML = chartHtml;
+      if(uvBlock) uvBlock.hidden = false;
+    }else{
+      uvChart.innerHTML = '';
+      if(uvBlock) uvBlock.hidden = true;
+    }
   }
 
   const strip = $('exposureUvStrip');
@@ -3526,7 +3596,8 @@ function buildDayTimeline(indices, hh, dd, i, opts){
       + '</div>'
     ).join('');
     const nowMark = nowPct != null
-      ? '<div class="day-now" style="left:' + nowPct.toFixed(2) + '%" title="Now"></div>'
+      ? '<div class="day-now" style="left:' + nowPct.toFixed(2) + '%" title="Current time">'
+        + '<span class="day-now-lbl">Now</span></div>'
       : '';
     const temps = indices.map(j => hh.temperature_2m[j]);
     const maxTicks = compactTicks ? 6 : 12;
@@ -3544,7 +3615,8 @@ function buildDayTimeline(indices, hh, dd, i, opts){
     }
     return {
       hourly: true,
-      segHtml: segHtml + nowMark,
+      segHtml: segHtml,
+      nowMark,
       temps,
       ticksHtml: tickParts.length ? '<div class="day-ticks">' + tickParts.join('') + '</div>' : '',
       note: ''
@@ -3562,6 +3634,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
   return {
     hourly: false,
     segHtml,
+    nowMark: '',
     temps: [lo, hi],
     ticksHtml,
     note: '<div class="day-card-note">Hourly detail not available for this day</div>'
@@ -3619,11 +3692,16 @@ function renderDaily(d){
       }).join('') + '</div>' : '')
       + '</div>'
       + '<div class="day-summary">' + summary + '</div>'
+      + '<div class="day-timeline-wrap">'
+      + '<div class="day-cond-wrap">'
       + '<div class="day-cond-strip" role="img" aria-label="Hour-by-hour sky conditions for this day">' + timeline.segHtml + '</div>'
+      + '</div>'
       + '<div class="day-temp-chart">'
       + '<div class="day-temp-line">' + dayTempSparkline(timeline.temps, 320, 36) + '</div>'
       + timeline.ticksHtml
       + timeline.note
+      + '</div>'
+      + (timeline.nowMark || '')
       + '</div></article>';
   }).join('');
   }catch(e){
