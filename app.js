@@ -2499,7 +2499,7 @@ async function loadNbm(loc){
         return;
       }
       body.innerHTML = renderNbmGridPanel(periods)
-        + '<p class="radar-note" style="margin-top:10px">From NWS grid hourly forecast at your pin.</p>';
+        + '<p class="radar-note" style="margin-top:10px">From NWS grid hourly forecast at your location.</p>';
     }catch(e){
       panel.hidden = false;
       setPanelUnavail(body, 'api_error');

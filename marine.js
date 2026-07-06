@@ -838,7 +838,7 @@ async function fetchNwpsGauge(usgsId){
 }
 function nwpsFloodHtml(nwps){
   const cat = nwps?.status?.observed?.floodCategory || nwps?.ObservedFloodCategory;
-  if(!cat || cat === 'no_flooding' || cat === 'fcst_not_current') return '';
+  if(!cat || /^(no_flooding|fcst_not_current|obs_not_current|not_defined)$/.test(cat)) return '';
   const lbl = NWPS_FLOOD_LABEL[cat] || String(cat).replace(/_/g, ' ');
   const cls = /major|moderate/.test(cat) ? ' stream-flood-warn' : ' stream-flood-adv';
   return '<span class="stream-flood' + cls + '">' + esc(lbl) + '</span>';
