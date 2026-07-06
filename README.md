@@ -435,60 +435,64 @@ Echo Weather is a single-page PWA (`index.html`). On phones and narrow screens (
 |---|---|
 | **Now** | Current conditions, storm setup (when relevant), Sun & Light, next 24 hours |
 | **Forecast** | 5-day visual forecast, detailed NWS text, obs vs forecast |
-| **Radar** | Animated radar, storm mode banner, convective outlook, alert polygons on the map |
-| **Outdoor** | Air quality & pollen, UV & exposure, Great Lakes water (basin only) |
+| **Radar** | Animated radar (RainViewer / MRMS / IEM), threat layers, storm & fire banners, convective outlook |
+| **Outdoor** | Air quality & pollen, UV & exposure, coastal tides, Great Lakes (basin only) |
+| **More** | Moon, advanced atmosphere (HRRR), aviation TAF, NWS forecast discussion |
 
-The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works.
-| **More** | Moon, advanced atmosphere (HRRR), NWS forecast discussion |
+The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works. Radar deep links use `#radar?mode=iem-n0q&frame=8`.
 
 ### Now
 
 - **Current conditions** — METAR when available (US), otherwise Open-Meteo; feels-like, pressure trend, glance metrics (wind, humidity, visibility, AQI teaser).
 - **Storm setup** *(conditional)* — CAPE, freezing level, wind shear, moisture, and Day 1 SPC probabilistic risks when convective weather is possible.
-- **Sun & Light** — Sun arc, golden/blue hour bar, sky compass, sunset outlook.
-- **Next 24 Hours** — Hourly strip anchored at *now* (NWS periods overlaid on Open-Meteo timing); correct day/night icons.
+- **Sun & Light** — Sun arc, golden/blue hour bar, sky compass, twilight/darkness estimate, sunset outlook.
+- **Aurora hint** *(northern latitudes)* — When planetary Kp is elevated and tonight’s skies are relatively clear.
+- **Next 24 Hours** — Hourly strip anchored at *now* (NWS periods overlaid on Open-Meteo timing); correct day/night icons; source labels on hover.
 
 ### Forecast
 
 - **5-Day Forecast** — Visual day cards with condition strip, temperature sparkline, and hourly ticks; thunderstorm hours highlighted in red; “now” marker on Today.
+- **Winter weather outlook** *(conditional)* — Snowfall, ice/freezing-rain signals, wind chill, and lake-effect wording when relevant.
 - **Detailed Forecast** — NWS zone periods (US): days 1–3 inline, days 4–7 expandable.
-- **Obs vs NWS Forecast** — METAR vs NWS hourly for temp, wind, and pressure.
+- **Obs vs NWS Forecast** — METAR vs NWS hourly for temp, wind, and pressure; 24h station trace when available.
 
 ### Radar & storm tracking
 
-- **Radar** — RainViewer (animated + optional satellite IR) or IEM NEXRAD base/composite; scrubber, play/pause, fullscreen expand, center on location.
-- **Lightning** — Optional live strike overlay (Blitzortung community network; connects only while the toggle is on).
-- **Alert polygons** — Active NWS warning/watch/advisory boundaries drawn on the map (tap for headline).
-- **Storm mode banner** — Appears when warnings/watches are active, SPC risk is elevated, MCDs apply, or CAPE is high; summarizes the situation above the map.
-- **Convective outlook** — SPC Day 1–3 categorical risk at your pin; shows at *slight* risk or higher (muted style on quiet days, full emphasis in storm mode). Includes:
-  - Day 1 **tornado / hail / wind** probabilistic risks
-  - **Best storm window today** (hourly CAPE + storm-code heuristic)
-  - **Nearby SPC storm reports** (within ~120 mi)
-  - **Lake-effect potential** for Great Lakes locations (cold air over warm water)
-  - Active **mesoscale discussions** and outlook discussion text when risk ≥ marginal
+- **Radar sources** — RainViewer (animated + optional satellite IR), **MRMS** composite (live CONUS), IEM NEXRAD base/composite (50‑min animation), or **site velocity** (nearest NEXRAD, live).
+- **Reflectivity ↔ velocity toggle** — Quick switch between IEM base reflectivity and nearest-site velocity (US).
+- **Animation** — Scrubber, play/pause, storm-window marker on the timeline, fullscreen expand, center on location.
+- **Deep links** — Share radar state: `#radar?mode=iem-n0q&frame=8` restores source and scrub position.
+- **Lightning** — Optional live strike overlay (Blitzortung; connects only while the toggle is on).
+- **Map threat layers** — Toggle warnings/watches/advisories, SPC Day 1 risk and probabilistic tornado/hail/wind, **storm reports** (SPC CSV markers), **WPC excessive rainfall**, **SPC fire weather**, and NHC tropical systems.
+- **Storm mode banner** — Appears when warnings/watches are active, SPC risk is elevated, MCDs apply, or CAPE is high; threat narrative summarizes the setup.
+- **Fire weather banner** — Red Flag warnings, dry/windy conditions, or SPC fire outlook at your location.
+- **Convective outlook panel** — SPC Day 1–3 categorical risk; Day 1 tornado/hail/wind probs; best storm window; nearby SPC reports; lake-effect hints; MCDs; flood signal when NWS text mentions heavy rain.
 
 ### Outdoor
 
-- **Air Quality & Pollen** — AirNow (via PHP proxy) or Open-Meteo modeled AQI; pollutant breakdown; **year-round** 3-day pollen forecast (Google Pollen API when configured, Open-Meteo fallback, or off-season placeholder).
+- **Air Quality & Pollen** — AirNow (via PHP proxy) or Open-Meteo modeled AQI; pollutant breakdown; smoke/haze row when PM2.5 is high; **year-round** 3-day pollen forecast.
 - **UV & Exposure** — Current UV, humidity, dew point, visibility, wet bulb; **outdoor rest-of-today** hourly strip (UV, RH, comfort).
+- **Coastal tides** *(coastal US)* — NOAA CO-OPS tide predictions for the nearest station.
 - **Great Lakes** *(basin only)* — NWS GLF or marine zone text, wave model, lake–air delta outlook, NDBC buoy picker with live obs.
 
 ### More
 
 - **Moon** — Phase, illumination, rise/set, compass.
 - **Advanced Atmosphere** — HRRR fields: wet bulb, boundary layer, soil, upper winds.
+- **Aviation TAF** — Nearest airport terminal forecast (raw + decoded periods) from AviationWeather.gov.
 - **NWS Forecast Discussion** — Full AFD text for the forecast office.
 
 ### Alerts & global UX
 
 - **NWS alerts** — Warnings, watches, and advisories in a top banner (US point lookup).
-- **Locations** — Geolocation, search (Open-Meteo geocoding), multiple saved chips with collapsible “More” list; shareable URLs: `?lat=42.97&lon=-85.92&name=Allendale`.
+- **Offline cache** — Last good weather snapshot (3 h) in localStorage; tab dots and panel labels show **cached** when serving stored data.
+- **Locations** — Geolocation, search (Open-Meteo geocoding), multiple saved chips; shareable URLs: `?lat=42.97&lon=-85.92&name=Allendale`.
 - **Themes** — Light / Dark / System; °F / °C.
-- **PWA** — Installable; service worker caches shell assets; in-app **Update app** link and auto-reload when a new version is detected near the top of the page; footer shows app version (e.g. `v104`) and a **Source** link to the GitHub repo for self-hosting. Platform-specific **Add to home screen** hint when not installed.
-- **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels (forecast, radar, outdoor, more) on first visit or idle prefetch.
+- **PWA** — Installable; service worker caches shell assets; in-app **Update app** link; footer shows app version (e.g. `v114`).
+- **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on first visit or idle prefetch.
 
 ---
 
 ## Data sources
 
-NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (categorical + probabilistic outlooks, mesoscale discussions, storm reports CSV), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.
+NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (outlooks, fire weather, mesoscale discussions, storm reports CSV), WPC (excessive rainfall ArcGIS), NOAA MRMS (WMS), AviationWeather.gov (TAF), NOAA SWPC (Kp), NOAA CO-OPS (tides), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.
