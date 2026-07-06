@@ -170,7 +170,7 @@ body.mtab-forecast #content [data-tab="forecast"]{display:block!important}
 body.mtab-radar #content [data-tab="radar"]{display:block!important}
 body.mtab-radar #stormLinks.visible{display:block!important}
 body.mtab-outdoor #content [data-tab="outdoor"]:not([hidden]){display:block!important}
-body.mtab-outdoor #outdoorGrid{display:grid!important}
+body.mtab-outdoor #outdoorGrid{display:flex!important;flex-direction:column;gap:22px}
 body.mtab-more #content [data-tab="more"]{display:block!important}
 body.mtab-more #moonAdvGrid{display:grid!important}
 body.mtab-more #afdPanelWrap{display:block!important}
@@ -260,8 +260,15 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .outlook .verdict{font-family:var(--serif);font-size:1.15rem;font-weight:600;margin-top:4px}
 .outlook .verdict.good{color:var(--good)}.outlook .verdict.warn{color:var(--warn)}.outlook .verdict.mid{color:var(--warm)}
 .outlook .detail{font-size:.8125rem;color:var(--mut);margin-top:6px;line-height:1.45}
-#outdoorGrid .outdoor-wide{grid-column:1/-1}
-#outdoorGrid>#airPanel,#outdoorGrid>#exposurePanel{grid-column:1/-1}
+.outdoor-layout{display:flex;flex-direction:column;gap:22px;min-width:0}
+.outdoor-group{display:flex;flex-direction:column;gap:12px;min-width:0}
+.outdoor-group-lbl{margin:0;padding:0 2px;font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.outdoor-group-plan .panel{border-color:color-mix(in srgb,var(--accent) 35%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent)}
+.outdoor-impacts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;min-width:0}
+.outdoor-group-water:not(:has(.panel:not([hidden]))),
+.outdoor-group-sky:not(:has(.panel:not([hidden]))){display:none}
+.outdoor-group-water .panel,.outdoor-group-sky .panel{margin-top:0}
+@media (max-width:720px){.outdoor-impacts-grid{grid-template-columns:1fr}}
 .air-metrics{display:flex;flex-direction:column;gap:0;margin-top:12px;width:100%;min-width:0}
 .air-metrics-section{width:100%;min-width:0}
 .air-metrics-section .metrics-lbl.air-metrics-lbl{margin-top:14px;margin-bottom:6px}

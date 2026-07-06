@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=148">
+<link rel="stylesheet" href="app.css?v=149">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -270,126 +270,140 @@
       </section>
     </div>
 
-    <div class="grid" id="outdoorGrid" style="margin-top:16px">
-      <section class="panel full nav-target outdoor-wide" id="waterVerdictPanel" data-tab="outdoor" aria-label="On the water summary" hidden>
-        <h2>On the water</h2>
-        <p class="activity-lede">Small-craft summary from NWS marine forecast, nearshore waves, wind, and tides.</p>
-        <div class="outlook" style="margin-top:0">
-          <div class="lbl">Boating verdict</div>
-          <div class="verdict" id="waterVerdictText">&mdash;</div>
-          <div class="detail" id="waterVerdictDetail"></div>
-        </div>
-      </section>
-      <section class="panel nav-target" id="airPanel" data-tab="outdoor" aria-label="Air quality and pollen">
-        <h2>Air Quality &amp; Pollen <span class="panel-status" id="airStatus"></span></h2>
-        <div class="outlook" style="margin-top:0">
-          <div class="lbl">US AQI</div>
-          <div class="verdict" id="aqiVerdict">&mdash;</div>
-          <div class="detail" id="aqiDetail"></div>
-        </div>
-        <div class="smoke-radar-hint" id="smokeRadarHint" hidden>
-          <p id="smokeRadarHintText"></p>
-          <button type="button" class="smoke-radar-btn" id="smokeRadarBtn">Show NOAA smoke layer on radar</button>
-        </div>
-        <div class="air-metrics" id="airMetrics"></div>
-        <div class="pollen-block" id="pollenBlock">
-          <div class="pollen-lbl">Pollen</div>
-          <div class="pollen-forecast" id="pollenForecast"></div>
-          <div class="radar-note" id="pollenNote" style="margin-top:8px"></div>
-        </div>
-        <div class="airnow-row" id="airnowRow"></div>
-      </section>
+    <div class="outdoor-layout" id="outdoorGrid" style="margin-top:16px">
+      <div class="outdoor-group outdoor-group-plan">
+        <section class="panel nav-target" id="activityPanel" data-tab="outdoor" aria-label="Outdoor activity forecast">
+          <h2>Activity planner</h2>
+          <p class="activity-lede" id="activityLede">Best times in the next 24 hours — rain, wind, heat, UV, air quality, and active NWS advisories. Gray = after dark or outside usual hours; bar labels show clock times.</p>
+          <div class="activity-summary muted" id="activitySummary" hidden></div>
+          <div class="activity-pin-bar" id="activityPinBar" hidden></div>
+          <div id="activityList" class="radar-note is-loading">Loading activity forecast&hellip;</div>
+        </section>
+      </div>
 
-      <section class="panel nav-target" id="exposurePanel" data-tab="outdoor" aria-label="UV and outdoor exposure">
-        <h2>UV &amp; Exposure</h2>
-        <div class="outlook" style="margin-top:0">
-          <div class="lbl">UV index</div>
-          <div class="verdict" id="uvVerdict">&mdash;</div>
-          <div class="detail" id="uvDetail"></div>
-        </div>
-        <div class="metrics" id="exposureMetrics" style="margin-top:12px"></div>
-        <div id="uvDayChartBlock">
-          <div class="metrics-lbl">UV through today</div>
-          <div class="uv-day-chart" id="uvDayChart" aria-label="UV index through today"></div>
-        </div>
-        <div class="metrics-lbl">Outdoor rest of today</div>
-        <div class="exposure-strip-note">UV, humidity, and comfort each hour</div>
-        <div class="hourly-strip" id="exposureUvStrip"></div>
-      </section>
-
-      <section class="panel nav-target outdoor-wide" id="auroraPanel" data-tab="outdoor" aria-label="Aurora outlook" hidden>
-        <h2>Aurora</h2>
-        <div class="aurora-hint" id="auroraOutdoor" hidden aria-live="polite"></div>
-      </section>
-
-      <section class="panel nav-target outdoor-wide" id="streamPanel" data-tab="outdoor" aria-label="Nearby river gauges" hidden>
-        <h2>River Gauges <span class="panel-status" id="streamStatus"></span></h2>
-        <p class="activity-lede" id="streamLede">Active USGS streamgages within ~30 mi — stage and flow for flood awareness.</p>
-        <div id="streamList" class="radar-note is-loading">Checking nearby gauges&hellip;</div>
-      </section>
-
-      <section class="panel nav-target outdoor-wide" id="activityPanel" data-tab="outdoor" aria-label="Outdoor activity forecast">
-        <h2>Activity planner</h2>
-        <p class="activity-lede" id="activityLede">Best times in the next 24 hours — rain, wind, heat, UV, air quality, and active NWS advisories. Gray = after dark or outside usual hours; bar labels show clock times.</p>
-        <div class="activity-summary muted" id="activitySummary" hidden></div>
-        <div class="activity-pin-bar" id="activityPinBar" hidden></div>
-        <div id="activityList" class="radar-note is-loading">Loading activity forecast&hellip;</div>
-      </section>
-
-      <section class="panel nav-target outdoor-wide" id="coastalPanel" data-tab="outdoor" aria-label="Coastal tides and waves" hidden>
-        <h2>Coastal <span class="panel-status" id="coastalStatus"></span></h2>
-        <p class="activity-lede" id="coastalLede">Tides from NOAA CO-OPS, nearshore waves from Open-Meteo, and NWS marine zone forecast when available.</p>
-        <div class="outlook" style="margin-top:0">
-          <div class="lbl" id="coastalStationLbl">Tide station</div>
-          <div class="verdict" id="coastalVerdict">&mdash;</div>
-          <div class="detail" id="coastalDetail"></div>
-        </div>
-        <div class="metrics" id="coastalMetrics" style="margin-top:12px"></div>
-        <div class="metrics coastal-marine-metrics" id="coastalMarine" style="margin-top:12px" hidden></div>
-        <div class="coastal-nws" id="coastalNws" hidden></div>
-        <div class="radar-note" id="coastalNote" style="margin-top:8px"></div>
-      </section>
-
-      <section class="panel nav-target outdoor-wide" id="marinePanel" data-tab="outdoor" aria-label="Great Lakes water conditions" hidden>
-        <h2><span id="marineTitle">Great Lakes</span> <span class="panel-status" id="marineStatus"></span></h2>
-        <div class="nearshore-summary" id="nearshoreSummary" hidden>
-          <div class="nearshore-headline" id="nearshoreHeadline"></div>
-          <div class="nearshore-stats" id="nearshoreStats"></div>
-        </div>
-        <div class="outlook" id="lakeOutlook" style="margin-top:0;display:none">
-          <div class="lbl">Lake-air delta</div>
-          <div class="verdict" id="lakeVerdict">&mdash;</div>
-          <div class="detail" id="lakeDetail"></div>
-        </div>
-        <div class="radar-note" id="marineNws" style="margin-top:8px;white-space:pre-wrap;font-size:.8125rem;color:var(--mut)"></div>
-        <div class="metrics" id="marineMetrics"></div>
-        <div class="radar-note" id="marineNote" style="margin-top:8px"></div>
-        <div class="buoy-card" id="buoyCard">
-          <div class="buoy-card-main">
-            <div>
-              <span class="lbl">NDBC Buoy</span>
-              <div class="buoy-card-title" id="buoyCardTitle">Select a station</div>
-              <div class="buoy-card-meta" id="buoyCardMeta"></div>
+      <div class="outdoor-group outdoor-group-impacts">
+        <p class="outdoor-group-lbl">Air &amp; exposure</p>
+        <div class="outdoor-impacts-grid">
+          <section class="panel nav-target" id="airPanel" data-tab="outdoor" aria-label="Air quality and pollen">
+            <h2>Air Quality &amp; Pollen <span class="panel-status" id="airStatus"></span></h2>
+            <div class="outlook" style="margin-top:0">
+              <div class="lbl">US AQI</div>
+              <div class="verdict" id="aqiVerdict">&mdash;</div>
+              <div class="detail" id="aqiDetail"></div>
             </div>
-            <div class="buoy-card-actions">
-              <button type="button" class="buoy-primary" id="buoyRefresh" title="Reload buoy observations">Refresh</button>
-              <button type="button" id="buoyNearest" title="Use nearest station for this location">Nearest</button>
-              <a id="buoyPageLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">NDBC page ↗</a>
+            <div class="smoke-radar-hint" id="smokeRadarHint" hidden>
+              <p id="smokeRadarHintText"></p>
+              <button type="button" class="smoke-radar-btn" id="smokeRadarBtn">Show NOAA smoke layer on radar</button>
             </div>
+            <div class="air-metrics" id="airMetrics"></div>
+            <div class="pollen-block" id="pollenBlock">
+              <div class="pollen-lbl">Pollen</div>
+              <div class="pollen-forecast" id="pollenForecast"></div>
+              <div class="radar-note" id="pollenNote" style="margin-top:8px"></div>
+            </div>
+            <div class="airnow-row" id="airnowRow"></div>
+          </section>
+
+          <section class="panel nav-target" id="exposurePanel" data-tab="outdoor" aria-label="UV and outdoor exposure">
+            <h2>UV &amp; Exposure</h2>
+            <div class="outlook" style="margin-top:0">
+              <div class="lbl">UV index</div>
+              <div class="verdict" id="uvVerdict">&mdash;</div>
+              <div class="detail" id="uvDetail"></div>
+            </div>
+            <div class="metrics" id="exposureMetrics" style="margin-top:12px"></div>
+            <div id="uvDayChartBlock">
+              <div class="metrics-lbl">UV through today</div>
+              <div class="uv-day-chart" id="uvDayChart" aria-label="UV index through today"></div>
+            </div>
+            <div class="metrics-lbl">Outdoor rest of today</div>
+            <div class="exposure-strip-note">UV, humidity, and comfort each hour</div>
+            <div class="hourly-strip" id="exposureUvStrip"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="outdoor-group outdoor-group-water" id="outdoorWaterGroup">
+        <p class="outdoor-group-lbl">Water, coast &amp; rivers</p>
+        <section class="panel nav-target" id="waterVerdictPanel" data-tab="outdoor" aria-label="On the water summary" hidden>
+          <h2>On the water</h2>
+          <p class="activity-lede">Small-craft summary from NWS marine forecast, nearshore waves, wind, and tides.</p>
+          <div class="outlook" style="margin-top:0">
+            <div class="lbl">Boating verdict</div>
+            <div class="verdict" id="waterVerdictText">&mdash;</div>
+            <div class="detail" id="waterVerdictDetail"></div>
           </div>
-          <details class="buoy-card-picker" id="buoyPicker">
-            <summary>Change station</summary>
-            <div class="buoy-picker-body">
-              <select id="buoySelect" aria-label="Select NDBC buoy station"></select>
-              <input id="buoyId" aria-label="Custom NDBC buoy station ID" placeholder="ID" style="display:none">
-              <button id="buoyGo" type="button">Load</button>
-              <a class="buoy-find" id="buoyFindLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">Find stations ↗</a>
+        </section>
+
+        <section class="panel nav-target" id="coastalPanel" data-tab="outdoor" aria-label="Coastal tides and waves" hidden>
+          <h2>Coastal <span class="panel-status" id="coastalStatus"></span></h2>
+          <p class="activity-lede" id="coastalLede">Tides from NOAA CO-OPS, nearshore waves from Open-Meteo, and NWS marine zone forecast when available.</p>
+          <div class="outlook" style="margin-top:0">
+            <div class="lbl" id="coastalStationLbl">Tide station</div>
+            <div class="verdict" id="coastalVerdict">&mdash;</div>
+            <div class="detail" id="coastalDetail"></div>
+          </div>
+          <div class="metrics" id="coastalMetrics" style="margin-top:12px"></div>
+          <div class="metrics coastal-marine-metrics" id="coastalMarine" style="margin-top:12px" hidden></div>
+          <div class="coastal-nws" id="coastalNws" hidden></div>
+          <div class="radar-note" id="coastalNote" style="margin-top:8px"></div>
+        </section>
+
+        <section class="panel nav-target" id="marinePanel" data-tab="outdoor" aria-label="Great Lakes water conditions" hidden>
+          <h2><span id="marineTitle">Great Lakes</span> <span class="panel-status" id="marineStatus"></span></h2>
+          <div class="nearshore-summary" id="nearshoreSummary" hidden>
+            <div class="nearshore-headline" id="nearshoreHeadline"></div>
+            <div class="nearshore-stats" id="nearshoreStats"></div>
+          </div>
+          <div class="outlook" id="lakeOutlook" style="margin-top:0;display:none">
+            <div class="lbl">Lake-air delta</div>
+            <div class="verdict" id="lakeVerdict">&mdash;</div>
+            <div class="detail" id="lakeDetail"></div>
+          </div>
+          <div class="radar-note" id="marineNws" style="margin-top:8px;white-space:pre-wrap;font-size:.8125rem;color:var(--mut)"></div>
+          <div class="metrics" id="marineMetrics"></div>
+          <div class="radar-note" id="marineNote" style="margin-top:8px"></div>
+          <div class="buoy-card" id="buoyCard">
+            <div class="buoy-card-main">
+              <div>
+                <span class="lbl">NDBC Buoy</span>
+                <div class="buoy-card-title" id="buoyCardTitle">Select a station</div>
+                <div class="buoy-card-meta" id="buoyCardMeta"></div>
+              </div>
+              <div class="buoy-card-actions">
+                <button type="button" class="buoy-primary" id="buoyRefresh" title="Reload buoy observations">Refresh</button>
+                <button type="button" id="buoyNearest" title="Use nearest station for this location">Nearest</button>
+                <a id="buoyPageLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">NDBC page ↗</a>
+              </div>
             </div>
-          </details>
-          <div class="buoy-card-metrics metrics" id="buoyMetrics"></div>
-          <div class="buoy-card-note" id="buoyNote"></div>
-        </div>
-      </section>
+            <details class="buoy-card-picker" id="buoyPicker">
+              <summary>Change station</summary>
+              <div class="buoy-picker-body">
+                <select id="buoySelect" aria-label="Select NDBC buoy station"></select>
+                <input id="buoyId" aria-label="Custom NDBC buoy station ID" placeholder="ID" style="display:none">
+                <button id="buoyGo" type="button">Load</button>
+                <a class="buoy-find" id="buoyFindLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">Find stations ↗</a>
+              </div>
+            </details>
+            <div class="buoy-card-metrics metrics" id="buoyMetrics"></div>
+            <div class="buoy-card-note" id="buoyNote"></div>
+          </div>
+        </section>
+
+        <section class="panel nav-target" id="streamPanel" data-tab="outdoor" aria-label="Nearby river gauges" hidden>
+          <h2>River Gauges <span class="panel-status" id="streamStatus"></span></h2>
+          <p class="activity-lede" id="streamLede">Active USGS streamgages within ~30 mi — stage and flow for flood awareness.</p>
+          <div id="streamList" class="radar-note is-loading">Checking nearby gauges&hellip;</div>
+        </section>
+      </div>
+
+      <div class="outdoor-group outdoor-group-sky" id="outdoorSkyGroup">
+        <p class="outdoor-group-lbl">Sky</p>
+        <section class="panel nav-target" id="auroraPanel" data-tab="outdoor" aria-label="Aurora outlook" hidden>
+          <h2>Aurora</h2>
+          <div class="aurora-hint" id="auroraOutdoor" hidden aria-live="polite"></div>
+        </section>
+      </div>
     </div>
 
     <section class="panel full nav-target" id="locComparePanel" data-tab="more" aria-label="Saved location comparison" hidden>
@@ -471,9 +485,9 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=148"></script>
-<script src="storm.js?v=148"></script>
-<script src="radar.js?v=148"></script>
-<script src="boot.js?v=148"></script>
+<script src="app.js?v=149"></script>
+<script src="storm.js?v=149"></script>
+<script src="radar.js?v=149"></script>
+<script src="boot.js?v=149"></script>
 </body>
 </html>
