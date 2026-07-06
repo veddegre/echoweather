@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v170** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=170` in `index.html`).
+**Current version: v172** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=172` in `index.html`).
 
 ---
 
@@ -19,7 +19,14 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v170 (latest)
+### v172 (latest)
+- **`marine.js`** — Great Lakes, coastal/tides, buoy, stream gauges, water verdict (~1.2k lines extracted from `app.js`)
+- **panelUnavail polish** — marine/coastal error states, loc compare catastrophic failure, forecast NBM strip API errors, pollen note on air failure
+
+### v171
+- **Syntax fix** — restored truncated `initServiceWorker()` in `app.js`; removed orphaned catch block from `nav.js`
+
+### v170
 - **`outdoor` → `impact` rename** — tab id, `impact.js`, CSS/HTML ids (`impactsGrid`, `impact-section-nav`, …); canonical hash `#impact`; legacy `#outdoor` / `#air` preserved
 
 ### v169
@@ -122,13 +129,27 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 The original phased roadmap (Phases 1–4) is **largely complete**. Remaining work is **refinement and surfacing**, not greenfield features.
 
-### Suggested next batch — v167+ (not started)
+### Suggested next batch
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Code maintenance** | Optional split from `app.js` (marine module) |
-| 2 | **Polish** | Any remaining silent panel hides on user-visible failures |
-| 3 | **Deploy / commit** | When ready — version sync through v166 |
+| 1 | **Further splits** | Optional: aviation (TAF) or air/pollen from `app.js` |
+| 2 | **Deploy** | Push v172 when ready |
+
+### v172 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | `marine.js` split | Done |
+| 2 | panelUnavail polish pass | Done |
+
+### Earlier suggested batch (superseded)
+
+| # | Item | Notes |
+|---|------|--------|
+| 1 | ~~Code maintenance~~ | marine split done in v172 |
+| 2 | ~~Polish~~ | panelUnavail pass done in v172 |
+| 3 | ~~Deploy / commit~~ | v151–v172 batch when ready |
 
 ### v166 (shipped)
 
@@ -191,23 +212,24 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 |------|------|
 | `index.html` | Shell, tab bar, panel markup |
 | `app.css` | All styles |
-| `app.js` | Core app: state, fetch, render, tabs, most panels (~5k lines) |
+| `app.js` | Core app: state, fetch, render, most panels (~3.8k lines) |
 | `nav.js` | In-page nav: tabs, hash deep links, chrome height |
 | `impact.js` | Impacts: activity/impact planners, aurora, section chips |
+| `marine.js` | Great Lakes, coastal/tides, buoy, stream gauges, water verdict |
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v170'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v172'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
 
-**Script load order:** `app.js` → `nav.js` → `impact.js` → `storm.js` → `radar.js` → `boot.js`
+**Script load order:** `app.js` → `nav.js` → `impact.js` → `marine.js` → `storm.js` → `radar.js` → `boot.js`
 
 **Version bump checklist:**
 1. `APP_VERSION` in `app.js`
 2. `CACHE` in `sw.js`
-3. All `?v=` query strings in `index.html` (css + 4 scripts)
+3. All `?v=` query strings in `index.html` (css + scripts)
 4. Run `./scripts/check-versions.sh && ./scripts/ci-check.sh`
 5. Deploy: `./update.sh --smoke`
 

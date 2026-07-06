@@ -9,6 +9,7 @@ if(urlLoc){
 }
 initBuoySelect();
 migrateBuoyPins();
+initMarineControls();
 syncBuoyForLocation(state.locations[state.active], false);
 syncMarinePanelVisibility(state.locations[state.active]);
 getTideStations().then(() => syncCoastalPanelVisibility(state.locations[state.active]));
