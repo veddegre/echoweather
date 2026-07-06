@@ -915,7 +915,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '117';
+const APP_VERSION = '118';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -5010,30 +5010,33 @@ async function renderMetarTrace(stationId){
 }
 
 // ---------- aviation TAF (nearest airport) ----------
-async function resolveTafIcao(loc){
-  const metarId = state.data?.metar?.id || state.data?.metarId;
-  if(metarId && /^K[A-Z0-9]{3}$/i.test(metarId)) return metarId.toUpperCase();
-  if(!isLikelyUS(loc)) return null;
+async function resolveTafIcaos(loc){
+  const out = [];
+  const add = id => {
+    const u = id && String(id).toUpperCase();
+    if(u && /^K[A-Z0-9]{3}$/.test(u) && !out.includes(u)) out.push(u);
+  };
+  add(state.data?.metar?.id || state.data?.metarId);
+  if(!isLikelyUS(loc)) return out.slice(0, 3);
   try{
     let stationsUrl = state.data?.nwsPoints?.observationStations;
     if(!stationsUrl){
       const r = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
-      if(!r.ok) return null;
+      if(!r.ok) return out.slice(0, 3);
       stationsUrl = (await r.json()).properties?.observationStations;
     }
-    if(!stationsUrl || typeof stationsUrl !== 'string') return null;
+    if(!stationsUrl || typeof stationsUrl !== 'string') return out.slice(0, 3);
     const sr = await nwsFetch(stationsUrl);
-    if(!sr.ok) return null;
+    if(!sr.ok) return out.slice(0, 3);
     const stList = await sr.json();
     for(const station of (stList.features || []).slice(0, 12)){
-      const id = station.properties?.stationIdentifier || station.properties?.stationId;
-      if(id && /^K[A-Z0-9]{3}$/i.test(id)) return id.toUpperCase();
+      add(station.properties?.stationIdentifier || station.properties?.stationId);
+      if(out.length >= 3) break;
     }
   }catch(e){
-    console.warn('resolveTafIcao', e);
-    return null;
+    console.warn('resolveTafIcaos', e);
   }
-  return null;
+  return out.slice(0, 3);
 }
 function renderTafHtml(taf){
   const raw = taf.rawTAF || '';
@@ -5062,30 +5065,34 @@ async function loadTaf(loc){
       return;
     }
     box.textContent = 'Loading TAF\u2026';
-    let icao = '';
+    let icaos = [];
     try{
-      icao = await resolveTafIcao(loc);
-      if(!icao){ box.textContent = 'No nearby airport TAF for this location.'; return; }
-      const r = await fetchTimeout('/api/taf?ids=' + encodeURIComponent(icao), {}, 12000);
+      icaos = await resolveTafIcaos(loc);
+      if(!icaos.length){ box.textContent = 'No nearby airport TAF for this location.'; return; }
+      const r = await fetchTimeout('/api/taf?ids=' + encodeURIComponent(icaos.join(',')), {}, 12000);
       if(!r.ok){
         if(r.status === 404) throw new Error('taf proxy missing');
         throw new Error('taf http ' + r.status);
       }
       const arr = await r.json();
       if(!Array.isArray(arr)) throw new Error('taf bad response');
-      const taf = arr[0];
-      if(!taf){ box.textContent = 'No TAF issued for ' + icao + '.'; return; }
+      const taf = arr.find(t => t && (t.rawTAF || t.icaoId));
+      if(!taf){
+        box.textContent = 'No TAF issued for nearby airports (' + icaos.join(', ') + ').';
+        return;
+      }
       box.innerHTML = renderTafHtml(taf);
     }catch(e){
       const msg = String(e.message || '');
+      const icaoLabel = icaos.length ? icaos.join(', ') : '';
       if(msg.includes('proxy')){
         box.textContent = 'TAF needs the server proxy — ensure /api/taf is deployed with PHP.';
       }else if(e.name === 'AbortError'){
         box.textContent = 'TAF request timed out — try again.';
       }else if(msg.startsWith('taf http ')){
-        box.textContent = 'TAF unavailable (HTTP ' + msg.slice(9) + (icao ? ', ' + icao : '') + ').';
+        box.textContent = 'TAF unavailable (HTTP ' + msg.slice(9) + (icaoLabel ? ', ' + icaoLabel : '') + ').';
       }else{
-        box.textContent = 'TAF unavailable' + (icao ? ' (' + icao + ')' : '') + '.';
+        box.textContent = 'TAF unavailable' + (icaoLabel ? ' (' + icaoLabel + ')' : '') + '.';
       }
       console.error('taf', e);
     }

@@ -88,7 +88,28 @@ function fetch_aviation_taf(string $ids): array
         throw new InvalidArgumentException('ids required');
     }
     $url = 'https://aviationweather.gov/api/data/taf?ids=' . rawurlencode($ids) . '&format=json';
-    $body = http_get($url, 15);
+
+    if (function_exists('curl_init')) {
+        $res = curl_request($url, [
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+        ], 15);
+        if ($res['body'] === false) {
+            throw new RuntimeException($res['err'] !== '' ? $res['err'] : 'request failed');
+        }
+        if ($res['code'] === 204) {
+            return [];
+        }
+        if ($res['code'] >= 400) {
+            throw new RuntimeException('HTTP ' . $res['code']);
+        }
+        $body = (string) $res['body'];
+    } else {
+        $body = http_get($url, 15);
+    }
+
+    if (trim($body) === '') {
+        return [];
+    }
     $data = json_decode($body, true);
     if (!is_array($data)) {
         throw new RuntimeException('unexpected TAF response');

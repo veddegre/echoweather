@@ -40,3 +40,20 @@ if ! printf '%s' "$taf_body" | grep -q '"icaoId":"KGRR"'; then
   exit 1
 fi
 echo "OK   /api/taf?ids=KGRR — JSON contains KGRR"
+
+# Stations without TAF return 204 upstream; proxy must answer 200 + [] not 502.
+curl_smoke "/api/taf?ids=KBIV"
+kbiv_body="$(curl -sS -H "Host: ${SMOKE_HOST}" "${BASE_URL}/api/taf?ids=KBIV")"
+if [[ "$kbiv_body" != "[]" ]]; then
+  echo "FAIL /api/taf?ids=KBIV — expected [] got: ${kbiv_body:0:80}" >&2
+  exit 1
+fi
+echo "OK   /api/taf?ids=KBIV — empty TAF list (no 502)"
+
+curl_smoke "/api/taf?ids=KBIV,KAZO"
+combo_body="$(curl -sS -H "Host: ${SMOKE_HOST}" "${BASE_URL}/api/taf?ids=KBIV,KAZO")"
+if ! printf '%s' "$combo_body" | grep -q '"icaoId":"KAZO"'; then
+  echo "FAIL /api/taf?ids=KBIV,KAZO — expected KAZO fallback TAF" >&2
+  exit 1
+fi
+echo "OK   /api/taf?ids=KBIV,KAZO — KAZO TAF when KBIV has none"
