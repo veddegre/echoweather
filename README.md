@@ -512,8 +512,10 @@ panels appear in one scrollable page with a compacting sticky header.
   expandable blocks.
 - **Observations vs NWS Forecast** — Latest station reading compared to the NWS
   hourly forecast for temperature, dew point, wind, and pressure; plain-language
-  bias badges (higher/lower/close). **Station history** sparklines (temperature,
-  wind) over the past 24 hours with range labels.
+  bias badges (higher/lower/close). **Station history (7 days)** sparklines
+  (temperature, wind, pressure) with 24 h / 7 d trend summary.
+- **AFD synoptic teaser** — Short excerpt from the NWS forecast discussion with
+  link to the full discussion on the More tab.
 
 ### Radar & storm tracking
 
@@ -533,8 +535,10 @@ panels appear in one scrollable page with a compacting sticky header.
 - **Storm mode banner** — Active warnings/watches, elevated SPC risk, overhead
   mesoscale discussions, severe window, and CAPE-driven threat narrative.
   Quick actions: **Open radar**, **Severe window on timeline** (scrubs animated
-  radar to the best storm window), and **Nearest SPC report** (jumps map to the
-  closest report).
+  radar to the best storm window), **Nearest SPC report**, **Warning polygon**, and
+  **Watch polygon** (centers radar on alert geometry; enables the matching layer).
+  Storm mode auto-enables **storm reports** and **SPC Day 1 categorical** layers
+  when they were off.
 - **Chase-mode radar** — When storm mode is active, MRMS users see a **Site
   radar** button to switch to animated NEXRAD; reflectivity/velocity toggle
   promoted on IEM modes.
@@ -571,6 +575,10 @@ panels appear in one scrollable page with a compacting sticky header.
 - **Great Lakes** *(within ~50 nm of shore)* — NWS GLF or marine zone text,
   Open-Meteo wave model, lake–air temperature delta outlook, **NDBC buoy picker**
   with live observations (proxied via `/api/buoy`).
+- **On the water** *(Great Lakes or coastal)* — Unified small-craft verdict with
+  source attribution; wind from buoy or lake point when inland pin is far from shore.
+- **River gauges** *(US)* — USGS streamgages within ~30 mi with stage and flow;
+  clear unavailable messaging when none are nearby or the API is down.
 
 ### More
 
@@ -594,7 +602,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v129`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v163`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the

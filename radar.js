@@ -206,7 +206,7 @@ function onRainviewerTileError(){
   radarMode = 'iem-n0q';
   saveLocRadarPrefs();
   $('radarMode').value = radarMode;
-  $('radarNote').textContent = 'RainViewer rate limited — using IEM NEXRAD.';
+  setPanelUnavail($('radarNote'), 'radar_rainviewer');
   stopRadarTimer();
   loadIemRadar('iem-n0q');
 }
@@ -326,11 +326,11 @@ function jumpRadarToStormReport(r){
   if(map) setTimeout(run, 120);
   else setTimeout(run, 500);
 }
-function jumpRadarToWarningPolygon(target){
+function jumpRadarToAlertPolygon(target, layerKey){
   if(!target || target.lat == null || target.lon == null) return;
-  if(!threatLayerOpts.warnings){
-    threatLayerOpts.warnings = true;
-    const inp = document.querySelector('[data-threat="warnings"]');
+  if(layerKey && !threatLayerOpts[layerKey]){
+    threatLayerOpts[layerKey] = true;
+    const inp = document.querySelector('[data-threat="' + layerKey + '"]');
     if(inp) inp.checked = true;
     saveLocRadarPrefs();
   }
@@ -352,6 +352,12 @@ function jumpRadarToWarningPolygon(target){
   };
   if(map) setTimeout(run, 120);
   else setTimeout(run, 500);
+}
+function jumpRadarToWarningPolygon(target){
+  jumpRadarToAlertPolygon(target, 'warnings');
+}
+function jumpRadarToWatchPolygon(target){
+  jumpRadarToAlertPolygon(target, 'watches');
 }
 function toggleRadarExpand(){
   const stage = $('radarStage');
@@ -622,7 +628,8 @@ async function loadRadar(){
       }
     }catch(e){
       if(loadId !== radarLoadId) return;
-      $('radarTime').textContent = 'radar unavailable';
+      $('radarTime').textContent = 'Radar unavailable';
+      setPanelUnavail($('radarNote'), 'radar_load');
       console.error('radar', e);
     }
   });

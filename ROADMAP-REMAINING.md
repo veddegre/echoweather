@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v163** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=163` in `index.html`).
+**Current version: v164** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=164` in `index.html`).
 
 ---
 
@@ -19,7 +19,12 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v163 (latest)
+### v164 (latest)
+- Storm banner **Watch polygon** jump (same pattern as warning jump)
+- **panelUnavail** — radar load failure and RainViewer rate-limit fallback copy
+- **README** feature list synced (v151–v164)
+
+### v163
 - Storm banner **Warning polygon** jump — centers radar on nearest active warning centroid, enables warning layer
 - **Auto threat layers** — storm reports + SPC Day 1 categorical turn on when storm mode fires (if off)
 - **panelUnavail** pass — river gauges show clear unavailable copy; radar velocity fallback messages
@@ -100,13 +105,21 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 The original phased roadmap (Phases 1–4) is **largely complete**. Remaining work is **refinement and surfacing**, not greenfield features.
 
-### Suggested next batch — v164+ (not started)
+### Suggested next batch — v165+ (not started)
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Watch polygon jump** | Same pattern as warning jump for watch areas |
-| 2 | **README / docs** | Keep feature list in sync as batches ship |
-| 3 | **panelUnavail pass** | Remaining edge cases (radar load failure, etc.) |
+| 1 | **Auto-enable watches layer** | When inside a watch (no warning), optional mirror of v163 reports/cat behavior |
+| 2 | **panelUnavail pass** | Any remaining panels with silent hide-on-fail |
+| 3 | **Code maintenance** | Optional further split from `app.js` |
+
+### v164 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Watch polygon jump | Done |
+| 2 | README / docs sync | Done |
+| 3 | panelUnavail (radar load) | Done |
 
 ### v163 (shipped)
 
@@ -151,7 +164,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v163'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v164'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
@@ -176,8 +189,8 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | Function | File | Purpose |
 |----------|------|---------|
-| `jumpRadarToWarningPolygon` | `radar.js` | Center radar on warning polygon centroid |
-| `nearestWarningPolygon` | `storm.js` | Nearest active warning geometry to pin |
+| `jumpRadarToAlertPolygon` | `radar.js` | Center radar on warning/watch polygon centroid |
+| `nearestWatchPolygon` | `storm.js` | Nearest active watch geometry to pin |
 | `autoEnableStormThreatLayers` | `storm.js` | Turn on reports + SPC cat when storm mode fires |
 | `defaultRadarMode` | `app.js`, `radar.js` | MRMS for US, RainViewer elsewhere |
 | `waterVerdictPanel` / `renderWaterVerdict` | `app.js` | Unified boating summary |

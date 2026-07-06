@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '163';
+const APP_VERSION = '164';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -195,7 +195,9 @@ const PANEL_UNAVAIL_MSG = {
   taf_proxy: 'TAF needs the server proxy — ensure /api/taf is deployed with PHP.',
   taf_timeout: 'TAF request timed out — tap Refresh or try again in a moment.',
   radar_vel_unavail: 'Nearest NEXRAD velocity tile failed — showing reflectivity instead.',
-  radar_vel_site: 'No radar site resolved for this pin — velocity needs a US location.'
+  radar_vel_site: 'No radar site resolved for this pin — velocity needs a US location.',
+  radar_load: 'Radar tiles could not be loaded — try another source or refresh.',
+  radar_rainviewer: 'RainViewer rate limited — switched to IEM NEXRAD reflectivity.'
 };
 function panelUnavail(code, extra){
   const msg = PANEL_UNAVAIL_MSG[code] || 'Unavailable for this location.';

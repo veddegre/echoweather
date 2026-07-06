@@ -752,20 +752,32 @@ function geoFeatureCentroid(geom){
   }
   return null;
 }
-function nearestWarningPolygon(){
+function nearestAlertPolygon(matchEvent){
   const loc = state.locations[state.active];
   if(!loc) return null;
-  const warns = (stormState.alertFeatures || []).filter(f =>
-    /warning/i.test(f.properties?.event || '') && f.geometry);
-  if(!warns.length) return null;
+  const feats = (stormState.alertFeatures || []).filter(f =>
+    matchEvent(f.properties?.event || '') && f.geometry);
+  if(!feats.length) return null;
   let best = null, bestDist = Infinity;
-  warns.forEach(f => {
+  feats.forEach(f => {
     const c = geoFeatureCentroid(f.geometry);
     if(!c) return;
     const d = haversineMi(loc.lat, loc.lon, c.lat, c.lon);
     if(d < bestDist){ bestDist = d; best = { feature: f, lat: c.lat, lon: c.lon, dist: d }; }
   });
   return best;
+}
+function isNwsWarningEvent(ev){
+  return /warning/i.test(ev) && !/watch/i.test(ev);
+}
+function isNwsWatchEvent(ev){
+  return /watch/i.test(ev);
+}
+function nearestWarningPolygon(){
+  return nearestAlertPolygon(isNwsWarningEvent);
+}
+function nearestWatchPolygon(){
+  return nearestAlertPolygon(isNwsWatchEvent);
 }
 function autoEnableStormThreatLayers(){
   if(!stormState.stormMode) return;
@@ -1135,6 +1147,11 @@ function buildStormBannerActions(){
     const dist = warnPoly.dist > 0.5 ? ' (' + Math.round(warnPoly.dist) + ' mi)' : '';
     parts.push('<button type="button" class="storm-banner-link" data-storm-radar-warning>Warning polygon' + esc(dist) + '</button>');
   }
+  const watchPoly = nearestWatchPolygon();
+  if(watchPoly){
+    const dist = watchPoly.dist > 0.5 ? ' (' + Math.round(watchPoly.dist) + ' mi)' : '';
+    parts.push('<button type="button" class="storm-banner-link" data-storm-radar-watch>Watch polygon' + esc(dist) + '</button>');
+  }
   return '<div class="storm-banner-actions">' + parts.join('') + '</div>';
 }
 function bindStormBannerActions(){
@@ -1156,7 +1173,12 @@ function bindStormBannerActions(){
   box.querySelector('[data-storm-radar-warning]')?.addEventListener('click', e => {
     e.preventDefault();
     const w = nearestWarningPolygon();
-    if(w) jumpRadarToWarningPolygon(w);
+    if(w) jumpRadarToAlertPolygon(w, 'warnings');
+  });
+  box.querySelector('[data-storm-radar-watch]')?.addEventListener('click', e => {
+    e.preventDefault();
+    const w = nearestWatchPolygon();
+    if(w) jumpRadarToAlertPolygon(w, 'watches');
   });
 }
 function renderStormBanner(){
