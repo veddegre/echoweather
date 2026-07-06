@@ -81,6 +81,21 @@ function fetch_ndbc_buoy(string $station): string
     return http_get($url, 25);
 }
 
+function fetch_aviation_taf(string $ids): array
+{
+    $ids = strtoupper(preg_replace('/[^A-Z0-9,]/', '', $ids));
+    if ($ids === '') {
+        throw new InvalidArgumentException('ids required');
+    }
+    $url = 'https://aviationweather.gov/api/data/taf?ids=' . rawurlencode($ids) . '&format=json';
+    $body = http_get($url, 15);
+    $data = json_decode($body, true);
+    if (!is_array($data)) {
+        throw new RuntimeException('unexpected TAF response');
+    }
+    return $data;
+}
+
 function fetch_airnow(float $lat, float $lon, int $distance, string $apiKey): array
 {
     $url = 'https://www.airnowapi.org/aq/observation/latLong/current/'

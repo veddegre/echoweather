@@ -295,6 +295,7 @@ Every key is optional.
 | `rate_limit_airnow` | `120` | Max `/api/airnow` requests per IP per hour. `0` = disabled. |
 | `rate_limit_pollen` | `60` | Max `/api/pollen` requests per IP per hour. `0` = disabled. |
 | `rate_limit_buoy` | `120` | Max `/api/buoy` requests per IP per hour. `0` = disabled. |
+| `rate_limit_taf` | `120` | Max `/api/taf` requests per IP per hour. `0` = disabled. |
 | `cors_origins` | see example | Browser origins allowed to call `/api/*`. Include your dev URL for `php -S`. |
 
 ### API keys
@@ -351,6 +352,7 @@ per-IP rate limits and `pollen_daily_limit`; tune both for public traffic.
 | `GET /api/airnow?latitude=&longitude=&distance=` | none | AirNow lat/long proxy (distance 1–100 mi, default 50) |
 | `GET /api/pollen?latitude=&longitude=&days=` | none | Google Pollen forecast (days 1–5, default 3; server-cached) |
 | `GET /api/buoy/{id}` | none | NDBC buoy text proxy |
+| `GET /api/taf?ids=KGRR` | none | AviationWeather.gov TAF JSON proxy (no browser CORS) |
 
 Validation errors return `400` with a short message. Misconfiguration returns
 `503`. Upstream failures return `502`. Rate limits return `429`. Internal
@@ -495,4 +497,4 @@ The Outdoor tab uses `#outdoor` in the URL hash; legacy `#air` still works. Rada
 
 ## Data sources
 
-NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (outlooks, fire weather, mesoscale discussions, storm reports CSV), WPC (excessive rainfall ArcGIS), NOAA MRMS (WMS), AviationWeather.gov (TAF), NOAA SWPC (Kp), NOAA CO-OPS (tides), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.
+NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (outlooks, fire weather, mesoscale discussions, storm reports CSV), WPC (excessive rainfall ArcGIS), NOAA MRMS (WMS), AviationWeather.gov (TAF via `/api/taf` proxy), NOAA SWPC (Kp), NOAA CO-OPS (tides), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.

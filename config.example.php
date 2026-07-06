@@ -74,6 +74,7 @@ return [
     'rate_limit_airnow' => 120,
     'rate_limit_pollen' => 60,
     'rate_limit_buoy' => 120,
+    'rate_limit_taf' => 120,
 
     // -------------------------------------------------------------------------
     // CORS — browser access to /api/*

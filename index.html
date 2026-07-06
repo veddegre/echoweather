@@ -915,7 +915,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '114';
+const APP_VERSION = '115';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -5006,18 +5006,26 @@ async function renderMetarTrace(stationId){
 async function resolveTafIcao(loc){
   const metarId = state.data?.metar?.id;
   if(metarId && /^K[A-Z0-9]{3}$/i.test(metarId)) return metarId.toUpperCase();
-  const stations = state.data?.nwsPoints?.observationStations;
-  if(stations && stations.length){
-    const s = stations.find(x => /^K[A-Z0-9]{3}$/i.test(x));
-    if(s) return s.toUpperCase();
-  }
+  const radar = state.data?.nwsPoints?.radarStation;
+  if(radar && /^K[A-Z0-9]{3}$/i.test(radar)) return radar.toUpperCase();
   if(!isLikelyUS(loc)) return null;
   try{
-    const r = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
-    if(!r.ok) return null;
-    const st = (await r.json()).properties?.observationStations?.[0];
-    return st && /^K[A-Z0-9]{3}$/i.test(st) ? st.toUpperCase() : null;
+    let stationsUrl = state.data?.nwsPoints?.observationStations;
+    if(!stationsUrl){
+      const r = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
+      if(!r.ok) return null;
+      stationsUrl = (await r.json()).properties?.observationStations;
+    }
+    if(!stationsUrl || typeof stationsUrl !== 'string') return null;
+    const sr = await nwsFetch(stationsUrl);
+    if(!sr.ok) return null;
+    const stList = await sr.json();
+    for(const station of (stList.features || []).slice(0, 6)){
+      const id = station.properties?.stationIdentifier || station.properties?.stationId;
+      if(id && /^K[A-Z0-9]{3}$/i.test(id)) return id.toUpperCase();
+    }
   }catch(e){ return null; }
+  return null;
 }
 function renderTafHtml(taf){
   const raw = taf.rawTAF || '';
@@ -5049,14 +5057,19 @@ async function loadTaf(loc){
     try{
       const icao = await resolveTafIcao(loc);
       if(!icao){ box.textContent = 'No nearby airport TAF for this location.'; return; }
-      const r = await fetch('https://aviationweather.gov/api/data/taf?ids=' + encodeURIComponent(icao) + '&format=json');
-      if(!r.ok) throw new Error('taf http');
+      const r = await fetchTimeout('/api/taf?ids=' + encodeURIComponent(icao), {}, 8000);
+      if(!r.ok){
+        if(r.status === 404) throw new Error('taf proxy missing');
+        throw new Error('taf http ' + r.status);
+      }
       const arr = await r.json();
-      const taf = arr && arr[0];
+      const taf = Array.isArray(arr) ? arr[0] : null;
       if(!taf){ box.textContent = 'No TAF issued for ' + icao + '.'; return; }
       box.innerHTML = renderTafHtml(taf);
     }catch(e){
-      box.textContent = 'TAF unavailable.';
+      box.textContent = String(e.message || '').includes('proxy')
+        ? 'TAF needs the server proxy — ensure /api/taf is deployed with PHP.'
+        : 'TAF unavailable.';
       console.error('taf', e);
     }
   });
