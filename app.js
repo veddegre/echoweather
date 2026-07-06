@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '146';
+const APP_VERSION = '147';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -721,9 +721,14 @@ function showLocToast(msg){
   const box = $('locToast');
   if(!box || !msg) return;
   box.textContent = msg;
+  box.hidden = false;
   box.classList.add('show');
   clearTimeout(locToastTimer);
-  locToastTimer = setTimeout(() => box.classList.remove('show'), 4200);
+  locToastTimer = setTimeout(() => {
+    box.classList.remove('show');
+    box.textContent = '';
+    box.hidden = true;
+  }, 4200);
 }
 async function syncLocationOnOpen(opts){
   if(urlLocPinned && !opts?.force) return false;
