@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '147';
+const APP_VERSION = '148';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -792,6 +792,9 @@ function isLikelyUS(loc){
   if(loc.country === 'US') return true;
   if(loc.country && loc.country !== 'US') return false;
   return loc.lat >= 18 && loc.lat <= 72 && loc.lon >= -180 && loc.lon <= -60;
+}
+function defaultRadarMode(loc){
+  return loc && isLikelyUS(loc) ? 'mrms' : 'rainviewer';
 }
 function nwsToWmo(text){
   const s = String(text || '').toLowerCase();
@@ -4061,6 +4064,38 @@ async function loadAFD(loc){
 }
 
 // ---------- advanced atmosphere ----------
+function precipTypeAt(d, i){
+  const h = (d.om && d.om.hourly) || d.hourly;
+  if(!h) return '\u2014';
+  const snow = h.snowfall?.[i] ?? 0;
+  const rain = h.precipitation?.[i] ?? 0;
+  const code = h.weather_code?.[i] ?? 0;
+  if(snow > 0.05 && rain < 0.02) return 'Snow';
+  if(code >= 71 && code <= 77) return 'Snow';
+  if(code >= 56 && code <= 57) return 'Freezing drizzle';
+  if(code >= 66 && code <= 67) return 'Freezing rain';
+  if(code >= 95) return 'Thunderstorm';
+  if(code >= 85) return 'Rain showers';
+  if(rain > 0.01 || code >= 51) return 'Rain';
+  return 'None';
+}
+function srhProxyAt(d, i){
+  const h = (d.om && d.om.hourly) || d.hourly;
+  if(!h) return null;
+  const s10 = h.wind_speed_10m?.[i] ?? 0;
+  const s80 = h.wind_speed_80m?.[i];
+  const s180 = h.wind_speed_180m?.[i];
+  const d10 = h.wind_direction_10m?.[i] ?? 0;
+  const d80 = h.wind_direction_80m?.[i];
+  const d180 = h.wind_direction_180m?.[i];
+  if(s80 == null || d80 == null) return null;
+  const spdShear = Math.abs(s80 - s10) + (s180 != null ? Math.abs(s180 - s80) * 0.5 : 0);
+  let dirDiff = Math.abs((d180 ?? d80) - d10);
+  if(dirDiff > 180) dirDiff = 360 - dirDiff;
+  const proxy = Math.round(spdShear * (1 + dirDiff / 90) * 12);
+  const cat = proxy >= 150 ? 'Strong' : proxy >= 75 ? 'Moderate' : 'Weak';
+  return { proxy, cat, note: cat + ' low-level shear profile (HRRR wind)' };
+}
 function renderAdvanced(d){
   const om = d.om || d;
   const i = nowIndex(d);
@@ -4074,10 +4109,14 @@ function renderAdvanced(d){
   const windAt = lvl => Math.round(h['wind_speed_' + lvl][i]) + '<small> ' + windUnit() + ' ' + compass(h['wind_direction_' + lvl][i]) + '</small>';
   const cape = Math.round(h.cape?.[i] ?? 0);
   const frz = h.freezing_level_height?.[i];
+  const srh = srhProxyAt(d, i);
+  const ptype = precipTypeAt(d, i);
   const rows = [
+    ['Precip type (now)', ptype + '<small> (HRRR/model)</small>'],
     ['CAPE (HRRR)', cape + '<small> J/kg</small>'],
     ['Freezing level', frz != null ? (state.units === 'F' ? Math.round(frz * 3.28084).toLocaleString() + '<small> ft</small>' : Math.round(frz).toLocaleString() + '<small> m</small>') : '\u2014'],
     ['Wet bulb', Math.round(h.wet_bulb_temperature_2m[i]) + '<small>' + degSym() + '</small>'],
+    ['SRH proxy', srh ? srh.proxy + '<small> m\u00B2/s\u00B2 \u00B7 ' + srh.cat + '</small>' : '\u2014'],
     ['Boundary layer', (state.units === 'F' ? ft(blh) + '<small> ft (HRRR)</small>' : Math.round(blh).toLocaleString() + '<small> m (HRRR)</small>')],
     ['Sunshine today', sunToday.toFixed(1) + '<small> / ' + dayLen.toFixed(1) + ' h daylight</small>'],
     ['Snow depth', snowVal],
@@ -4427,6 +4466,79 @@ function glfHeadline(text){
   });
   return hit ? hit.trim().slice(0, 180) : '';
 }
+const waterVerdictState = { marine: null, coastal: null };
+function marineHazardLevel(text){
+  if(!text) return 0;
+  const u = text.toUpperCase();
+  if(/GALE WARNING|STORM WARNING|HURRICANE FORCE|TROPICAL STORM WARNING/.test(u)) return 3;
+  if(/SMALL CRAFT ADVISORY|SMALL CRAFT|HAZARDOUS SEAS|SPECIAL MARINE WARNING/.test(u)) return 2;
+  if(/SMALL CRAFT EXERCISE CAUTION|DENSE FOG|FOG ADVISORY/.test(u)) return 1;
+  return 0;
+}
+function waveHeightFt(waveM){
+  if(waveM == null) return null;
+  return state.units === 'F' ? waveM * 3.28084 : waveM;
+}
+function waveHeightLabel(waveM){
+  if(waveM == null) return null;
+  return state.units === 'F' ? mToFt(waveM) + ' ft' : waveM.toFixed(1) + ' m';
+}
+function stashWaterMarine(ctx){
+  waterVerdictState.marine = ctx;
+  renderWaterVerdict();
+}
+function stashWaterCoastal(ctx){
+  waterVerdictState.coastal = ctx;
+  renderWaterVerdict();
+}
+function renderWaterVerdict(){
+  const panel = $('waterVerdictPanel');
+  if(!panel) return;
+  const loc = state.locations[state.active];
+  const isLake = loc && isGreatLakesLoc(loc);
+  const isCoast = loc && isCoastalLoc(loc);
+  if(!isLake && !isCoast){
+    panel.hidden = true;
+    return;
+  }
+  const d = state.data;
+  const wi = d ? nowIndex(d) : 0;
+  const wind = d?.current?.wind_speed_10m ?? d?.hourly?.wind_speed_10m?.[wi] ?? 0;
+  const gust = d?.current?.wind_gusts_10m ?? d?.hourly?.wind_gusts_10m?.[wi] ?? 0;
+  const marine = waterVerdictState.marine;
+  const coastal = waterVerdictState.coastal;
+  const waveM = marine?.waveHeight ?? coastal?.waveHeight ?? null;
+  const waveFt = waveHeightFt(waveM);
+  const nwsText = marine?.nwsText || coastal?.nwsText || '';
+  const hazard = marineHazardLevel(nwsText);
+  const headline = glfHeadline(nwsText);
+  let verdict, cls, detailParts = [];
+  if(hazard >= 3 || (waveFt != null && waveFt >= 8) || gust >= 40){
+    verdict = 'Stay ashore';
+    cls = 'warn';
+  }else if(hazard >= 2 || (waveFt != null && waveFt >= 4) || gust >= 28 || wind >= 22){
+    verdict = 'Small craft caution';
+    cls = 'mid';
+  }else if(hazard >= 1 || (waveFt != null && waveFt >= 2.5)){
+    verdict = 'Use caution on the water';
+    cls = 'mid';
+  }else if(waveM != null || nwsText){
+    verdict = 'Favorable for small craft';
+    cls = 'good';
+  }else{
+    verdict = 'Marine conditions';
+    cls = 'mid';
+  }
+  if(waveM != null) detailParts.push('Waves ~' + waveHeightLabel(waveM));
+  if(wind) detailParts.push('Wind ' + Math.round(wind) + ' ' + windUnit() + (gust > wind + 4 ? ', gusts ' + Math.round(gust) : ''));
+  if(headline) detailParts.push(headline);
+  else if(isLake && marine?.lake) detailParts.push(marine.lake + ' nearshore');
+  else if(isCoast && coastal?.tideLabel) detailParts.push(coastal.tideLabel);
+  $('waterVerdictText').textContent = verdict;
+  $('waterVerdictText').className = 'verdict ' + cls;
+  $('waterVerdictDetail').textContent = detailParts.join(' \u00B7 ') || 'Loading wave and marine forecast data\u2026';
+  panel.hidden = false;
+}
 function renderNearshoreSummary(lake, c, nwsMarine, buoyId, airDeltaC){
   const box = $('nearshoreSummary'), head = $('nearshoreHeadline'), stats = $('nearshoreStats');
   if(!box || !head || !stats) return;
@@ -4580,6 +4692,11 @@ async function loadMarine(loc){
           : state.data.current.temperature_2m) - c.sea_surface_temperature;
       }
       renderNearshoreSummary(lake, c, nwsMarine, buoyId, airDeltaC);
+      stashWaterMarine({
+        waveHeight: c.wave_height,
+        nwsText: nwsMarine?.text || '',
+        lake
+      });
       if(c.wave_height === null || c.wave_height === undefined){
         const extra = note.textContent ? note.textContent + ' ' : '';
         note.textContent = extra + (nwsMarine
@@ -5100,6 +5217,8 @@ function syncCoastalPanelVisibility(loc){
   const show = loc && isCoastalLoc(loc);
   panel.hidden = !show;
   panel.style.display = show ? '' : 'none';
+  if(!show) waterVerdictState.coastal = null;
+  renderWaterVerdict();
 }
 let coastalLoadGen = 0;
 async function loadCoastal(loc){
@@ -5183,6 +5302,13 @@ async function loadCoastal(loc){
         nwsBox.innerHTML = '';
       }
       $('coastalNote').textContent = note;
+      stashWaterCoastal({
+        waveHeight: c?.wave_height ?? null,
+        nwsText: nwsMarine?.text || '',
+        tideLabel: upcoming[0]
+          ? (upcoming[0].type === 'H' ? 'Next high' : 'Next low') + ' ' + new Date(upcoming[0].t).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })
+          : ''
+      });
     }catch(e){
       $('coastalNote').textContent = 'Tide data unavailable';
       const marineBox = $('coastalMarine');
@@ -5270,6 +5396,8 @@ function syncMarinePanelVisibility(loc){
   const show = loc && isGreatLakesLoc(loc);
   panel.hidden = !show;
   panel.style.display = show ? '' : 'none';
+  if(!show) waterVerdictState.marine = null;
+  renderWaterVerdict();
 }
 function renderWeatherUi(d){
   renderCurrent(d);
@@ -5284,6 +5412,9 @@ async function loadAll(){
   applyLocRadarPrefs(loc, { reloadRadar: getAppTab() === 'radar' });
   const reloadBuoy = tabPanelsLoaded.outdoor;
   syncMarinePanelVisibility(loc);
+  waterVerdictState.marine = null;
+  waterVerdictState.coastal = null;
+  renderWaterVerdict();
   getTideStations().then(() => syncCoastalPanelVisibility(loc));
   setOfflineBadge(false);
   setCachedMode(false);

@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=147">
+<link rel="stylesheet" href="app.css?v=148">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -271,6 +271,15 @@
     </div>
 
     <div class="grid" id="outdoorGrid" style="margin-top:16px">
+      <section class="panel full nav-target outdoor-wide" id="waterVerdictPanel" data-tab="outdoor" aria-label="On the water summary" hidden>
+        <h2>On the water</h2>
+        <p class="activity-lede">Small-craft summary from NWS marine forecast, nearshore waves, wind, and tides.</p>
+        <div class="outlook" style="margin-top:0">
+          <div class="lbl">Boating verdict</div>
+          <div class="verdict" id="waterVerdictText">&mdash;</div>
+          <div class="detail" id="waterVerdictDetail"></div>
+        </div>
+      </section>
       <section class="panel nav-target" id="airPanel" data-tab="outdoor" aria-label="Air quality and pollen">
         <h2>Air Quality &amp; Pollen <span class="panel-status" id="airStatus"></span></h2>
         <div class="outlook" style="margin-top:0">
@@ -462,9 +471,9 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=147"></script>
-<script src="storm.js?v=147"></script>
-<script src="radar.js?v=147"></script>
-<script src="boot.js?v=147"></script>
+<script src="app.js?v=148"></script>
+<script src="storm.js?v=148"></script>
+<script src="radar.js?v=148"></script>
+<script src="boot.js?v=148"></script>
 </body>
 </html>

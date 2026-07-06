@@ -633,8 +633,13 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .storm-window{margin-top:10px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:.8125rem;line-height:1.45}
 .storm-window strong{color:var(--ink)}
 .storm-reports{margin-top:10px;display:flex;flex-direction:column;gap:6px}
-.storm-report{padding:9px 11px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:.75rem;line-height:1.4}
-.storm-report .sr-meta{font-size:.6875rem;color:var(--dim);margin-top:3px}
+.storm-report{display:block;width:100%;text-align:left;padding:9px 11px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:.75rem;line-height:1.4;font-family:inherit;color:inherit;cursor:pointer}
+.storm-report:hover{border-color:var(--accent);background:var(--panel-2)}
+.storm-report .sr-meta{display:block;font-size:.6875rem;color:var(--dim);margin-top:3px}
+.storm-report-go{color:var(--sky);font-weight:600}
+.storm-rpt-jump-btn{margin-top:6px;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--sky);font-size:.6875rem;font-weight:600;cursor:pointer;font-family:inherit}
+.storm-rpt-jump-btn:hover{border-color:var(--accent)}
+.water-verdict-panel{margin-bottom:0}
 .storm-setup{margin-top:14px}
 .storm-setup[hidden]{display:none!important}
 .afd-text{font-size:.8125rem;color:var(--mut);white-space:pre-wrap;max-height:320px;overflow-y:auto;line-height:1.55;margin-top:10px;padding:14px 16px;background:var(--panel-2);border-radius:10px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace}

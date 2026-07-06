@@ -12,7 +12,7 @@ let iemLoadGen = 0;
 let mrmsLayer = null;
 let radarDeepFrame = null;
 const MRMS_WMS_URL = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows';
-let radarMode = store.get('st_radar_mode') || 'rainviewer';
+let radarMode = store.get('st_radar_mode') || defaultRadarMode(state.locations[state.active]);
 const IEM_SUFFIXES = ['900913-m50m','900913-m45m','900913-m40m','900913-m35m','900913-m30m','900913-m25m','900913-m20m','900913-m15m','900913-m10m','900913-m05m','900913'];
 const IEM_MINS = [50,45,40,35,30,25,20,15,10,5,0];
 const IEM_TILES = {
@@ -228,6 +228,67 @@ function centerRadarMap(){
   if(!loc) return;
   map.setView([loc.lat, loc.lon], map.getZoom(), { animate: true });
   if(mapMarker) mapMarker.setLatLng([loc.lat, loc.lon]);
+}
+function parseStormReportTimeUtc(timeStr){
+  const m = String(timeStr || '').match(/(\d{4})/);
+  if(!m) return null;
+  const hh = parseInt(m[1].slice(0, 2), 10);
+  const mm = parseInt(m[1].slice(2, 4), 10);
+  if(hh > 23 || mm > 59) return null;
+  const now = new Date();
+  let t = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hh, mm, 0);
+  if(t > Date.now() + 1800000) t -= 86400000;
+  return t;
+}
+function findRadarFrameForTime(targetMs){
+  if(radarMode === 'rainviewer' && radarFrames.length){
+    let best = 0, bestDiff = Infinity;
+    radarFrames.forEach((f, i) => {
+      const diff = Math.abs(f.time * 1000 - targetMs);
+      if(diff < bestDiff){ bestDiff = diff; best = i; }
+    });
+    return best;
+  }
+  if(IEM_TILES[radarMode] && iemFrames.length){
+    const minsAgo = Math.max(0, (Date.now() - targetMs) / 60000);
+    let best = 0, bestDiff = Infinity;
+    IEM_MINS.forEach((m, i) => {
+      const diff = Math.abs(m - minsAgo);
+      if(diff < bestDiff){ bestDiff = diff; best = i; }
+    });
+    return best;
+  }
+  return null;
+}
+function jumpRadarToStormReport(r){
+  if(!r || r.lat == null || r.lon == null) return;
+  if(!threatLayerOpts.stormReports){
+    threatLayerOpts.stormReports = true;
+    const inp = document.querySelector('[data-threat="stormReports"]');
+    if(inp) inp.checked = true;
+    saveLocRadarPrefs();
+  }
+  setAppTab('radar');
+  const run = () => {
+    if(!map) return;
+    const z = Math.min(Math.max(map.getZoom(), radarMode === 'mrms' ? 8 : 9), radarMaxZoom());
+    map.setView([r.lat, r.lon], z, { animate: true });
+    const tMs = parseStormReportTimeUtc(r.time);
+    const fi = tMs != null ? findRadarFrameForTime(tMs) : null;
+    if(fi != null && radarFrameCount() > 1){
+      stopRadarTimer();
+      showFrame(fi);
+    }
+    syncStormReportMarkers();
+    if(stormReportGroup){
+      stormReportGroup.eachLayer(m => {
+        const ll = m.getLatLng();
+        if(Math.abs(ll.lat - r.lat) < 0.02 && Math.abs(ll.lng - r.lon) < 0.02) m.openPopup();
+      });
+    }
+  };
+  if(map) setTimeout(run, 120);
+  else setTimeout(run, 500);
 }
 function toggleRadarExpand(){
   const stage = $('radarStage');

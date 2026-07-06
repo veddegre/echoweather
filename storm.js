@@ -46,7 +46,7 @@ function filteredStormReports(){
   return (stormState.reports || []).filter(r => reportMatchesFilter(r.type));
 }
 function getLocRadarPrefs(loc){
-  const fallbackMode = store.get('st_radar_mode') || 'rainviewer';
+  const fallbackMode = store.get('st_radar_mode') || defaultRadarMode(loc);
   const fallbackThreat = store.get('st_threat_layers');
   const threatLayers = defaultThreatLayers();
   if(fallbackThreat && typeof fallbackThreat === 'object'){
@@ -193,7 +193,13 @@ function syncStormReportMarkers(){
     m.bindPopup('<strong>' + esc(r.type) + '</strong><br>' + esc(r.place)
       + (r.county ? ', ' + esc(r.county) : '') + (r.st ? ' ' + esc(r.st) : '')
       + '<br><span style="font-size:.75rem;color:#666">' + esc(r.time || '')
-      + (r.remarks ? '<br>' + esc(r.remarks.slice(0, 160)) : '') + '</span>');
+      + (r.remarks ? '<br>' + esc(r.remarks.slice(0, 160)) : '') + '</span>'
+      + '<p style="margin:8px 0 0"><button type="button" class="storm-rpt-jump-btn">View on radar &rarr;</button></p>');
+    m.on('popupopen', () => {
+      const el = m.getPopup()?.getElement();
+      const btn = el && el.querySelector('.storm-rpt-jump-btn');
+      if(btn) btn.onclick = () => { m.closePopup(); jumpRadarToStormReport(r); };
+    });
     stormReportGroup.addLayer(m);
   });
   if(stormReportGroup.getLayers().length) stormReportGroup.addTo(map);
@@ -1116,12 +1122,13 @@ function renderStormPanel(box, loc, opts){
   const reportsShown = filteredStormReports();
   if(reportsShown.length){
     reportHtml = renderStormReportFilters()
-      + '<div class="storm-reports">' + reportsShown.slice(0, 8).map(r =>
-      '<div class="storm-report"><strong>' + esc(r.type) + '</strong> \u00B7 ' + esc(r.place)
+      + '<div class="storm-reports">' + reportsShown.slice(0, 8).map((r, ri) =>
+      '<button type="button" class="storm-report storm-report-jump" data-rpt-i="' + ri + '"><strong>' + esc(r.type) + '</strong> \u00B7 ' + esc(r.place)
       + (r.county ? ', ' + esc(r.county) : '') + (r.st ? ' ' + esc(r.st) : '')
-      + '<div class="sr-meta">' + esc(r.time || '')
+      + '<span class="sr-meta">' + esc(r.time || '')
       + (r.dist != null ? ' \u00B7 ' + Math.round(r.dist) + ' mi away' : '')
-      + (r.remarks ? ' \u00B7 ' + esc(r.remarks.slice(0, 120)) : '') + '</div></div>'
+      + (r.remarks ? ' \u00B7 ' + esc(r.remarks.slice(0, 120)) : '')
+      + ' <span class="storm-report-go">View on radar &rarr;</span></span></button>'
     ).join('') + '</div>';
   }
   const dayLabels = { day1:'Day 1', day2:'Day 2', day3:'Day 3' };
@@ -1155,6 +1162,16 @@ function renderStormPanel(box, loc, opts){
     + '<a href="' + skywarnUrl + '" target="_blank" rel="noopener">SKYWARN / spotter info</a>'
     + '</div>';
   bindStormReportFilters(box);
+  bindStormReportJumps(box, reportsShown);
+}
+function bindStormReportJumps(box, reports){
+  if(!box || !reports) return;
+  box.querySelectorAll('.storm-report-jump').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = parseInt(btn.getAttribute('data-rpt-i'), 10);
+      if(reports[i]) jumpRadarToStormReport(reports[i]);
+    });
+  });
 }
 function updateStormUi(loc, d){
   renderStormBanner();
