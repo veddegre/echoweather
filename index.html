@@ -697,7 +697,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
             <option value="rainviewer">RainViewer (animated)</option>
             <option value="iem-n0q">IEM NEXRAD base (animated)</option>
             <option value="iem-n0r">IEM composite (animated)</option>
-            <option value="iem-n0u">IEM NEXRAD velocity (animated)</option>
+            <option value="iem-n0u">IEM NEXRAD velocity (nearest site)</option>
           </select>
           <span id="radarAnimCtl" class="radar-anim-ctl">
             <button id="radarPlay" aria-label="Play or pause radar animation">&#9654; Play</button>
@@ -884,7 +884,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '111';
+const APP_VERSION = '112';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -3700,14 +3700,14 @@ let radarSlotFrame = [-1, -1], satSlotFrame = [-1, -1], iemSlotFrame = [-1, -1];
 let goesSatLayer = null;
 let radarIdx = 0, radarTimer = null, radarHost = '', radarSatOn = false, radarLoadId = 0;
 let rvPastCount = 0;
-let rainviewerTileErrors = 0;
+let iemVelocitySite = null;
 let radarMode = store.get('st_radar_mode') || 'rainviewer';
 const IEM_SUFFIXES = ['900913-m50m','900913-m45m','900913-m40m','900913-m35m','900913-m30m','900913-m25m','900913-m20m','900913-m15m','900913-m10m','900913-m05m','900913'];
 const IEM_MINS = [50,45,40,35,30,25,20,15,10,5,0];
 const IEM_TILES = {
   'iem-n0q': { product: 'n0q', label: 'IEM NEXRAD base reflectivity' },
   'iem-n0r': { product: 'n0r', label: 'IEM composite reflectivity' },
-  'iem-n0u': { product: 'N0U', label: 'IEM NEXRAD base velocity', ridge: true, velocity: true }
+  'iem-n0u': { product: 'N0U', label: 'IEM NEXRAD velocity', velocity: true }
 };
 const RADAR_ZOOM = { min: 4, default: 6, rainviewer: 6, iem: 9 };
 const RV_TILE_OPTS = {
@@ -3904,15 +3904,38 @@ function clearRadarLayers(){
   resetPingPongSlots();
 }
 function setRadarAnimControls(visible){
-  $('radarAnimCtl').classList.toggle('hidden', !visible);
+  const vel = IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity;
+  $('radarAnimCtl').classList.toggle('hidden', !visible || !!vel);
   $('radarSat').style.display = radarMode === 'rainviewer' ? '' : 'none';
   if($('radarLightning')) $('radarLightning').style.display = '';
   if(!visible) stopRadarTimer();
 }
 function iemLayerName(mode, suffix){
   const spec = IEM_TILES[mode];
-  if(spec && spec.ridge) return 'ridge::' + spec.product + '-' + suffix;
+  if(spec && spec.velocity && iemVelocitySite) return 'ridge::' + iemVelocitySite + '-N0U-0';
   return 'nexrad-' + IEM_TILES[mode].product + '-' + suffix;
+}
+async function resolveIemVelocitySite(){
+  const rs = state.data && state.data.nwsPoints && state.data.nwsPoints.radarStation;
+  if(rs) return rs.replace(/^K/i, '').toUpperCase();
+  const loc = state.locations[state.active];
+  if(!loc || !isLikelyUS(loc)) return null;
+  try{
+    const r = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
+    if(!r.ok) return null;
+    const props = (await r.json()).properties;
+    return props && props.radarStation ? props.radarStation.replace(/^K/i, '').toUpperCase() : null;
+  }catch(e){ return null; }
+}
+function onIemTileError(){
+  if(radarMode !== 'iem-n0u' || !iemVelocitySite) return;
+  radarMode = 'iem-n0q';
+  iemVelocitySite = null;
+  store.set('st_radar_mode', radarMode);
+  $('radarMode').value = radarMode;
+  $('radarNote').textContent = 'Site velocity unavailable — using IEM reflectivity.';
+  stopRadarTimer();
+  loadIemRadar('iem-n0q');
 }
 function updateRadarLegend(){
   const leg = document.querySelector('.radar-legend');
@@ -3981,7 +4004,13 @@ function rainviewerCoverageNote(){
   return parts.join(' \u00B7 ');
 }
 function radarNoteForMode(){
-  if(radarMode !== 'rainviewer') return IEM_TILES[radarMode].label + ' \u00B7 last 50 min \u00B7 Iowa Environmental Mesonet';
+  const spec = IEM_TILES[radarMode];
+  if(spec){
+    if(spec.velocity && iemVelocitySite){
+      return spec.label + ' \u00B7 ' + iemVelocitySite + ' \u00B7 live \u00B7 Iowa Environmental Mesonet';
+    }
+    return spec.label + ' \u00B7 last 50 min \u00B7 Iowa Environmental Mesonet';
+  }
   if(radarSatOn){
     return satFrames.length
       ? 'RainViewer \u00B7 radar + synced satellite IR'
@@ -3994,8 +4023,31 @@ function loadIemRadar(mode){
   stopRadarTimer();
   radarSatOn = false;
   $('radarSat').classList.remove('on');
-  setRadarAnimControls(true);
+  const spec = IEM_TILES[mode];
+  if(spec && spec.velocity){
+    const run = async () => {
+      const site = await resolveIemVelocitySite();
+      if(!site){
+        $('radarNote').textContent = 'Velocity needs a US location — using reflectivity.';
+        radarMode = 'iem-n0q';
+        store.set('st_radar_mode', radarMode);
+        $('radarMode').value = radarMode;
+        loadIemRadar('iem-n0q');
+        return;
+      }
+      iemVelocitySite = site;
+      iemFrames = ['0'];
+      finishIemRadarLoad(mode);
+    };
+    run();
+    return;
+  }
+  iemVelocitySite = null;
   iemFrames = IEM_SUFFIXES.slice();
+  finishIemRadarLoad(mode);
+}
+function finishIemRadarLoad(mode){
+  setRadarAnimControls(true);
   radarIdx = iemFrames.length - 1;
   $('radarScrub').max = Math.max(0, iemFrames.length - 1);
   $('radarScrub').value = radarIdx;
@@ -4071,14 +4123,17 @@ function showFrame(i){
     const suffix = iemFrames[i];
     const name = iemLayerName(mode, suffix);
     const url = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png';
-    iemOverlaySlot = showPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, i, url, 0.78, null, IEM_TILE_OPTS);
+    const iemErr = IEM_TILES[mode] && IEM_TILES[mode].velocity ? onIemTileError : null;
+    iemOverlaySlot = showPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, i, url, 0.78, iemErr, IEM_TILE_OPTS);
     const next = (i + 1) % iemFrames.length;
     const ns = iemFrames[next];
     if(ns){
       const nname = iemLayerName(mode, ns);
-      preloadPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, next, 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + nname + '/{z}/{x}/{y}.png', null, IEM_TILE_OPTS);
+      preloadPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, next, 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + nname + '/{z}/{x}/{y}.png', iemErr, IEM_TILE_OPTS);
     }
-    $('radarTime').textContent = IEM_MINS[i] === 0 ? 'Live \u00B7 now' : IEM_MINS[i] + ' min ago';
+    $('radarTime').textContent = IEM_TILES[mode] && IEM_TILES[mode].velocity
+      ? 'Live \u00B7 ' + (iemVelocitySite || 'site')
+      : (IEM_MINS[i] === 0 ? 'Live \u00B7 now' : IEM_MINS[i] + ' min ago');
   }
   if(basemapLayer) basemapLayer.bringToBack();
   bringStormMapLayersFront();
