@@ -48,6 +48,13 @@
   --map-tiles:light_all;--serif:'Fraunces',Georgia,'Times New Roman',serif;
   --sans:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   --on-accent:#FFFFFF;
+  --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
+  --dc-partly-bg:#B8DCFF;--dc-partly-fg:#0C3A6E;
+  --dc-cloudy-bg:#A8B4C4;--dc-cloudy-fg:#1A2838;
+  --dc-fog-bg:#C4C0D0;--dc-fog-fg:#2E2A3A;
+  --dc-rain-bg:#3B8FD9;--dc-rain-fg:#F2F9FF;
+  --dc-snow-bg:#A8D4F0;--dc-snow-fg:#0A3050;
+  --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
 }
 html[data-theme="dark"] {
   color-scheme: dark;
@@ -60,6 +67,13 @@ html[data-theme="dark"] {
   --lb-night:#0a0c10;--lb-blue:#5aa8f0;--lb-gold:#FFC04A;--lb-day:#8ec8ff;
   --map-tiles:dark_all;
   --on-accent:#001845;
+  --dc-clear-bg:#6B5520;--dc-clear-fg:#FFE9A8;
+  --dc-partly-bg:#2A5080;--dc-partly-fg:#D4ECFF;
+  --dc-cloudy-bg:#3D4654;--dc-cloudy-fg:#E2E8F0;
+  --dc-fog-bg:#4A4E5C;--dc-fog-fg:#E8E4F0;
+  --dc-rain-bg:#1E5A9E;--dc-rain-fg:#E8F4FF;
+  --dc-snow-bg:#3A5870;--dc-snow-fg:#E0F0FF;
+  --dc-storm-bg:#8B3838;--dc-storm-fg:#FFE8E8;
 }
 @media (prefers-color-scheme: dark) {
   html[data-theme="system"] {
@@ -73,6 +87,13 @@ html[data-theme="dark"] {
     --lb-night:#0a0c10;--lb-blue:#5aa8f0;--lb-gold:#FFC04A;--lb-day:#8ec8ff;
     --map-tiles:dark_all;
     --on-accent:#001845;
+    --dc-clear-bg:#6B5520;--dc-clear-fg:#FFE9A8;
+    --dc-partly-bg:#2A5080;--dc-partly-fg:#D4ECFF;
+    --dc-cloudy-bg:#3D4654;--dc-cloudy-fg:#E2E8F0;
+    --dc-fog-bg:#4A4E5C;--dc-fog-fg:#E8E4F0;
+    --dc-rain-bg:#1E5A9E;--dc-rain-fg:#E8F4FF;
+    --dc-snow-bg:#3A5870;--dc-snow-fg:#E0F0FF;
+    --dc-storm-bg:#8B3838;--dc-storm-fg:#FFE8E8;
   }
 }
 @media (prefers-color-scheme: light) {
@@ -86,6 +107,13 @@ html[data-theme="dark"] {
     --lb-night:#001845;--lb-blue:#3c91e6;--lb-gold:#F0A028;--lb-day:#5aa8f0;
     --map-tiles:light_all;
     --on-accent:#FFFFFF;
+    --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
+    --dc-partly-bg:#B8DCFF;--dc-partly-fg:#0C3A6E;
+    --dc-cloudy-bg:#A8B4C4;--dc-cloudy-fg:#1A2838;
+    --dc-fog-bg:#C4C0D0;--dc-fog-fg:#2E2A3A;
+    --dc-rain-bg:#3B8FD9;--dc-rain-fg:#F2F9FF;
+    --dc-snow-bg:#A8D4F0;--dc-snow-fg:#0A3050;
+    --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
   }
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -289,16 +317,28 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-card-meta .day-rain{color:var(--sky);font-weight:600}
 .day-summary{font-size:.75rem;color:var(--mut);margin-bottom:10px;line-height:1.45}
 .day-summary strong{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
-.day-cond-strip{position:relative;display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
-.day-seg{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden}
-.day-seg span{font-size:.5625rem;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:color-mix(in srgb,var(--ink) 72%,transparent);padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.day-seg.dc-clear{background:color-mix(in srgb,var(--sky) 18%,var(--panel))}
-.day-seg.dc-partly{background:color-mix(in srgb,var(--sky) 10%,var(--panel-2))}
-.day-seg.dc-cloudy{background:color-mix(in srgb,var(--dim) 22%,var(--panel-2))}
-.day-seg.dc-fog{background:color-mix(in srgb,var(--dim) 14%,var(--panel))}
-.day-seg.dc-rain{background:color-mix(in srgb,var(--sky) 42%,var(--panel))}
-.day-seg.dc-snow{background:color-mix(in srgb,var(--sky) 24%,var(--panel))}
-.day-seg.dc-storm{background:color-mix(in srgb,var(--warn) 32%,var(--panel))}
+.day-cond-strip{position:relative;display:flex;height:32px;border-radius:8px;overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 80%,transparent)}
+.day-seg{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden;border-right:1px solid color-mix(in srgb,var(--ink) 8%,transparent)}
+.day-seg:last-child{border-right:none}
+.day-seg span{font-size:.5625rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-seg.dc-clear{background:var(--dc-clear-bg);color:var(--dc-clear-fg)}
+.day-seg.dc-partly{background:var(--dc-partly-bg);color:var(--dc-partly-fg)}
+.day-seg.dc-cloudy{background:var(--dc-cloudy-bg);color:var(--dc-cloudy-fg)}
+.day-seg.dc-fog{background:var(--dc-fog-bg);color:var(--dc-fog-fg)}
+.day-seg.dc-rain{background:var(--dc-rain-bg);color:var(--dc-rain-fg)}
+.day-seg.dc-snow{background:var(--dc-snow-bg);color:var(--dc-snow-fg)}
+.day-seg.dc-storm{background:var(--dc-storm-bg);color:var(--dc-storm-fg)}
+.day-legend{display:flex;flex-wrap:wrap;gap:6px 10px;margin:0 0 12px;font-size:.625rem}
+.day-legend span{display:inline-flex;align-items:center;gap:5px;color:var(--mut);font-weight:600}
+.day-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;flex-shrink:0;border:1px solid color-mix(in srgb,var(--ink) 12%,transparent)}
+.day-legend .dc-clear i{background:var(--dc-clear-bg)}
+.day-legend .dc-partly i{background:var(--dc-partly-bg)}
+.day-legend .dc-cloudy i{background:var(--dc-cloudy-bg)}
+.day-legend .dc-fog i{background:var(--dc-fog-bg)}
+.day-legend .dc-rain i{background:var(--dc-rain-bg)}
+.day-legend .dc-snow i{background:var(--dc-snow-bg)}
+.day-legend .dc-storm i{background:var(--dc-storm-bg)}
+.day-legend-lede{font-size:.72rem;color:var(--dim);margin:0 0 8px;line-height:1.4}
 .day-now{position:absolute;top:0;bottom:0;width:2px;background:var(--warn);transform:translateX(-50%);z-index:2;pointer-events:none;box-shadow:0 0 0 1px color-mix(in srgb,var(--warn) 35%,transparent)}
 .day-temp-chart{margin-top:10px}
 .day-temp-line{height:36px;color:var(--accent)}
@@ -363,8 +403,14 @@ body.radar-expanded{overflow:hidden}
 .activity-bar-times span{position:absolute;top:0;font-size:.5625rem;color:var(--dim);letter-spacing:.03em;transform:translateX(-50%);white-space:nowrap}
 .activity-bar-times span.edge-start{left:0;transform:none}
 .activity-bar-times span.edge-end{left:100%;transform:translateX(-100%)}
-.activity-why{margin-top:8px;font-size:.72rem;color:var(--mut);line-height:1.45}
-.activity-why summary{cursor:pointer;color:var(--acc);user-select:none}
+.activity-why{margin-top:8px;font-size:.72rem;color:var(--mut);line-height:1.5}
+.activity-why summary{cursor:pointer;color:var(--accent);user-select:none;font-weight:600}
+.activity-why-lede{font-size:.7rem;color:var(--dim);margin:6px 0 8px;line-height:1.45}
+.activity-why li{margin-bottom:6px}
+.activity-why li strong{color:var(--ink);font-weight:600}
+.activity-why .why-good strong{color:var(--good)}
+.activity-why .why-fair strong{color:var(--warm)}
+.activity-why .why-poor strong{color:var(--warn)}
 #activityList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-height:8rem}
 #activityList.is-loading{min-height:28rem}
 #activityList .activity-card{margin-top:0}
@@ -597,7 +643,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   .locbar-tools .search{flex:1 1 100px}
   .app-tab-bar{margin-top:4px}
 }
-@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.day-card{padding:10px 12px}.day-card-title .day-dn{font-size:.9375rem}.day-tick .day-tick-t{font-size:.5rem}.day-tick .day-tick-v{font-size:.625rem}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px;display:grid;grid-template-columns:auto 1fr;align-items:center}.radar-scrub-wrap{grid-column:2;flex:none}.radar-toggles{grid-column:1/-1}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
+@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.day-card{padding:10px 12px}.day-card-title .day-dn{font-size:.9375rem}.day-cond-strip{height:38px}.day-seg span{font-size:.5rem;letter-spacing:.02em}.day-legend{font-size:.5625rem;gap:4px 8px;margin-bottom:10px}.day-legend i{width:14px;height:14px}.day-legend-lede{font-size:.6875rem}.day-tick .day-tick-t{font-size:.5rem}.day-tick .day-tick-v{font-size:.625rem}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px;display:grid;grid-template-columns:auto 1fr;align-items:center}.radar-scrub-wrap{grid-column:2;flex:none}.radar-toggles{grid-column:1/-1}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
 </head>
 <body class="mtab-now">
@@ -728,6 +774,16 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 
     <section class="panel full nav-target" id="dailyPanel" data-tab="forecast" aria-label="Five day forecast">
       <h2>5-Day Forecast <span class="panel-status" id="dailySource"></span></h2>
+      <p class="day-legend-lede">Colored bar = hour-by-hour sky conditions that day (scroll times below for temperature).</p>
+      <div class="day-legend" role="list" aria-label="Sky condition colors">
+        <span class="dc-clear"><i></i>Clear</span>
+        <span class="dc-partly"><i></i>Partly cloudy</span>
+        <span class="dc-cloudy"><i></i>Cloudy</span>
+        <span class="dc-fog"><i></i>Fog</span>
+        <span class="dc-rain"><i></i>Rain</span>
+        <span class="dc-snow"><i></i>Snow</span>
+        <span class="dc-storm"><i></i>Storm</span>
+      </div>
       <div id="winterOutlook" hidden aria-label="Winter weather outlook"></div>
       <div class="daily" id="daily"></div>
     </section>
@@ -2844,111 +2900,113 @@ function summarizeActivityWindows(windows, hours, def){
 function activityWxLabel(ctx){
   return wmo(ctx.code, ctx.isDay)[0];
 }
-function activityLaterConcerns(eligible){
-  const lastGoodIdx = eligible.map((h, i) => h.grade === 'good' ? i : -1).filter(i => i >= 0).pop();
-  if(lastGoodIdx == null) return [];
-  const after = eligible.slice(lastGoodIdx + 1).filter(h => h.grade !== 'good');
-  const counts = {};
-  after.forEach(h => h.reasons.forEach(r => { counts[r] = (counts[r] || 0) + 1; }));
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([r]) => r);
+function sampleHourInWindow(w, hours){
+  const inWin = hours.filter(h => !h.ineligible && h.time >= w.start && h.time <= w.end);
+  if(!inWin.length) return null;
+  if(w.grade === 'poor'){
+    return inWin.reduce((a, h) => (h.score < a.score ? h : a), inWin[0]);
+  }
+  if(w.grade === 'good'){
+    return inWin.reduce((a, h) => (h.score > a.score ? h : a), inWin[0]);
+  }
+  return inWin[Math.floor(inWin.length / 2)];
 }
-function buildActivityWhyList(def, hours, windows, d, extra){
-  const items = [];
-  const eligible = hours.filter(h => !h.ineligible);
-  if(!eligible.length){
-    return [def.nightOnly
-      ? 'Needs darkness — none left in this 24-hour window.'
-      : 'Best in daylight; remaining hours are after dark.'];
-  }
-  const peakHour = eligible.reduce((a, h) => h.score > a.score ? h : a, eligible[0]);
-  const alert = activityAlertCap(def, d.timezone, hours);
-  const peakAlert = activityAlertImpact(def, peakHour.time, d.timezone);
-  if(peakAlert.notes.length && peakAlert.cap < 70){
-    items.push(peakAlert.notes[0] + ' in effect — lake swimming and piers unsafe.');
-  }else if(alert.notes.length && !peakAlert.notes.length){
-    items.push('NWS alert active earlier in the window: ' + alert.notes[0] + ' — clears before peak.');
-  }
-  const peakIdx = d.hourly.time.indexOf(peakHour.time);
-  if(peakIdx < 0) return items.length ? items : ['Forecast data unavailable for this period.'];
-  const bestWin = windows.find(w => peakHour.time >= w.start && peakHour.time <= w.end)
-    || windows.find(w => w.grade === 'good')
-    || windows.find(w => w.grade === 'fair');
-  if(bestWin){
-    items.push('Top window: ' + fmtActWindow(bestWin) + ' (' + activityGradeLabel(bestWin.grade).toLowerCase() + ')');
-  }
-  const ctx = activityHourContext(d, peakIdx);
+function weatherSnapshotPhrase(ctx){
+  if(!ctx) return '';
   const temp = Math.round(ctx.temp);
-  const dew = Math.round(ctx.dew);
+  const wx = activityWxLabel(ctx).toLowerCase();
   const pop = Math.round(ctx.pop);
   const wind = Math.round(ctx.wind);
   const wu = windUnit();
-  const wcard = ctx.windDir != null ? compass(ctx.windDir) : '';
-  const wc = activityWindChillF(ctx);
+  let line = wx + ', about ' + temp + degSym();
+  if(pop >= 40) line += ', rain likely';
+  else if(pop >= 20) line += ', some rain risk';
+  if(wind >= 16) line += ', windy (' + wind + ' ' + wu + ')';
+  else if(wind >= 8) line += ', breezy';
+  return line;
+}
+function describeActivityWindow(def, w, hours, d, extra){
+  const sample = sampleHourInWindow(w, hours);
+  if(!sample) return 'Outside the hours we usually score for this activity.';
+  const idx = d.hourly.time.indexOf(sample.time);
+  const ctx = idx >= 0 ? activityHourContext(d, idx) : null;
+  const snap = weatherSnapshotPhrase(ctx);
+  const alert = activityAlertImpact(def, sample.time, d.timezone);
+  const reasons = [...new Set(sample.reasons.length ? sample.reasons : w.reasons)];
+  const sentences = [];
 
-  items.push('At peak: ' + activityWxLabel(ctx) + ', ' + temp + degSym() + ', ' + hourlyComfortNote(temp, dew).toLowerCase());
-  const peakHr = new Date(ctx.time).getHours();
-  if(['golf', 'beach', 'yard', 'running', 'hiking', 'dog', 'cycling'].includes(def.id)
-    && peakHr >= 13 && peakHr < 18 && temp >= (state.units === 'F' ? 80 : 27)){
-    items.push('Peak hour is in the afternoon heat — morning may rate higher');
+  if(w.grade === 'good'){
+    if(reasons.length){
+      sentences.push(reasons.slice(0, 2).join('; ').replace(/;$/, '') + '.');
+    }else if(snap){
+      sentences.push('Comfortable stretch — ' + snap + '.');
+    }else{
+      sentences.push('Weather lines up well for ' + def.name.toLowerCase() + '.');
+    }
+  }else if(w.grade === 'fair'){
+    if(reasons.length){
+      sentences.push(reasons.slice(0, 2).join('; ').replace(/;$/, '') + '.');
+    }
+    if(snap) sentences.push('Still workable then (' + snap + ').');
+    else if(!sentences.length) sentences.push('Mixed signals — doable if you adjust timing or pace.');
+  }else{
+    if(alert.notes.length && alert.cap < 70){
+      sentences.push(alert.notes[0] + ' in effect — wait until it ends.');
+    }
+    if(reasons.length){
+      sentences.push(reasons.slice(0, 3).join('; ').replace(/;$/, '') + '.');
+    }else if(snap){
+      sentences.push('Tough stretch — ' + snap + '.');
+    }else{
+      sentences.push('Several factors stack up against going out then.');
+    }
   }
-  if(pop <= 15) items.push('Rain unlikely (' + pop + '% chance)');
-  else if(pop < 40) items.push('Some rain risk (' + pop + '% chance)');
-  else items.push('Rain likely (' + pop + '% chance)');
-  if(wind < 4) items.push('Light wind');
-  else items.push((wcard ? wcard + ' wind at ' : 'Wind ') + wind + ' ' + wu + (ctx.gust > wind + 4 ? ', gusts to ' + Math.round(ctx.gust) + ' ' + wu : ''));
-
-  if(def.id === 'golf'){
-    if(wind < 12) items.push('Wind should not dominate ball flight');
-    else if(wind >= 18) items.push('Wind may make club selection difficult');
-    if(ctx.uv >= 6 && ctx.isDay) items.push('UV ' + ctx.uv.toFixed(1) + ' — hat and sunscreen between holes');
-  }else if(def.id === 'hiking'){
-    if(ctx.cloud < 40 && ctx.isDay) items.push('Good visibility on the trail');
-    else if(ctx.cloud > 80) items.push('Overcast — dim light on trails');
-    if(ctx.uv >= 8 && ctx.isDay) items.push('High UV — cover up on exposed ridges');
-    if(wc != null && wc <= 15) items.push('Wind chill ' + wc + '\u00B0F — layer up');
-    if(ctx.snowDepth > 0.05) items.push('Snow on trails — traction aids recommended');
-  }else if(def.id === 'yard'){
-    if(ctx.precip > 0.02) items.push('Ground may still be wet from recent rain');
-    if(ctx.wetBulb >= 80) items.push('Heavy exertion in heat — take breaks and hydrate');
-    if(wind >= 20) items.push('High wind — mowing or spraying may be difficult');
-  }else if(def.id === 'running'){
-    if(temp >= 40 && temp <= 65) items.push('Cool temps favorable for pace');
-    else if(temp > 78) items.push('Warm — slower pace and extra fluids');
-    if(extra.aqi != null && extra.aqi > 100) items.push('AQI ' + extra.aqi + ' — consider an indoor workout');
-    else if(extra.aqi != null && extra.aqi <= 50) items.push('Air quality is good for outdoor runs');
-  }else if(def.id === 'beach'){
-    if(temp >= 75) items.push('Warm enough for comfortable swimming');
-    else if(temp < 68) items.push('Water may feel chilly');
-    if(ctx.uv >= 7) items.push('Strong sun — shade and sunscreen');
-    if(extra.coastal) items.push('Near the coast — check surf and rip-current alerts');
-    if(peakAlert.notes.length) items.push('Lake beach unsafe during advisory — pool OK inland');
-  }else if(def.id === 'cycling'){
-    if(wind < 12) items.push('Low wind resistance on the road');
-    else if(wind >= 16) items.push('Headwinds may slow your ride noticeably');
-  }else if(def.id === 'dog'){
-    if(temp >= 85) items.push('Hot pavement risk — walk early or on grass');
-    else if(temp <= 20) items.push('Cold — short walks; watch for ice on paws');
-    const wc = activityWindChillF(ctx);
-    if(wc != null && wc <= 10) items.push('Wind chill ' + wc + '\u00B0F — protect paws');
-    if(extra.aqi != null && extra.aqi > 100) items.push('AQI ' + extra.aqi + ' — shorten outdoor time');
-  }else if(def.id === 'ski'){
-    if(ctx.snowDepth > 0.05) items.push('Snow depth supports sliding sports');
-    else if(ctx.snowfall > 0) items.push('Fresh snow expected');
-    if(wc != null) items.push('Wind chill ' + wc + '\u00B0F — dress in layers');
-    else if(temp <= 25) items.push('Dress for cold and wind');
-  }else if(def.id === 'shovel'){
-    if(ctx.snowfall > 0 || isSnowWxCode(ctx.code)) items.push('Snow accumulation likely');
-  }else if(def.id === 'stars'){
-    if(ctx.cloud < 25) items.push('Mostly clear skies');
-    else if(ctx.cloud < 55) items.push('Partly cloudy — some stars visible');
-    else items.push(Math.round(ctx.cloud) + '% cloud cover may limit viewing');
+  return sentences.join(' ');
+}
+function buildActivityWhyList(def, hours, windows, d, extra){
+  const eligible = hours.filter(h => !h.ineligible);
+  const intro = 'Each note matches a colored stretch on the bar above (green = good, amber = fair, red = poor).';
+  if(!eligible.length){
+    return {
+      intro: '',
+      items: [{
+        grade: 'na',
+        label: '',
+        time: '',
+        text: def.nightOnly
+          ? 'Needs darkness — none left in this 24-hour window.'
+          : 'Best in daylight; remaining hours are after dark.'
+      }]
+    };
   }
-
-  peakHour.reasons.forEach(r => {
-    if(!items.some(line => line.toLowerCase().includes(r.toLowerCase().slice(0, 14)))) items.push(r);
-  });
-  activityLaterConcerns(eligible).forEach(r => items.push('Later today: ' + r));
-  return items.slice(0, 8);
+  const nowIso = hours[0]?.time;
+  const windowSort = (a, b) => {
+    const aNow = nowIso && a.start <= nowIso && a.end >= nowIso;
+    const bNow = nowIso && b.start <= nowIso && b.end >= nowIso;
+    if(aNow !== bNow) return aNow ? -1 : 1;
+    return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
+  };
+  const items = [];
+  for(const grade of ['good', 'fair', 'poor']){
+    const wins = windows.filter(w => w.grade === grade).sort(windowSort);
+    for(const w of wins.slice(0, 2)){
+      items.push({
+        grade,
+        label: activityGradeLabel(grade),
+        time: fmtActWindow(w),
+        text: describeActivityWindow(def, w, hours, d, extra)
+      });
+    }
+  }
+  if(!items.length){
+    items.push({
+      grade: 'poor',
+      label: 'Poor',
+      time: '',
+      text: 'No stretch rated good or fair in the next 24 hours.'
+    });
+  }
+  return { intro, items };
 }
 function renderActivityCard(def, hours, d, extra){
   if(!hours.length){
@@ -2967,8 +3025,15 @@ function renderActivityCard(def, hours, d, extra){
     return '<span class="' + cls + '" title="' + esc(tip) + '"></span>';
   }).join('');
   const timeLbl = activityBarTimeLabels(hours);
-  const whyList = buildActivityWhyList(def, hours, windows, d, extra)
-    .map(line => '<li>' + esc(line) + '</li>').join('');
+  const why = buildActivityWhyList(def, hours, windows, d, extra);
+  const whyIntro = why.intro ? '<p class="activity-why-lede">' + esc(why.intro) + '</p>' : '';
+  const whyList = why.items.map(item => {
+    const cls = item.grade === 'good' ? 'why-good' : item.grade === 'fair' ? 'why-fair' : item.grade === 'poor' ? 'why-poor' : '';
+    const head = item.time
+      ? '<strong>' + esc(item.label) + ' (' + esc(item.time) + '):</strong> '
+      : '';
+    return '<li class="' + cls + '">' + head + esc(item.text) + '</li>';
+  }).join('');
   return '<article class="activity-card">'
     + '<div class="activity-head"><span class="activity-ico" aria-hidden="true">' + def.icon + '</span>'
     + '<span class="activity-name">' + esc(def.name) + '</span>'
@@ -2977,7 +3042,8 @@ function renderActivityCard(def, hours, d, extra){
     + '<div class="activity-bar" role="img" aria-label="Hourly suitability for ' + esc(def.name) + ' over the next 24 hours">'
     + bar + '</div>'
     + '<div class="activity-bar-times">' + timeLbl + '</div>'
-    + '<details class="activity-why"><summary>Why</summary><ul style="margin:6px 0 0;padding-left:1.1em">' + whyList + '</ul></details>'
+    + '<details class="activity-why"><summary>Why</summary>' + whyIntro
+    + '<ul style="margin:6px 0 0;padding-left:1.1em">' + whyList + '</ul></details>'
     + '</article>';
 }
 function renderActivityPlanner(d){
@@ -3451,7 +3517,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
     const segs = buildConditionSegments(indices, hh);
     const segHtml = segs.map(s =>
       '<div class="day-seg dc-' + s.bucket + '" style="width:' + s.pct.toFixed(2) + '%" title="' + esc(s.label) + '">'
-      + (s.pct >= 9 ? '<span>' + esc(s.label) + '</span>' : '')
+      + (s.pct >= 6 ? '<span>' + esc(s.label) + '</span>' : '')
       + '</div>'
     ).join('');
     const nowMark = nowPct != null
@@ -3548,7 +3614,7 @@ function renderDaily(d){
       }).join('') + '</div>' : '')
       + '</div>'
       + '<div class="day-summary">' + summary + '</div>'
-      + '<div class="day-cond-strip">' + timeline.segHtml + '</div>'
+      + '<div class="day-cond-strip" role="img" aria-label="Hour-by-hour sky conditions for this day">' + timeline.segHtml + '</div>'
       + '<div class="day-temp-chart">'
       + '<div class="day-temp-line">' + dayTempSparkline(timeline.temps, 320, 36) + '</div>'
       + timeline.ticksHtml
