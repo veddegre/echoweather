@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '154';
+const APP_VERSION = '156';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1935,6 +1935,12 @@ function penalizeAqi(extra, reasons, strict){
   if(aqi > 75 && strict) reasons.push('Sensitive groups: elevated AQI');
   return s + (aqi > 75 && strict ? 8 : 0);
 }
+function coldImpactThresholds(){
+  if(state.units === 'F'){
+    return { mild: 55, cool: 50, chilly: 40, freezing: 32, veryCold: 20, bitter: 10 };
+  }
+  return { mild: 13, cool: 10, chilly: 4, freezing: 0, veryCold: -7, bitter: -12 };
+}
 function penalizeWinter(ctx, reasons){
   let s = 0;
   if(isIceWxCode(ctx.code)){ s += 45; reasons.push('Freezing rain or ice'); }
@@ -2100,10 +2106,12 @@ const ACTIVITY_SCORERS = {
     if(ctx.wetBulb < 65 && ctx.temp < 75){
       return { score: 92, reasons: ['Cool conditions — minimal heat stress'] };
     }
-    s -= penalizeHeat(ctx, reasons, 82, 90, { heatOnly: true });
-    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 84, extreme: 92, hotPenalty: 18, extremePenalty: 35 });
-    if(ctx.wetBulb >= 82){ s -= 20; reasons.push('Extreme wet-bulb heat stress'); }
-    if(ctx.temp >= 95 && ctx.isDay){ s -= 15; reasons.push('Afternoon heat peak'); }
+    s -= penalizeHeat(ctx, reasons, 80, 88, { heatOnly: true });
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 82, extreme: 90, hotPenalty: 16, extremePenalty: 32 });
+    if(ctx.wetBulb >= 82){ s -= 22; reasons.push('Extreme wet-bulb heat stress'); }
+    else if(ctx.wetBulb >= 78){ s -= 12; reasons.push('Humid heat stress'); }
+    if(ctx.temp >= 85 && ctx.isDay){ s -= 10; reasons.push('Hot afternoon'); }
+    if(ctx.temp >= 95 && ctx.isDay){ s -= 12; reasons.push('Afternoon heat peak'); }
     return { score: clampActScore(s), reasons };
   },
   wind(ctx, extra){
@@ -2137,14 +2145,36 @@ const ACTIVITY_SCORERS = {
   cold(ctx, extra){
     let s = 100;
     const reasons = [];
-    if(ctx.temp >= 55 && (activityWindChillF(ctx) == null || activityWindChillF(ctx) > 25)){
-      return { score: 90, reasons: ['Mild conditions — limited cold stress'] };
-    }
-    s -= penalizeWinter(ctx, reasons);
-    if(ctx.temp <= 20){ s -= 25; reasons.push('Bitter cold'); }
-    else if(ctx.temp <= 32){ s -= 12; reasons.push('Freezing temperatures'); }
+    const t = coldImpactThresholds();
     const wc = activityWindChillF(ctx);
-    if(wc != null && wc <= 10){ s -= 20; reasons.push('Dangerous wind chill'); }
+    if(ctx.temp >= t.mild && (wc == null || wc > 28)){
+      return { score: 92, reasons: ['Mild conditions — limited cold stress'] };
+    }
+    if(isIceWxCode(ctx.code)){
+      s -= 38; reasons.push('Freezing rain or ice');
+    }
+    if(ctx.temp <= t.bitter || (wc != null && wc <= 0)){
+      s -= 32; reasons.push('Bitter cold');
+    }else if(ctx.temp <= t.veryCold || (wc != null && wc <= 10)){
+      s -= 24; reasons.push('Very cold');
+    }else if(ctx.temp <= t.freezing || (wc != null && wc <= 20)){
+      s -= 16; reasons.push('Below freezing');
+    }else if(ctx.temp <= t.chilly || (wc != null && wc <= 28)){
+      s -= 10; reasons.push('Chilly');
+    }else if(ctx.temp <= t.cool){
+      s -= 5; reasons.push('Cool');
+    }
+    if(wc != null && wc <= 10 && ctx.temp > t.veryCold){
+      s -= 12; reasons.push('Dangerous wind chill (' + wc + '\u00B0F)');
+    }
+    if(ctx.snowfall > (state.units === 'F' ? 0.02 : 0.05)){
+      s -= 12; reasons.push('Snow falling');
+    }else if(ctx.snowDepth > 0.05){
+      s -= 6; reasons.push('Snow on the ground');
+    }
+    if(ctx.visibility != null && ctx.visibility < 2){
+      s -= 10; reasons.push('Low visibility');
+    }
     return { score: clampActScore(s), reasons };
   },
   uv(ctx, extra){
@@ -2471,7 +2501,7 @@ function buildActivityWhyList(def, hours, windows, d, extra){
       items.push({
         grade,
         label: isImpactDef(def) ? activityImpactSummaryLabel(grade) : activityGradeLabel(grade, def),
-        time: fmtActWindow(w),
+        time: isImpactDef(def) ? fmtImpactWindowLabel(w, hours) : fmtActWindow(w),
         text: describeActivityWindow(def, w, hours, d, extra)
       });
     }
