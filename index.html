@@ -321,7 +321,7 @@ body.radar-expanded{overflow:hidden}
 .radar-stage.expanded .radar-wrap{flex:1;min-height:0}
 .radar-stage.expanded #radar{height:100%!important}
 .radar-stage.expanded .radar-ctl{flex-shrink:0}
-.radar-ctl{display:grid;grid-template-columns:auto 1fr auto;gap:10px 12px;margin-top:12px;align-items:center}
+.radar-ctl{display:flex;flex-direction:column;gap:10px;margin-top:12px;align-items:stretch}
 .radar-ctl button{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 14px;font-size:.8125rem;font-weight:500;white-space:nowrap}
 .radar-ctl button:hover{border-color:var(--accent)}
 .radar-time{font-size:.8125rem;color:var(--accent);font-weight:500;white-space:nowrap}
@@ -346,8 +346,11 @@ body.radar-expanded{overflow:hidden}
 .exposure-strip-note{font-size:.6875rem;color:var(--dim);margin:-6px 0 8px;line-height:1.4}
 footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .radar-mode{grid-column:1/-1;width:100%;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 10px;font-size:.8125rem;font-weight:500}
-.radar-anim-ctl{display:grid;grid-column:1/-1;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;width:100%;min-width:0}
+.radar-anim-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;grid-column:1/-1;width:100%;min-width:0}
 .radar-anim-ctl.hidden{display:none}
+.radar-anim-ctl > #radarPlay{flex:0 0 auto}
+.radar-toggles{display:flex;flex-wrap:wrap;gap:8px;flex:0 0 auto}
+.radar-toggles button{flex:0 0 auto}
 .radar-scrub{width:100%;min-width:0;accent-color:var(--accent)}
 .radar-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;grid-column:1/-1}
 .lightning-status{color:var(--sky);font-weight:500}
@@ -356,13 +359,13 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .radar-ctl button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .leaflet-container{font-family:var(--sans);font-size:.75rem;background:var(--panel-2)}
 .lightning-canvas{position:absolute;left:0;top:0;z-index:500;pointer-events:none}
-.threat-layers{grid-column:1/-1;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);padding:0}
-.threat-layers>summary{padding:8px 12px;font-size:.75rem;font-weight:600;color:var(--sky);cursor:pointer;list-style:none}
+.threat-layers{grid-column:1/-1;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);padding:0;font-size:.75rem}
+.threat-layers>summary{padding:6px 10px;font-size:.75rem;font-weight:600;color:var(--sky);cursor:pointer;list-style:none}
 .threat-layers>summary::-webkit-details-marker{display:none}
 .threat-layer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:6px 10px;padding:0 12px 10px;font-size:.75rem;color:var(--mut)}
 .threat-layer-grid label{display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
 .threat-layer-grid input{accent-color:var(--accent)}
-.radar-scrub-wrap{position:relative;grid-column:1;width:100%;min-width:0;display:flex;align-items:center}
+.radar-scrub-wrap{position:relative;flex:1 1 10rem;min-width:0;display:flex;align-items:center}
 .radar-scrub-wrap .radar-scrub{flex:1}
 .radar-storm-mark{position:absolute;top:50%;height:10px;transform:translateY(-50%);background:var(--warn);opacity:.45;border-radius:3px;pointer-events:none;z-index:1}
 .storm-mode-banner .storm-narrative{display:block;margin-top:6px;font-size:.8125rem;font-weight:400;color:var(--ink);line-height:1.45}
@@ -534,7 +537,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
   .locbar-tools .search{flex:1 1 100px}
   .app-tab-bar{margin-top:4px}
 }
-@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.day-card{padding:10px 12px}.day-card-title .day-dn{font-size:.9375rem}.day-tick .day-tick-t{font-size:.5rem}.day-tick .day-tick-v{font-size:.625rem}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
+@media (max-width:520px){body{font-size:14px}.wrap{padding:0 14px calc(var(--tab-bar-h) + 12px + env(safe-area-inset-bottom,0px))}.site-top > header{margin:0 -14px;padding-left:14px;padding-right:14px}body.scrolled .site-top > header,body.scrolled header{padding-left:14px;padding-right:14px}.locbar{margin:0 -14px;padding:8px 14px 10px}body.scrolled .locbar{padding:8px 14px 10px}.panel{padding:16px 14px}.day-card{padding:10px 12px}.day-card-title .day-dn{font-size:.9375rem}.day-tick .day-tick-t{font-size:.5rem}.day-tick .day-tick-v{font-size:.625rem}#radar{height:240px}.pill-toggle button{padding:6px 9px;font-size:.6875rem}.radar-ctl{gap:8px}.radar-ctl button{padding:6px 10px;font-size:.75rem}.radar-mode{font-size:.75rem;padding:6px 8px}.radar-anim-ctl{gap:6px 8px;display:grid;grid-template-columns:auto 1fr;align-items:center}.radar-scrub-wrap{grid-column:2;flex:none}.radar-toggles{grid-column:1/-1}.radar-note{font-size:.6875rem}.glance{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:1fr 1fr}.obs-row{grid-template-columns:1fr 1fr;grid-template-areas:none;gap:8px 10px}.obs-row .obs-label{grid-column:1/-1;grid-area:auto}.obs-val{grid-area:auto!important}.obs-badge{grid-column:1/-1;justify-self:stretch;text-align:left;margin-top:2px}.fc-period{padding:12px 14px}.fc-head strong{font-size:.9375rem}}
 </style>
 </head>
 <body class="mtab-now">
@@ -700,13 +703,15 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
             <option value="iem-n0u">IEM NEXRAD velocity (nearest site)</option>
           </select>
           <span id="radarAnimCtl" class="radar-anim-ctl">
-            <button id="radarPlay" aria-label="Play or pause radar animation">&#9654; Play</button>
+            <button id="radarPlay" type="button" aria-label="Play or pause radar animation">&#9654; Play</button>
             <div class="radar-scrub-wrap">
               <div class="radar-storm-mark" id="radarStormMark" hidden></div>
               <input type="range" id="radarScrub" class="radar-scrub" min="0" max="0" value="0" aria-label="Radar frame scrubber">
             </div>
-            <button id="radarSat" aria-label="Toggle satellite infrared overlay">Satellite</button>
-            <button id="radarLightning" aria-label="Toggle lightning strike overlay">Lightning</button>
+            <div class="radar-toggles">
+              <button type="button" id="radarSat" aria-label="Toggle satellite infrared overlay">Satellite</button>
+              <button type="button" id="radarLightning" aria-label="Toggle lightning strike overlay">Lightning</button>
+            </div>
           </span>
           <details class="threat-layers" id="threatLayers">
             <summary>Map threat layers</summary>
@@ -884,7 +889,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '112';
+const APP_VERSION = '113';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -3700,7 +3705,9 @@ let radarSlotFrame = [-1, -1], satSlotFrame = [-1, -1], iemSlotFrame = [-1, -1];
 let goesSatLayer = null;
 let radarIdx = 0, radarTimer = null, radarHost = '', radarSatOn = false, radarLoadId = 0;
 let rvPastCount = 0;
+let rainviewerTileErrors = 0;
 let iemVelocitySite = null;
+let iemLoadGen = 0;
 let radarMode = store.get('st_radar_mode') || 'rainviewer';
 const IEM_SUFFIXES = ['900913-m50m','900913-m45m','900913-m40m','900913-m35m','900913-m30m','900913-m25m','900913-m20m','900913-m15m','900913-m10m','900913-m05m','900913'];
 const IEM_MINS = [50,45,40,35,30,25,20,15,10,5,0];
@@ -3906,14 +3913,18 @@ function clearRadarLayers(){
 function setRadarAnimControls(visible){
   const vel = IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity;
   $('radarAnimCtl').classList.toggle('hidden', !visible || !!vel);
-  $('radarSat').style.display = radarMode === 'rainviewer' ? '' : 'none';
-  if($('radarLightning')) $('radarLightning').style.display = '';
+  const satBtn = $('radarSat');
+  if(satBtn) satBtn.style.display = radarMode === 'rainviewer' ? '' : 'none';
   if(!visible) stopRadarTimer();
 }
 function iemLayerName(mode, suffix){
   const spec = IEM_TILES[mode];
-  if(spec && spec.velocity && iemVelocitySite) return 'ridge::' + iemVelocitySite + '-N0U-0';
-  return 'nexrad-' + IEM_TILES[mode].product + '-' + suffix;
+  if(!spec) return null;
+  if(spec.velocity){
+    if(!iemVelocitySite) return null;
+    return 'ridge::' + iemVelocitySite + '-N0U-0';
+  }
+  return 'nexrad-' + spec.product + '-' + suffix;
 }
 async function resolveIemVelocitySite(){
   const rs = state.data && state.data.nwsPoints && state.data.nwsPoints.radarStation;
@@ -4019,30 +4030,37 @@ function radarNoteForMode(){
   return rainviewerCoverageNote();
 }
 function loadIemRadar(mode){
+  const gen = ++iemLoadGen;
   clearRadarLayers();
   stopRadarTimer();
   radarSatOn = false;
   $('radarSat').classList.remove('on');
+  iemVelocitySite = null;
+  iemFrames = [];
+  radarIdx = 0;
+  $('radarScrub').max = 0;
+  $('radarScrub').value = 0;
+  hidePingPongLayers(iemOverlayLayers);
+
   const spec = IEM_TILES[mode];
   if(spec && spec.velocity){
-    const run = async () => {
-      const site = await resolveIemVelocitySite();
+    $('radarTime').textContent = 'Loading velocity\u2026';
+    $('radarNote').textContent = 'Resolving nearest NEXRAD site\u2026';
+    setRadarAnimControls(false);
+    return resolveIemVelocitySite().then(site => {
+      if(gen !== iemLoadGen) return;
       if(!site){
-        $('radarNote').textContent = 'Velocity needs a US location — using reflectivity.';
+        $('radarNote').textContent = 'Velocity needs a US location \u2014 using reflectivity.';
         radarMode = 'iem-n0q';
         store.set('st_radar_mode', radarMode);
         $('radarMode').value = radarMode;
-        loadIemRadar('iem-n0q');
-        return;
+        return loadIemRadar('iem-n0q');
       }
       iemVelocitySite = site;
       iemFrames = ['0'];
       finishIemRadarLoad(mode);
-    };
-    run();
-    return;
+    });
   }
-  iemVelocitySite = null;
   iemFrames = IEM_SUFFIXES.slice();
   finishIemRadarLoad(mode);
 }
@@ -4088,7 +4106,7 @@ async function loadRadar(){
       if(radarMode === 'rainviewer') await loadRainViewerRadar(loadId);
       else if(IEM_TILES[radarMode]){
         if(loadId !== radarLoadId) return;
-        loadIemRadar(radarMode);
+        await loadIemRadar(radarMode);
       }
     }catch(e){
       if(loadId !== radarLoadId) return;
@@ -4116,12 +4134,15 @@ function showFrame(i){
     }
     applySatelliteOverlay(i);
   }else if(IEM_TILES[radarMode]){
+    if(!iemFrames.length) return;
+    const mode = radarMode;
+    if(IEM_TILES[mode].velocity && !iemVelocitySite) return;
+    const suffix = iemFrames[i];
+    const name = iemLayerName(mode, suffix);
+    if(!name) return;
     hidePingPongLayers(radarOverlayLayers);
     hidePingPongLayers(satOverlayLayers);
     hideGoesSatellite();
-    const mode = radarMode;
-    const suffix = iemFrames[i];
-    const name = iemLayerName(mode, suffix);
     const url = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png';
     const iemErr = IEM_TILES[mode] && IEM_TILES[mode].velocity ? onIemTileError : null;
     iemOverlaySlot = showPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, i, url, 0.78, iemErr, IEM_TILE_OPTS);
@@ -4145,6 +4166,7 @@ $('radarMode').addEventListener('change', e => {
   radarMode = e.target.value;
   store.set('st_radar_mode', radarMode);
   radarLoadId++;
+  iemLoadGen++;
   stopRadarTimer();
   applyRadarZoomLimits();
   updateRadarLegend();
