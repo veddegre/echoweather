@@ -962,7 +962,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '123';
+const APP_VERSION = '124';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -2190,6 +2190,7 @@ function activityHourContext(d, i){
     precip: h.precipitation?.[i] ?? 0,
     wind: h.wind_speed_10m?.[i] ?? 0,
     gust: h.wind_gusts_10m?.[i] ?? 0,
+    windDir: h.wind_direction_10m?.[i] ?? null,
     uv: h.uv_index?.[i] ?? 0,
     code: h.weather_code?.[i] ?? 0,
     isDay: h.is_day?.[i] ?? 1,
@@ -2419,7 +2420,89 @@ function summarizeActivityWindows(windows, hours, def){
   if(!parts.length) return 'Poor conditions during recommended hours';
   return parts.join(' \u00B7 ');
 }
-function renderActivityCard(def, hours){
+function activityWxLabel(ctx){
+  return wmo(ctx.code, ctx.isDay)[0];
+}
+function activityLaterConcerns(eligible){
+  const lastGoodIdx = eligible.map((h, i) => h.grade === 'good' ? i : -1).filter(i => i >= 0).pop();
+  if(lastGoodIdx == null) return [];
+  const after = eligible.slice(lastGoodIdx + 1).filter(h => h.grade !== 'good');
+  const counts = {};
+  after.forEach(h => h.reasons.forEach(r => { counts[r] = (counts[r] || 0) + 1; }));
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([r]) => r);
+}
+function buildActivityWhyList(def, hours, windows, d, extra){
+  const items = [];
+  const eligible = hours.filter(h => !h.ineligible);
+  if(!eligible.length){
+    return [def.nightOnly
+      ? 'Needs darkness — none left in this 24-hour window.'
+      : 'Best in daylight; remaining hours are after dark.'];
+  }
+  const bestWin = windows.find(w => w.grade === 'good') || windows.find(w => w.grade === 'fair');
+  if(bestWin){
+    items.push('Top window: ' + fmtActWindow(bestWin) + ' (' + activityGradeLabel(bestWin.grade).toLowerCase() + ')');
+  }
+  const peakHour = eligible.reduce((a, h) => h.score > a.score ? h : a, eligible[0]);
+  const peakIdx = d.hourly.time.indexOf(peakHour.time);
+  if(peakIdx < 0) return items.length ? items : ['Forecast data unavailable for this period.'];
+  const ctx = activityHourContext(d, peakIdx);
+  const temp = Math.round(ctx.temp);
+  const dew = Math.round(ctx.dew);
+  const pop = Math.round(ctx.pop);
+  const wind = Math.round(ctx.wind);
+  const wu = windUnit();
+  const wcard = ctx.windDir != null ? compass(ctx.windDir) : '';
+
+  items.push('At peak: ' + activityWxLabel(ctx) + ', ' + temp + degSym() + ', ' + hourlyComfortNote(temp, dew).toLowerCase());
+  if(pop <= 15) items.push('Rain unlikely (' + pop + '% chance)');
+  else if(pop < 40) items.push('Some rain risk (' + pop + '% chance)');
+  else items.push('Rain likely (' + pop + '% chance)');
+  if(wind < 4) items.push('Light wind');
+  else items.push((wcard ? wcard + ' wind at ' : 'Wind ') + wind + ' ' + wu + (ctx.gust > wind + 4 ? ', gusts to ' + Math.round(ctx.gust) + ' ' + wu : ''));
+
+  if(def.id === 'golf'){
+    if(wind < 12) items.push('Wind should not dominate ball flight');
+    else if(wind >= 18) items.push('Wind may make club selection difficult');
+    if(ctx.uv >= 6 && ctx.isDay) items.push('UV ' + ctx.uv.toFixed(1) + ' — hat and sunscreen between holes');
+  }else if(def.id === 'hiking'){
+    if(ctx.cloud < 40 && ctx.isDay) items.push('Good visibility on the trail');
+    else if(ctx.cloud > 80) items.push('Overcast — dim light on trails');
+    if(ctx.uv >= 8 && ctx.isDay) items.push('High UV — cover up on exposed ridges');
+  }else if(def.id === 'yard'){
+    if(ctx.precip > 0.02) items.push('Ground may still be wet from recent rain');
+    if(ctx.wetBulb >= 80) items.push('Heavy exertion in heat — take breaks and hydrate');
+    if(wind >= 20) items.push('High wind — mowing or spraying may be difficult');
+  }else if(def.id === 'running'){
+    if(temp >= 40 && temp <= 65) items.push('Cool temps favorable for pace');
+    else if(temp > 78) items.push('Warm — slower pace and extra fluids');
+    if(extra.aqi != null && extra.aqi > 100) items.push('AQI ' + extra.aqi + ' — consider an indoor workout');
+    else if(extra.aqi != null && extra.aqi <= 50) items.push('Air quality is good for outdoor runs');
+  }else if(def.id === 'beach'){
+    if(temp >= 75) items.push('Warm enough for comfortable swimming');
+    else if(temp < 68) items.push('Water may feel chilly');
+    if(ctx.uv >= 7) items.push('Strong sun — shade and sunscreen');
+    if(extra.coastal) items.push('Near the coast — check surf and rip-current alerts');
+  }else if(def.id === 'cycling'){
+    if(wind < 12) items.push('Low wind resistance on the road');
+    else if(wind >= 16) items.push('Headwinds may slow your ride noticeably');
+  }else if(def.id === 'dog'){
+    if(temp >= 85) items.push('Hot pavement risk — walk early or on grass');
+    else if(temp <= 20) items.push('Cold — short walks; watch for ice on paws');
+    if(extra.aqi != null && extra.aqi > 100) items.push('AQI ' + extra.aqi + ' — shorten outdoor time');
+  }else if(def.id === 'stars'){
+    if(ctx.cloud < 25) items.push('Mostly clear skies');
+    else if(ctx.cloud < 55) items.push('Partly cloudy — some stars visible');
+    else items.push(Math.round(ctx.cloud) + '% cloud cover may limit viewing');
+  }
+
+  peakHour.reasons.forEach(r => {
+    if(!items.some(line => line.toLowerCase().includes(r.toLowerCase().slice(0, 14)))) items.push(r);
+  });
+  activityLaterConcerns(eligible).forEach(r => items.push('Later today: ' + r));
+  return items.slice(0, 8);
+}
+function renderActivityCard(def, hours, d, extra){
   if(!hours.length){
     return '<article class="activity-card"><div class="activity-head"><span class="activity-ico" aria-hidden="true">' + def.icon
       + '</span><span class="activity-name">' + esc(def.name) + '</span><span class="activity-grade poor">Poor</span></div>'
@@ -2429,17 +2512,13 @@ function renderActivityCard(def, hours){
   const peak = eligible.length ? Math.max(...eligible.map(h => h.score)) : 0;
   const overall = eligible.length ? activityGrade(peak) : 'poor';
   const windows = mergeActivityWindows(hours);
-  const why = eligible.length
-    ? eligible.reduce((best, h) => h.score > best.score ? h : best, eligible[0])
-    : hours[0];
   const bar = hours.map(h => {
     const cls = h.ineligible ? 'na' : (h.grade === 'good' ? 'g' : h.grade === 'fair' ? 'f' : 'p');
     const tip = hourLabelCompact(h.time) + ': ' + (h.ineligible ? activityIneligibleNote(def) : activityGradeLabel(h.grade));
     return '<span class="' + cls + '" title="' + esc(tip) + '"></span>';
   }).join('');
-  const whyList = why.reasons.length
-    ? why.reasons.map(r => '<li>' + esc(r) + '</li>').join('')
-    : '<li>' + esc(activityGradeLabel(why.grade) + ' around ' + hourLabelCompact(why.time)) + '</li>';
+  const whyList = buildActivityWhyList(def, hours, windows, d, extra)
+    .map(line => '<li>' + esc(line) + '</li>').join('');
   return '<article class="activity-card">'
     + '<div class="activity-head"><span class="activity-ico" aria-hidden="true">' + def.icon + '</span>'
     + '<span class="activity-name">' + esc(def.name) + '</span>'
@@ -2464,7 +2543,7 @@ function renderActivityPlanner(d){
     coastal: loc && isCoastalLoc(loc)
   };
   box.innerHTML = ACTIVITY_DEFS.map(def =>
-    renderActivityCard(def, buildActivityHours(d, def, extra))
+    renderActivityCard(def, buildActivityHours(d, def, extra), d, extra)
   ).join('');
 }
 function todayOutlook(d){
