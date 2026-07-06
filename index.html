@@ -410,6 +410,22 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .storm-foot{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
 .storm-foot a{font-size:.75rem;padding:6px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;text-decoration:none;font-weight:500}
 .storm-foot a:hover{border-color:var(--accent)}
+.storm-panel-muted{background:var(--panel);border-color:var(--line)}
+.storm-panel-muted .storm-head .lbl{color:var(--mut)}
+.storm-mode-banner{display:none;margin-bottom:10px;padding:12px 14px;border-radius:10px;border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 12%,var(--panel));font-size:.8125rem;line-height:1.45;color:var(--ink)}
+.storm-mode-banner.visible{display:block}
+.storm-mode-banner strong{color:var(--warn);font-weight:600}
+.storm-probs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.storm-prob{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:.75rem}
+.storm-prob .k{color:var(--dim);font-weight:500}
+.storm-prob .v{font-weight:600;color:var(--ink)}
+.storm-window{margin-top:10px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:.8125rem;line-height:1.45}
+.storm-window strong{color:var(--ink)}
+.storm-reports{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.storm-report{padding:9px 11px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:.75rem;line-height:1.4}
+.storm-report .sr-meta{font-size:.6875rem;color:var(--dim);margin-top:3px}
+.storm-setup{margin-top:14px}
+.storm-setup[hidden]{display:none!important}
 .afd-text{font-size:.8125rem;color:var(--mut);white-space:pre-wrap;max-height:320px;overflow-y:auto;line-height:1.55;margin-top:10px;padding:14px 16px;background:var(--panel-2);border-radius:10px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace}
 .fc-meta{font-size:.75rem;color:var(--dim);margin-bottom:12px;line-height:1.45}
 .fc-meta a{color:var(--sky)}
@@ -573,6 +589,10 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
           </div>
         </div>
         <div class="glance" id="conditionsGlance"></div>
+        <div class="storm-setup" id="stormSetup" hidden>
+          <div class="metrics-lbl">Storm setup</div>
+          <div class="glance" id="stormSetupGlance"></div>
+        </div>
         <div class="metrics-lbl">More detail</div>
         <div class="metrics" id="metrics"></div>
       </section>
@@ -631,6 +651,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 
     <section class="panel full nav-target" id="radarPanel" data-tab="radar" aria-label="Radar">
       <h2>Radar <span class="panel-status" id="radarStatus"></span></h2>
+      <div class="storm-mode-banner" id="stormModeBanner" role="status" aria-live="polite"></div>
       <div class="radar-stage" id="radarStage">
         <div class="radar-wrap">
           <div class="radar-map-tools">
@@ -656,6 +677,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
             <button id="radarPlay" aria-label="Play or pause radar animation">&#9654; Play</button>
             <input type="range" id="radarScrub" class="radar-scrub" min="0" max="0" value="0" aria-label="Radar frame scrubber">
             <button id="radarSat" aria-label="Toggle satellite infrared overlay">Satellite</button>
+            <button id="radarLightning" aria-label="Toggle lightning strike overlay">Lightning</button>
           </span>
           <div class="radar-meta">
             <span class="radar-time" id="radarTime">&mdash;</span>
@@ -803,7 +825,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '102';
+const APP_VERSION = '103';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -1781,6 +1803,7 @@ async function enrichWeatherBackground(loc){
   if(hrrr){
     mergeHrrrFields(d.om, hrrr);
     renderHourly(d);
+    if(stormState.loaded) renderStormSetup(d);
     if(tabPanelsLoaded.more) renderAdvanced(d);
   }
   if(metar){
@@ -2065,6 +2088,7 @@ function renderCurrent(d){
   $('metrics').innerHTML = rows.map(r =>
     '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
   ).join('');
+  if(stormState.loaded) renderStormSetup(d);
 }
 
 // ---------- render: light planner ----------
@@ -2473,35 +2497,126 @@ function renderForecastText(d){
 }
 
 // ---------- NWS alerts: warnings / watches / advisories (US only) ----------
+const stormState = {
+  risks: [], prob: null, mcds: [], discussions: {}, reports: [],
+  alertFeatures: [], severeWindow: null, lakeEffect: null,
+  maxDn: 0, stormMode: false, loaded: false
+};
+let alertLayerGroup = null;
+let lightningLayer = null;
+let radarLightningOn = false;
+let stormTrackGen = 0;
+
+function haversineMi(lat1, lon1, lat2, lon2){
+  const R = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+async function fetchAllActiveAlerts(loc){
+  const r = await nwsFetch('https://api.weather.gov/alerts/active?point=' + loc.lat + ',' + loc.lon);
+  if(!r.ok) return [];
+  return (await r.json()).features || [];
+}
+async function fetchActiveAlertFeatures(loc){
+  const feats = await fetchAllActiveAlerts(loc);
+  return feats.filter(f => f.geometry);
+}
+function renderAlertsBox(feats){
+  const box = $('alerts');
+  if(!box) return;
+  box.style.display = 'none';
+  box.innerHTML = '';
+  if(!feats.length) return;
+  const rank = ev => /warning/i.test(ev) ? 0 : /watch/i.test(ev) ? 1 : 2;
+  const sorted = feats.slice().sort((a, b) => rank(a.properties.event) - rank(b.properties.event)).slice(0, 6);
+  box.innerHTML = sorted.map(f => {
+    const p = f.properties;
+    const ev = p.event || 'Alert';
+    const cls = /warning/i.test(ev) ? '' : /watch/i.test(ev) ? ' watch' : ' adv';
+    const until = p.expires ? ' \u00B7 until ' + new Date(p.expires).toLocaleString([], {weekday:'short', hour:'numeric', minute:'2-digit'}) : '';
+    const desc = ((p.description || '') + (p.instruction ? '\n\nPRECAUTIONARY ACTIONS:\n' + p.instruction : ''))
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    return '<details class="alert' + cls + '"><summary>'
+      + '<div class="ev">\u26A0 ' + esc(ev) + until + '</div>'
+      + '<div class="hl">' + esc(p.headline || '') + '</div>'
+      + '</summary><div class="desc">' + desc + '</div></details>';
+  }).join('');
+  box.style.display = 'flex';
+}
 async function loadAlerts(loc){
   return panelTask('alerts', null, async () => {
-    const box = $('alerts');
-    box.style.display = 'none'; box.innerHTML = '';
     try{
-      const r = await nwsFetch('https://api.weather.gov/alerts/active?point=' + loc.lat + ',' + loc.lon);
-      if(!r.ok) return 0;
-      const j = await r.json();
-      const rank = ev => /warning/i.test(ev) ? 0 : /watch/i.test(ev) ? 1 : 2;
-      const feats = (j.features || [])
-        .sort((a, b) => rank(a.properties.event) - rank(b.properties.event))
-        .slice(0, 6);
-      if(!feats.length) return 0;
-      box.innerHTML = feats.map(f => {
-        const p = f.properties;
-        const ev = p.event || 'Alert';
-        const cls = /warning/i.test(ev) ? '' : /watch/i.test(ev) ? ' watch' : ' adv';
-        const until = p.expires ? ' \u00B7 until ' + new Date(p.expires).toLocaleString([], {weekday:'short', hour:'numeric', minute:'2-digit'}) : '';
-        const desc = ((p.description || '') + (p.instruction ? '\n\nPRECAUTIONARY ACTIONS:\n' + p.instruction : ''))
-          .replace(/&/g,'&amp;').replace(/</g,'&lt;');
-        return '<details class="alert' + cls + '"><summary>'
-          + '<div class="ev">\u26A0 ' + esc(ev) + until + '</div>'
-          + '<div class="hl">' + esc(p.headline || '') + '</div>'
-          + '</summary><div class="desc">' + desc + '</div></details>';
-      }).join('');
-      box.style.display = 'flex';
+      const feats = await fetchAllActiveAlerts(loc);
+      stormState.alertFeatures = feats;
+      renderAlertsBox(feats);
+      syncAlertPolygons(feats.filter(f => f.geometry));
       return feats.length;
-    }catch(e){ return 0; }
+    }catch(e){
+      stormState.alertFeatures = [];
+      renderAlertsBox([]);
+      syncAlertPolygons([]);
+      return 0;
+    }
   });
+}
+function syncAlertPolygons(features){
+  if(!map) return;
+  if(alertLayerGroup){
+    map.removeLayer(alertLayerGroup);
+    alertLayerGroup = null;
+  }
+  if(!features || !features.length) return;
+  alertLayerGroup = L.layerGroup();
+  L.geoJSON({ type: 'FeatureCollection', features }, {
+    style(f){
+      const ev = f.properties.event || '';
+      const isWarn = /warning/i.test(ev);
+      const isWatch = /watch/i.test(ev);
+      return {
+        color: isWarn ? '#c0392b' : isWatch ? '#d4ac0d' : '#3c91e6',
+        weight: 2,
+        fillOpacity: isWarn ? 0.2 : isWatch ? 0.14 : 0.08,
+        fillColor: isWarn ? '#e74c3c' : isWatch ? '#f1c40f' : '#3498db'
+      };
+    },
+    onEachFeature(f, layer){
+      const p = f.properties;
+      layer.bindPopup('<strong>' + esc(p.event || 'Alert') + '</strong><br>' + esc(p.headline || ''));
+    }
+  }).eachLayer(l => alertLayerGroup.addLayer(l));
+  alertLayerGroup.addTo(map);
+  bringStormMapLayersFront();
+}
+function bringStormMapLayersFront(){
+  if(!map) return;
+  if(alertLayerGroup) alertLayerGroup.eachLayer(l => l.bringToFront && l.bringToFront());
+  if(lightningLayer && map.hasLayer(lightningLayer)) lightningLayer.bringToFront();
+  if(mapMarker) mapMarker.bringToFront();
+}
+function setLightningOverlay(on){
+  radarLightningOn = !!on;
+  const btn = $('radarLightning');
+  if(btn) btn.classList.toggle('on', radarLightningOn);
+  if(!map){
+    if(btn && radarLightningOn) btn.classList.remove('on');
+    radarLightningOn = false;
+    return;
+  }
+  if(lightningLayer && map.hasLayer(lightningLayer)) map.removeLayer(lightningLayer);
+  lightningLayer = null;
+  if(!radarLightningOn) return;
+  lightningLayer = L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes_east_glmfl-900913/{z}/{x}/{y}.png', {
+    opacity: 0.58,
+    zIndex: 455,
+    maxNativeZoom: 8,
+    maxZoom: radarMaxZoom(),
+    attribution: 'IEM / NOAA GLM'
+  });
+  lightningLayer.addTo(map);
+  bringStormMapLayersFront();
 }
 
 // ---------- active weather (SPC outlook + MCD at your location) ----------
@@ -2654,7 +2769,224 @@ function renderOutlookDiscussionHtml(disc, dayLabel, open){
     + (meta ? '<span class="storm-disc-meta">Issued ' + esc(meta) + '</span>' : '')
     + '</summary><div class="storm-disc-body">' + body + '</div></details>';
 }
-function renderStormPanel(box, loc, risks, mcds, discussions){
+async function fetchSpcProbLayer(loc, layer){
+  const r = await fetch('https://www.spc.noaa.gov/products/outlook/day1otlk_' + layer + '.lyr.geojson');
+  if(!r.ok) return null;
+  const geo = await r.json();
+  return spcRiskAtPoint(loc.lon, loc.lat, geo);
+}
+async function fetchSpcProbRisks(loc){
+  const [torn, hail, wind] = await Promise.all([
+    fetchSpcProbLayer(loc, 'torn'),
+    fetchSpcProbLayer(loc, 'hail'),
+    fetchSpcProbLayer(loc, 'wind')
+  ]);
+  return { torn, hail, wind };
+}
+async function fetchNearbyStormReports(loc, maxMi){
+  try{
+    const r = await fetch('https://www.spc.noaa.gov/climo/reports/today.csv');
+    if(!r.ok) return [];
+    const lines = (await r.text()).trim().split('\n').slice(1);
+    const out = [];
+    for(const line of lines){
+      const parts = line.split(',');
+      if(parts.length < 7) continue;
+      const lat = parseFloat(parts[5]);
+      const lon = parseFloat(parts[6]);
+      if(isNaN(lat) || isNaN(lon)) continue;
+      const dist = haversineMi(loc.lat, loc.lon, lat, lon);
+      if(dist > (maxMi || 120)) continue;
+      const time = parts[0] || '';
+      const type = parts[1] || 'Report';
+      const place = parts[2] || '';
+      const county = parts[3] || '';
+      const st = parts[4] || '';
+      const remarks = parts.slice(7).join(',').trim();
+      out.push({ time, type, place, county, st, lat, lon, dist, remarks });
+    }
+    return out.sort((a, b) => a.dist - b.dist).slice(0, 6);
+  }catch(e){ return []; }
+}
+async function fetchLakeEffectHint(loc, d){
+  if(!isGreatLakesLoc(loc) || !d) return null;
+  try{
+    const c = await fetchMarineCurrent(loc.lat, loc.lon);
+    if(c.sea_surface_temperature == null) return null;
+    const airC = state.units === 'F'
+      ? (d.current.temperature_2m - 32) * 5 / 9
+      : d.current.temperature_2m;
+    const deltaC = airC - c.sea_surface_temperature;
+    const lake = greatLakeName(loc.lat, loc.lon);
+    if(deltaC <= -13){
+      return {
+        verdict: 'Lake-effect potential',
+        detail: 'Cold air over ' + lake + ' water \u2014 watch for banded snow/showers downwind.',
+        cls: 'good'
+      };
+    }
+    if(deltaC <= -8){
+      return {
+        verdict: 'Moderate lake influence',
+        detail: 'Air colder than ' + lake + ' \u2014 some lake-modified weather possible.',
+        cls: 'mid'
+      };
+    }
+    return null;
+  }catch(e){ return null; }
+}
+function isStormCode(code){
+  return (code ?? 0) >= 95;
+}
+function hourStormScore(d, j){
+  const h = d.hourly;
+  const cape = h.cape[j] ?? 0;
+  const code = h.weather_code[j] ?? 0;
+  const pop = h.precipitation_probability[j] ?? 0;
+  const gust = h.wind_gusts_10m[j] ?? 0;
+  let score = 0;
+  if(isStormCode(code)) score += 3;
+  else if(code >= 80) score += 1;
+  if(cape >= 1500) score += 2;
+  else if(cape >= 800) score += 1;
+  if(pop >= 50) score += 1;
+  if(gust >= 35) score += 1;
+  return score;
+}
+function computeSevereWindow(d){
+  if(!d || !d.hourly || !d.hourly.time) return null;
+  const i0 = nowIndex(d);
+  const todayKey = d.hourly.time[i0].slice(0, 10);
+  let bestStart = -1, bestEnd = -1, bestSum = 0;
+  let curStart = -1, curSum = 0;
+  for(let j = i0; j < d.hourly.time.length && d.hourly.time[j].slice(0, 10) === todayKey; j++){
+    const score = hourStormScore(d, j);
+    if(score >= 2){
+      if(curStart < 0) curStart = j;
+      curSum += score;
+    } else if(curStart >= 0){
+      if(curSum > bestSum){ bestSum = curSum; bestStart = curStart; bestEnd = j - 1; }
+      curStart = -1;
+      curSum = 0;
+    }
+  }
+  if(curStart >= 0 && curSum > bestSum){
+    bestStart = curStart;
+    bestEnd = d.hourly.time.length - 1;
+    while(bestEnd > bestStart && d.hourly.time[bestEnd].slice(0, 10) !== todayKey) bestEnd--;
+  }
+  if(bestStart < 0 || bestEnd < bestStart) return null;
+  return {
+    start: d.hourly.time[bestStart],
+    end: d.hourly.time[bestEnd],
+    label: (bestStart === bestEnd
+      ? hourLabelCompact(d.hourly.time[bestStart])
+      : hourLabelCompact(d.hourly.time[bestStart]) + '\u2013' + hourLabelCompact(d.hourly.time[bestEnd]))
+  };
+}
+function windShearNote(d, i){
+  const h = d.hourly;
+  const s10 = h.wind_speed_10m[i] ?? 0;
+  const s80 = h.wind_speed_80m && h.wind_speed_80m[i];
+  const d10 = h.wind_direction_10m[i] ?? 0;
+  const d80 = h.wind_direction_80m && h.wind_direction_80m[i];
+  if(s80 == null || d80 == null) return null;
+  const spdShear = Math.round(s80 - s10);
+  let dirDiff = Math.abs(d80 - d10);
+  if(dirDiff > 180) dirDiff = 360 - dirDiff;
+  const strong = spdShear >= 15 || dirDiff >= 45;
+  return (strong ? 'Strong' : 'Weak') + ' shear \u00B7 ' + spdShear + ' ' + windUnit() + ' \u0394 \u00B7 ' + dirDiff + '\u00B0 dir';
+}
+function moistureNote(d, i){
+  const rh = d.hourly.relative_humidity_2m && d.hourly.relative_humidity_2m[i];
+  const temp = d.hourly.temperature_2m[i] ?? 0;
+  if(rh == null) return null;
+  if(rh >= 65 && temp > 15) return 'Moist surface air';
+  if(rh >= 50) return 'Moderate moisture';
+  return 'Limited moisture';
+}
+function shouldShowStormSetup(d){
+  if(!d) return false;
+  const i = nowIndex(d);
+  const cape = d.hourly.cape[i] ?? 0;
+  return stormState.stormMode || stormState.maxDn >= 2 || cape >= 500 || !!stormState.severeWindow;
+}
+function renderStormSetup(d){
+  const wrap = $('stormSetup'), box = $('stormSetupGlance');
+  if(!wrap || !box || !d) return;
+  if(!shouldShowStormSetup(d)){
+    wrap.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  const i = nowIndex(d);
+  const cape = Math.round(d.hourly.cape[i] ?? 0);
+  const frz = d.hourly.freezing_level_height[i] ?? 0;
+  const frzDisp = state.units === 'F'
+    ? (Math.round(frz * 3.281 / 100) * 100).toLocaleString() + '<small> ft</small>'
+    : Math.round(frz).toLocaleString() + '<small> m</small>';
+  const items = [
+    { k: 'CAPE', v: cape + '<small> J/kg</small>', s: capeCat(cape) + ' (HRRR)' },
+    { k: 'Freezing lvl', v: frzDisp, s: 'Storm depth reference' }
+  ];
+  const shear = windShearNote(d, i);
+  if(shear) items.push({ k: 'Wind shear', v: shear.split(' \u00B7 ')[0], s: shear });
+  const moist = moistureNote(d, i);
+  if(moist) items.push({ k: 'Moisture', v: moist, s: 'Surface layer' });
+  if(stormState.prob){
+    const p = stormState.prob;
+    const bits = [];
+    if(p.torn) bits.push('T ' + (p.torn.label2 || p.torn.label));
+    if(p.hail) bits.push('Hail ' + (p.hail.label2 || p.hail.label));
+    if(p.wind) bits.push('Wind ' + (p.wind.label2 || p.wind.label));
+    if(bits.length) items.push({ k: 'SPC probs', v: bits[0], s: bits.slice(1).join(' \u00B7 ') });
+  }
+  box.innerHTML = items.map(it =>
+    '<div class="g"><div class="gk">' + it.k + '</div><div class="gv">' + it.v + '</div>'
+    + (it.s ? '<div class="gs">' + it.s + '</div>' : '') + '</div>'
+  ).join('');
+  wrap.hidden = false;
+}
+function buildStormBannerText(){
+  const parts = [];
+  const warns = stormState.alertFeatures.filter(f => /warning/i.test(f.properties.event));
+  const watches = stormState.alertFeatures.filter(f => /watch/i.test(f.properties.event));
+  if(warns.length){
+    const p = warns[0].properties;
+    const until = p.expires
+      ? ' until ' + new Date(p.expires).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })
+      : '';
+    parts.push('<strong>' + esc(p.event) + '</strong>' + esc(until));
+  } else if(watches.length){
+    parts.push('<strong>' + esc(watches[0].properties.event) + '</strong>');
+  }
+  const day1 = stormState.risks.find(r => r.day === 'day1');
+  if(day1 && day1.dn >= 2) parts.push('SPC ' + esc(day1.label2 || day1.label));
+  if(stormState.mcds.length) parts.push('Mesoscale Discussion overhead');
+  if(stormState.severeWindow) parts.push('Best window ' + esc(stormState.severeWindow.label));
+  return parts.join(' \u00B7 ');
+}
+function renderStormBanner(){
+  const box = $('stormModeBanner');
+  if(!box) return;
+  const text = buildStormBannerText();
+  if(stormState.stormMode && text){
+    box.innerHTML = text;
+    box.classList.add('visible');
+  } else {
+    box.innerHTML = '';
+    box.classList.remove('visible');
+  }
+}
+function renderStormPanel(box, loc, opts){
+  const risks = opts.risks || [];
+  const mcds = opts.mcds || [];
+  const discussions = opts.discussions || {};
+  const prob = opts.prob;
+  const reports = opts.reports || [];
+  const severeWindow = opts.severeWindow;
+  const lakeEffect = opts.lakeEffect;
+  const muted = opts.muted;
   const riskHtml = risks.map(r => {
     const name = r.day === 'day1' ? 'Day 1' : r.day === 'day2' ? 'Day 2' : 'Day 3';
     const fill = cssColor(r.fill);
@@ -2663,6 +2995,27 @@ function renderStormPanel(box, loc, risks, mcds, discussions){
     return '<div class="storm-risk"><span class="day">' + name + '</span>'
       + '<span class="storm-badge" style="' + style + '">' + esc(r.label2 || r.label || 'None') + '</span></div>';
   }).join('');
+  let probHtml = '';
+  if(prob && (prob.torn || prob.hail || prob.wind)){
+    const rows = [
+      ['Tornado', prob.torn],
+      ['Hail', prob.hail],
+      ['Wind', prob.wind]
+    ].filter(r => r[1]).map(r =>
+      '<div class="storm-prob"><span class="k">' + r[0] + '</span><span class="v">' + esc(r[1].label2 || r[1].label) + '</span></div>'
+    ).join('');
+    if(rows) probHtml = '<div class="storm-probs">' + rows + '</div>';
+  }
+  let windowHtml = '';
+  if(severeWindow){
+    windowHtml = '<div class="storm-window"><strong>Best storm window today:</strong> '
+      + esc(severeWindow.label) + '</div>';
+  }
+  let lakeHtml = '';
+  if(lakeEffect){
+    lakeHtml = '<div class="storm-window"><strong>' + esc(lakeEffect.verdict) + ':</strong> '
+      + esc(lakeEffect.detail) + '</div>';
+  }
   let mcdHtml = '';
   if(mcds.length){
     mcdHtml = '<div class="storm-mcds">' + mcds.map(m =>
@@ -2674,55 +3027,111 @@ function renderStormPanel(box, loc, risks, mcds, discussions){
       + '</div></div>'
     ).join('') + '</div>';
   }
+  let reportHtml = '';
+  if(reports.length){
+    reportHtml = '<div class="storm-reports">' + reports.map(r =>
+      '<div class="storm-report"><strong>' + esc(r.type) + '</strong> \u00B7 ' + esc(r.place)
+      + (r.county ? ', ' + esc(r.county) : '') + (r.st ? ' ' + esc(r.st) : '')
+      + '<div class="sr-meta">' + esc(r.time || '')
+      + (r.dist != null ? ' \u00B7 ' + Math.round(r.dist) + ' mi away' : '')
+      + (r.remarks ? ' \u00B7 ' + esc(r.remarks.slice(0, 120)) : '') + '</div></div>'
+    ).join('') + '</div>';
+  }
   const dayLabels = { day1:'Day 1', day2:'Day 2', day3:'Day 3' };
   const maxDn = Math.max(...risks.map(r => r.dn || 0), 0);
   let discHtml = '';
-  if(discussions){
-    const parts = [];
-    for(const r of risks){
-      const disc = discussions[r.day];
-      if(!disc || (r.dn || 0) < 1) continue;
-      parts.push(renderOutlookDiscussionHtml(disc, dayLabels[r.day] || r.day, r.day === 'day1' && maxDn >= 4));
-    }
-    if(parts.length) discHtml = '<div class="storm-discs">' + parts.join('') + '</div>';
+  const parts = [];
+  for(const r of risks){
+    const disc = discussions[r.day];
+    if(!disc || (r.dn || 0) < 1) continue;
+    parts.push(renderOutlookDiscussionHtml(disc, dayLabels[r.day] || r.day, r.day === 'day1' && maxDn >= 4));
   }
+  if(parts.length) discHtml = '<div class="storm-discs">' + parts.join('') + '</div>';
   const fcUrl = 'https://forecast.weather.gov/MapClick.php?lat=' + loc.lat + '&lon=' + loc.lon;
+  box.classList.toggle('storm-panel-muted', !!muted);
   box.innerHTML = '<div class="storm-head"><div class="lbl">Convective outlook</div>'
     + '<div class="storm-meta">SPC at your location</div></div>'
     + '<div class="storm-risks">' + riskHtml + '</div>'
-    + mcdHtml + discHtml
+    + probHtml + windowHtml + lakeHtml + mcdHtml + reportHtml + discHtml
     + '<div class="storm-foot">'
     + '<a href="https://www.spc.noaa.gov/products/outlook/" target="_blank" rel="noopener">SPC outlook maps</a>'
     + '<a href="' + fcUrl + '" target="_blank" rel="noopener">NWS point forecast</a>'
     + '</div>';
 }
-async function loadStormIntel(loc, d){
+function updateStormUi(loc, d){
+  renderStormBanner();
+  renderStormSetup(d);
   const box = $('stormLinks');
-  const cape = d ? (d.hourly.cape[nowIndex(d)] ?? 0) : 0;
+  if(!box) return;
+  const show = stormState.maxDn >= 2 || stormState.mcds.length > 0 || stormState.reports.length > 0
+    || stormState.stormMode || !!stormState.severeWindow || !!stormState.lakeEffect;
+  if(!show){
+    box.classList.remove('visible');
+    return;
+  }
+  renderStormPanel(box, loc, {
+    risks: stormState.risks,
+    mcds: stormState.mcds,
+    discussions: stormState.discussions,
+    prob: stormState.prob,
+    reports: stormState.reports,
+    severeWindow: stormState.severeWindow,
+    lakeEffect: stormState.lakeEffect,
+    muted: stormState.maxDn === 2 && !stormState.stormMode
+  });
+  box.classList.add('visible');
+}
+async function refreshStormTracking(loc, d){
+  if(!isLikelyUS(loc) || !d) return;
+  const gen = ++stormTrackGen;
+  const cape = d.hourly.cape[nowIndex(d)] ?? 0;
+  stormState.severeWindow = computeSevereWindow(d);
   try{
-    const [day1, day2, day3, products] = await Promise.all([
+    const [day1, day2, day3, products, prob, reports, lakeEffect, alertFeats] = await Promise.all([
       fetchSpcOutlookDay(loc, 'day1'),
       fetchSpcOutlookDay(loc, 'day2'),
       fetchSpcOutlookDay(loc, 'day3'),
-      fetchSwoProducts(30)
+      fetchSwoProducts(30),
+      fetchSpcProbRisks(loc),
+      fetchNearbyStormReports(loc, 120),
+      fetchLakeEffectHint(loc, d),
+      fetchAllActiveAlerts(loc)
     ]);
-    const risks = [day1, day2, day3].filter(Boolean);
-    const maxDn = Math.max(...risks.map(r => r.dn || 0), 0);
-    const mcds = products.map(parseMcd).filter(Boolean)
+    if(gen !== stormTrackGen) return;
+    stormState.risks = [day1, day2, day3].filter(Boolean);
+    stormState.maxDn = Math.max(...stormState.risks.map(r => r.dn || 0), 0);
+    stormState.prob = prob;
+    stormState.mcds = products.map(parseMcd).filter(Boolean)
       .filter(m => pointInMcd(loc.lon, loc.lat, m.text));
-    const discussions = {
+    stormState.discussions = {
       day1: findOutlookByDay(products, 1),
       day2: findOutlookByDay(products, 2),
       day3: findOutlookByDay(products, 3)
     };
-    const show = maxDn >= 3 || mcds.length > 0 || cape >= 1000;
-    if(!show){ box.classList.remove('visible'); return; }
-    renderStormPanel(box, loc, risks, mcds, discussions);
-    box.classList.add('visible');
+    stormState.reports = reports;
+    stormState.lakeEffect = lakeEffect;
+    stormState.alertFeatures = alertFeats;
+    const hasWarning = stormState.alertFeatures.some(f => /warning/i.test(f.properties.event));
+    const hasWatch = stormState.alertFeatures.some(f => /watch/i.test(f.properties.event));
+    stormState.stormMode = hasWarning || hasWatch || stormState.maxDn >= 3
+      || stormState.mcds.length > 0 || cape >= 1000;
+    stormState.loaded = true;
+    updateStormUi(loc, d);
+    syncAlertPolygons(alertFeats.filter(f => f.geometry));
+    renderAlertsBox(alertFeats);
   }catch(e){
     console.error('storm intel', e);
-    box.classList.remove('visible');
+    stormState.loaded = false;
+    $('stormLinks')?.classList.remove('visible');
   }
+}
+async function loadStormIntel(loc, d){
+  if(stormState.loaded && state.data === d){
+    updateStormUi(loc, d);
+    syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
+    return;
+  }
+  return refreshStormTracking(loc, d || state.data);
 }
 
 // ---------- radar (RainViewer + IEM NEXRAD) ----------
@@ -2875,6 +3284,8 @@ function activateRadarPanel(){
   initMap(loc);
   refreshRadarMapSize();
   if(created || radarFrameCount() === 0) loadRadar();
+  if(radarLightningOn) setLightningOverlay(true);
+  else syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
 }
 function initMap(loc){
   if(map){
@@ -2882,6 +3293,8 @@ function initMap(loc){
     applyRadarZoomLimits();
     if(mapMarker) mapMarker.setLatLng([loc.lat, loc.lon]);
     else mapMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(map);
+    syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
+    if(radarLightningOn) setLightningOverlay(true);
     return;
   }
   map = L.map('radar', {
@@ -2928,6 +3341,7 @@ function clearRadarLayers(){
 function setRadarAnimControls(visible){
   $('radarAnimCtl').classList.toggle('hidden', !visible);
   $('radarSat').style.display = radarMode === 'rainviewer' ? '' : 'none';
+  if($('radarLightning')) $('radarLightning').style.display = '';
   if(!visible) stopRadarTimer();
 }
 function iemLayerName(mode, suffix){
@@ -3091,7 +3505,7 @@ function showFrame(i){
     $('radarTime').textContent = IEM_MINS[i] === 0 ? 'Live \u00B7 now' : IEM_MINS[i] + ' min ago';
   }
   if(basemapLayer) basemapLayer.bringToBack();
-  if(mapMarker) mapMarker.bringToFront();
+  bringStormMapLayersFront();
   $('radarScrub').value = i;
 }
 $('radarMode').value = radarMode;
@@ -3126,6 +3540,9 @@ $('radarSat').addEventListener('click', () => {
   $('radarSat').classList.toggle('on', radarSatOn);
   $('radarNote').textContent = radarNoteForMode();
   showFrame(radarIdx);
+});
+$('radarLightning').addEventListener('click', () => {
+  setLightningOverlay(!radarLightningOn);
 });
 
 // ---------- moon (compact astronomical formulas, SunCalc-style) ----------
@@ -4315,12 +4732,22 @@ function scheduleIdleOutdoorPrefetch(loc){
   if(typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3500 });
   else setTimeout(run, 2800);
 }
+function scheduleIdleStormPrefetch(loc){
+  if(!isLikelyUS(loc)) return;
+  const run = () => { if(!stormState.loaded && state.data) refreshStormTracking(loc, state.data); };
+  if(typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3000 });
+  else setTimeout(run, 2200);
+}
 function isGreatLakesLoc(loc){
   return loc && isLikelyUS(loc) && !!greatLakeName(loc.lat, loc.lon);
 }
 async function loadAll(){
   const loc = state.locations[state.active];
   const reloadBuoy = tabPanelsLoaded.outdoor;
+  stormState.loaded = false;
+  stormTrackGen++;
+  const setup = $('stormSetup');
+  if(setup) setup.hidden = true;
   resetTabPanelsLoaded();
   syncBuoyForLocation(loc, reloadBuoy);
   $('content').classList.add('loading');
@@ -4334,12 +4761,14 @@ async function loadAll(){
     $('content').classList.remove('loading');
 
     loadAlerts(loc);
+    if(isLikelyUS(loc) && state.data) refreshStormTracking(loc, state.data);
     enrichWeatherBackground(loc);
     if(map) initMap(loc);
 
     ensureTabPanels(getAppTab());
     scheduleIdleForecastPrefetch();
     scheduleIdleOutdoorPrefetch(loc);
+    scheduleIdleStormPrefetch(loc);
   }catch(e){
     console.error(e);
     $('nowCond').textContent = 'Could not load weather \u2014 check connection and retry.';
