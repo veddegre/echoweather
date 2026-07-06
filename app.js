@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '153';
+const APP_VERSION = '154';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2158,7 +2158,7 @@ const ACTIVITY_SCORERS = {
     if(uv >= 11){ s -= 72; reasons.push('Extreme UV (' + Math.round(uv) + ')'); }
     else if(uv >= 8){ s -= 52; reasons.push('Very high UV (' + Math.round(uv) + ')'); }
     else if(uv >= 6){ s -= 38; reasons.push('High UV (' + Math.round(uv) + ')'); }
-    else if(uv >= 3){ s -= 20; reasons.push('Moderate UV (' + Math.round(uv) + ')'); }
+    else if(uv >= 3){ s -= 20; reasons.push('UV index ' + Math.round(uv)); }
     else if(uv >= 1){ s -= 6; reasons.push('Low UV'); }
     if(ctx.cloud >= 70 && ctx.uv >= 3 && uv < ctx.uv - 0.5){
       reasons.push('Cloud cover reduces surface UV');
@@ -2289,6 +2289,41 @@ function fmtActWindow(w){
   const a = hourLabelCompact(w.start), b = hourLabelCompact(w.end);
   return a === b ? a : a + '\u2013' + b;
 }
+function windowEligibleHours(w, hours){
+  return hours.filter(h => !h.ineligible && h.time >= w.start && h.time <= w.end).length;
+}
+function eligibleHourCount(hours){
+  return hours.filter(h => !h.ineligible).length;
+}
+function isFullSpanWindow(w, hours){
+  const total = eligibleHourCount(hours);
+  if(total < 2) return false;
+  return windowEligibleHours(w, hours) >= total - 1;
+}
+function fmtImpactWindowLabel(w, hours){
+  if(isFullSpanWindow(w, hours)) return 'next 24 hours';
+  return fmtActWindow(w);
+}
+function impactLowDefault(def, ctx){
+  switch(def.id){
+    case 'wind':
+      return ctx && ctx.wind >= 8
+        ? 'Breezy at times, but below strong-wind thresholds.'
+        : 'Light winds — limited wind exposure.';
+    case 'air':
+      return 'Air quality acceptable for time outside.';
+    case 'storms':
+      return 'Limited thunderstorm or lightning risk in the forecast window.';
+    case 'heat':
+      return 'Heat stress remains within comfortable limits.';
+    case 'cold':
+      return 'Cold exposure remains low.';
+    case 'uv':
+      return 'UV remains low for the hours shown.';
+    default:
+      return 'Minimal ' + def.name.toLowerCase() + ' concern.';
+  }
+}
 function summarizeActivityWindows(windows, hours, def){
   const eligible = hours.filter(h => !h.ineligible);
   if(!eligible.length){
@@ -2308,9 +2343,15 @@ function summarizeActivityWindows(windows, hours, def){
   const poor = windows.filter(w => w.grade === 'poor').sort(windowSort);
   const parts = [];
   if(isImpactDef(def)){
-    if(poor.length) parts.push('High ' + poor.slice(0, 2).map(fmtActWindow).join(', '));
-    if(fair.length) parts.push('Moderate ' + fair.slice(0, 2).map(fmtActWindow).join(', '));
-    if(good.length) parts.push('Low ' + good.slice(0, 2).map(fmtActWindow).join(', '));
+    if(poor.length) parts.push('High ' + poor.slice(0, 2).map(w => fmtImpactWindowLabel(w, hours)).join(', '));
+    if(fair.length) parts.push('Moderate ' + fair.slice(0, 2).map(w => fmtImpactWindowLabel(w, hours)).join(', '));
+    if(good.length){
+      if(good.length === 1 && isFullSpanWindow(good[0], hours) && !fair.length && !poor.length){
+        parts.push('Low throughout the next 24 hours');
+      }else{
+        parts.push('Low ' + good.slice(0, 2).map(w => fmtImpactWindowLabel(w, hours)).join(', '));
+      }
+    }
   }else{
     if(good.length) parts.push('Best ' + good.slice(0, 2).map(fmtActWindow).join(', '));
     if(fair.length) parts.push('Fair ' + fair.slice(0, 2).map(fmtActWindow).join(', '));
@@ -2363,8 +2404,10 @@ function describeActivityWindow(def, w, hours, d, extra){
   if(w.grade === 'good'){
     if(reasons.length){
       sentences.push(reasons.slice(0, 2).join('; ').replace(/;$/, '') + '.');
+    }else if(isImpactDef(def)){
+      sentences.push(impactLowDefault(def, ctx));
     }else if(snap){
-      sentences.push(isImpactDef(def) ? 'Low stress — ' + snap + '.' : 'Comfortable stretch — ' + snap + '.');
+      sentences.push('Comfortable stretch — ' + snap + '.');
     }else{
       sentences.push(isImpactDef(def)
         ? 'Minimal ' + def.name.toLowerCase() + ' concern.'
@@ -2421,7 +2464,8 @@ function buildActivityWhyList(def, hours, windows, d, extra){
     return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
   };
   const items = [];
-  for(const grade of ['good', 'fair', 'poor']){
+  const gradeOrder = isImpactDef(def) ? ['poor', 'fair', 'good'] : ['good', 'fair', 'poor'];
+  for(const grade of gradeOrder){
     const wins = windows.filter(w => w.grade === grade).sort(windowSort);
     for(const w of wins.slice(0, 2)){
       items.push({
