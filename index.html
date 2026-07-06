@@ -915,7 +915,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '115';
+const APP_VERSION = '116';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 
@@ -1270,7 +1270,10 @@ function hourLabelCompact(iso){
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return h12 + suffix;
 }
-const minsOfDay = iso => Number(iso.slice(11,13))*60 + Number(iso.slice(14,16));
+const minsOfDay = iso => {
+  if(!iso || typeof iso !== 'string' || iso.length < 16) return 0;
+  return Number(iso.slice(11,13))*60 + Number(iso.slice(14,16));
+};
 function shiftMins(iso, delta){ // returns minutes-of-day clamped 0..1439
   return Math.max(0, Math.min(1439, minsOfDay(iso) + delta));
 }
@@ -2214,9 +2217,9 @@ function renderCurrent(d){
     ['UV index', (d.hourly.uv_index?.[i] ?? 0).toFixed(1) + ' <small>' + uvCat(d.hourly.uv_index?.[i] ?? 0) + '</small>'],
     ['CAPE', Math.round(d.hourly.cape?.[i] ?? 0) + '<small> J/kg \u00B7 ' + capeCat(d.hourly.cape?.[i] ?? 0) + ' (HRRR)</small>'],
     ['Freezing lvl', state.units === 'F'
-        ? (Math.round((d.hourly.freezing_level_height[i] ?? 0) * 3.281 / 100) * 100).toLocaleString() + '<small> ft</small>'
-        : Math.round(d.hourly.freezing_level_height[i] ?? 0).toLocaleString() + '<small> m</small>'],
-    ['Precip (1h)', (d.hourly.precipitation[i] ?? 0) + '<small> ' + (state.units === 'F' ? 'in' : 'mm') + ' (model)</small>']
+        ? (Math.round((d.hourly.freezing_level_height?.[i] ?? 0) * 3.281 / 100) * 100).toLocaleString() + '<small> ft</small>'
+        : Math.round(d.hourly.freezing_level_height?.[i] ?? 0).toLocaleString() + '<small> m</small>'],
+    ['Precip (1h)', (d.hourly.precipitation?.[i] ?? 0) + '<small> ' + (state.units === 'F' ? 'in' : 'mm') + ' (model)</small>']
   ];
   $('metrics').innerHTML = rows.map(r =>
     '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
@@ -2261,7 +2264,7 @@ function renderLight(d){
     + GOLD + ' ' + pc(goldPmS) + ',' + GOLD + ' ' + pc(ssM) + ','
     + BLUE + ' ' + pc(bluePmS) + ',' + BLUE + ' ' + pc(bluePmE) + ','
     + NIGHT + ' ' + pc(bluePmE + 25) + ',' + NIGHT + ' 100%)';
-  $('nowMark').style.left = pc(minsOfDay(d.current.time));
+  $('nowMark').style.left = pc(minsOfDay(d.current?.time || d.hourly?.time?.[nowIndex(d)]));
 
   const cells = [
     ['Golden AM', hm(sr) + ' \u2013 ' + fmtMins(goldAmE), 'gold'],
@@ -2570,7 +2573,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
 }
 function renderDaily(d){
   const dd = d.daily;
-  const hh = d.om && d.om.hourly;
+  const hh = (d.om && d.om.hourly) || d.hourly;
   if(!dd || !dd.time || !dd.time.length || !hh || !hh.time){
     $('daily').innerHTML = '<p class="radar-note">Daily forecast unavailable.</p>';
     $('dailySource').textContent = '';
@@ -2636,10 +2639,12 @@ function renderDaily(d){
 }
 function renderWinterOutlook(d){
   const box = $('winterOutlook');
-  if(!box || !d || !d.om) return;
-  const dd = d.om.daily;
+  if(!box || !d) return;
+  const dd = (d.om && d.om.daily) || d.daily;
+  if(!dd) return;
   const snow = dd.snowfall_sum && dd.snowfall_sum[0];
-  const snowDepth = d.om.hourly.snow_depth && d.om.hourly.snow_depth[nowIndex(d)];
+  const snowDepth = (d.om && d.om.hourly && d.om.hourly.snow_depth && d.om.hourly.snow_depth[nowIndex(d)])
+    || (d.hourly && d.hourly.snow_depth && d.hourly.snow_depth[nowIndex(d)]);
   const nwsText = (d.nwsDaily || []).map(p => (p.shortForecast || '') + ' ' + (p.detailedForecast || '')).join(' ').toLowerCase();
   const winterWords = /winter storm|ice storm|freezing rain|freezing drizzle|sleet|blizzard|heavy snow|snow accum|black ice|wind chill/i.test(nwsText);
   const i0 = nowIndex(d);
@@ -5943,6 +5948,13 @@ function cacheWeatherSnapshot(loc, d){
     });
   }catch(e){}
 }
+function normalizeCachedHourly(h){
+  if(!h) return { time: [], anchoredNow: false };
+  const out = Object.assign({ anchoredNow: !!h.anchoredNow }, h);
+  if(!out.time) out.time = [];
+  HOURLY_CACHE_KEYS.forEach(k => { if(!out[k]) out[k] = []; });
+  return out;
+}
 function loadCachedWeather(loc){
   try{
     const hit = store.get(weatherCacheKey(loc));
@@ -5951,7 +5963,7 @@ function loadCachedWeather(loc){
       timezone: hit.timezone,
       timezone_abbreviation: hit.timezone_abbreviation,
       current: hit.current,
-      hourly: Object.assign({ anchoredNow: false }, hit.hourly),
+      hourly: normalizeCachedHourly(hit.hourly),
       daily: hit.daily,
       sources: hit.sources || { forecast: 'cached', current: 'cached' },
       cached: true
@@ -6016,6 +6028,19 @@ function syncMarinePanelVisibility(loc){
   panel.hidden = !show;
   panel.style.display = show ? '' : 'none';
 }
+function setCachedMode(on){
+  const cached = !!(on && state.data && state.data.cached);
+  document.body.classList.toggle('data-cached', cached);
+  document.querySelectorAll('.panel-status').forEach(el => el.classList.toggle('is-cached', cached));
+}
+function renderWeatherUi(d){
+  renderCurrent(d);
+  renderLight(d);
+  renderHourly(d);
+  $('lastUpdate').textContent = (d.cached ? 'CACHED' : 'FORECAST') + ' '
+    + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})
+    + (d.timezone_abbreviation ? ' \u00B7 TZ ' + d.timezone_abbreviation : '');
+}
 async function loadAll(){
   const loc = state.locations[state.active];
   const reloadBuoy = tabPanelsLoaded.outdoor;
@@ -6030,16 +6055,22 @@ async function loadAll(){
   resetTabPanelsLoaded();
   syncBuoyForLocation(loc, reloadBuoy);
   $('content').classList.add('loading');
+  let fetched = null;
   try{
-    const d = await fetchWeather(loc, { fastPath: true });
-    state.data = d;
-    cacheWeatherSnapshot(loc, d);
-    renderCurrent(d);
-    renderLight(d);
-    renderHourly(d);
-    $('lastUpdate').textContent = 'FORECAST ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + ' \u00B7 TZ ' + (d.timezone_abbreviation || '');
+    fetched = await fetchWeather(loc, { fastPath: true });
+  }catch(e){
+    console.error('fetchWeather', e);
+  }
+  if(fetched){
+    state.data = fetched;
+    try{ cacheWeatherSnapshot(loc, fetched); }catch(e){}
+    try{
+      renderWeatherUi(fetched);
+    }catch(e){
+      console.error('renderWeatherUi', e);
+      $('nowCond').textContent = 'Forecast loaded — retry refresh if display looks wrong.';
+    }
     $('content').classList.remove('loading');
-
     loadAlerts(loc);
     if(isLikelyUS(loc) && state.data){
       refreshStormTracking(loc, state.data);
@@ -6047,30 +6078,29 @@ async function loadAll(){
     }
     enrichWeatherBackground(loc);
     if(map) initMap(loc);
-
     ensureTabPanels(getAppTab());
     scheduleIdleForecastPrefetch();
     scheduleIdleOutdoorPrefetch(loc);
     scheduleIdleStormPrefetch(loc);
-  }catch(e){
-    console.error(e);
-    const cached = loadCachedWeather(loc);
-    if(cached){
-      state.data = cached;
-      setOfflineBadge(true);
-      renderCurrent(cached);
-      renderLight(cached);
-      renderHourly(cached);
-      $('lastUpdate').textContent = 'CACHED \u00B7 offline snapshot';
-      $('nowCond').textContent = (cached.current.condition || cached.current.textDescription || 'Cached conditions');
-      ensureTabPanels(getAppTab());
-    }else{
-      $('nowCond').textContent = 'Could not load weather \u2014 check connection and retry.';
-      $('lastUpdate').textContent = 'LOAD FAILED';
-    }
-  }finally{
-    $('content').classList.remove('loading');
+    return;
   }
+  const cached = loadCachedWeather(loc);
+  if(cached){
+    state.data = cached;
+    setOfflineBadge(true);
+    setCachedMode(true);
+    try{
+      renderWeatherUi(cached);
+    }catch(e){
+      console.error('renderWeatherUi cached', e);
+      $('nowCond').textContent = cached.current?.condition || cached.current?.textDescription || 'Cached conditions';
+    }
+    ensureTabPanels(getAppTab());
+  }else{
+    $('nowCond').textContent = 'Could not load weather \u2014 check connection and retry.';
+    $('lastUpdate').textContent = 'LOAD FAILED';
+  }
+  $('content').classList.remove('loading');
 }
 
 // auto-refresh every 15 min
