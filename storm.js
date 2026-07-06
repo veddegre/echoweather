@@ -726,6 +726,69 @@ function minDistToRingMi(lon, lat, ring){
   const clon = ring.reduce((s, p) => s + p[0], 0) / ring.length;
   return Math.min(min, haversineMi(lat, lon, clat, clon));
 }
+function geoRingCentroid(ring){
+  if(!ring || !ring.length) return null;
+  let slat = 0, slon = 0, n = 0;
+  ring.forEach(([lon, lat]) => {
+    if(lat == null || lon == null) return;
+    slat += lat;
+    slon += lon;
+    n++;
+  });
+  return n ? { lat: slat / n, lon: slon / n } : null;
+}
+function geoFeatureCentroid(geom){
+  if(!geom) return null;
+  if(geom.type === 'Point') return { lat: geom.coordinates[1], lon: geom.coordinates[0] };
+  if(geom.type === 'Polygon') return geoRingCentroid(geom.coordinates[0]);
+  if(geom.type === 'MultiPolygon'){
+    let best = null, bestN = 0;
+    geom.coordinates.forEach(poly => {
+      const c = geoRingCentroid(poly[0]);
+      const n = poly[0]?.length || 0;
+      if(c && n > bestN){ best = c; bestN = n; }
+    });
+    return best;
+  }
+  return null;
+}
+function nearestWarningPolygon(){
+  const loc = state.locations[state.active];
+  if(!loc) return null;
+  const warns = (stormState.alertFeatures || []).filter(f =>
+    /warning/i.test(f.properties?.event || '') && f.geometry);
+  if(!warns.length) return null;
+  let best = null, bestDist = Infinity;
+  warns.forEach(f => {
+    const c = geoFeatureCentroid(f.geometry);
+    if(!c) return;
+    const d = haversineMi(loc.lat, loc.lon, c.lat, c.lon);
+    if(d < bestDist){ bestDist = d; best = { feature: f, lat: c.lat, lon: c.lon, dist: d }; }
+  });
+  return best;
+}
+function autoEnableStormThreatLayers(){
+  if(!stormState.stormMode) return;
+  let changed = false;
+  if(!threatLayerOpts.stormReports){
+    threatLayerOpts.stormReports = true;
+    changed = true;
+  }
+  if(!threatLayerOpts.spcCat && stormState.maxDn >= 2){
+    threatLayerOpts.spcCat = true;
+    changed = true;
+  }
+  if(!changed) return;
+  document.querySelectorAll('[data-threat]').forEach(inp => {
+    const k = inp.getAttribute('data-threat');
+    if(k in threatLayerOpts) inp.checked = threatLayerOpts[k];
+  });
+  saveLocRadarPrefs();
+  if(isRadarTabVisible()){
+    syncThreatOverlays();
+    syncStormReportMarkers();
+  }
+}
 async function fetchSwoProducts(limit){
   const r = await nwsFetch('https://api.weather.gov/products/types/SWO');
   if(!r.ok) return [];
@@ -1067,6 +1130,11 @@ function buildStormBannerActions(){
     const dist = near.dist != null ? ' (' + Math.round(near.dist) + ' mi)' : '';
     parts.push('<button type="button" class="storm-banner-link" data-storm-radar-report>Nearest report' + esc(dist) + '</button>');
   }
+  const warnPoly = nearestWarningPolygon();
+  if(warnPoly){
+    const dist = warnPoly.dist > 0.5 ? ' (' + Math.round(warnPoly.dist) + ' mi)' : '';
+    parts.push('<button type="button" class="storm-banner-link" data-storm-radar-warning>Warning polygon' + esc(dist) + '</button>');
+  }
   return '<div class="storm-banner-actions">' + parts.join('') + '</div>';
 }
 function bindStormBannerActions(){
@@ -1084,6 +1152,11 @@ function bindStormBannerActions(){
     e.preventDefault();
     const r = nearestStormReport();
     if(r) jumpRadarToStormReport(r);
+  });
+  box.querySelector('[data-storm-radar-warning]')?.addEventListener('click', e => {
+    e.preventDefault();
+    const w = nearestWarningPolygon();
+    if(w) jumpRadarToWarningPolygon(w);
   });
 }
 function renderStormBanner(){
@@ -1272,6 +1345,7 @@ async function refreshStormTracking(loc, d){
     stormState.stormMode = hasWarning || hasWatch || stormState.maxDn >= 3
       || stormState.mcds.length > 0 || cape >= 1000;
     stormState.loaded = true;
+    autoEnableStormThreatLayers();
     updateStormUi(loc, d);
     syncAlertPolygons(alertFeats.filter(f => f.geometry));
     syncStormReportMarkers();

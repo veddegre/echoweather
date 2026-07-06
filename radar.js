@@ -326,6 +326,33 @@ function jumpRadarToStormReport(r){
   if(map) setTimeout(run, 120);
   else setTimeout(run, 500);
 }
+function jumpRadarToWarningPolygon(target){
+  if(!target || target.lat == null || target.lon == null) return;
+  if(!threatLayerOpts.warnings){
+    threatLayerOpts.warnings = true;
+    const inp = document.querySelector('[data-threat="warnings"]');
+    if(inp) inp.checked = true;
+    saveLocRadarPrefs();
+  }
+  setAppTab('radar');
+  const run = () => {
+    if(!map) return;
+    const feats = (stormState.alertFeatures || []).filter(f => f.geometry);
+    syncAlertPolygons(feats);
+    const z = Math.min(Math.max(map.getZoom(), 8), radarMaxZoom());
+    map.setView([target.lat, target.lon], z, { animate: true });
+    if(alertLayerGroup){
+      alertLayerGroup.eachLayer(layer => {
+        const bounds = layer.getBounds && layer.getBounds();
+        if(!bounds) return;
+        const c = bounds.getCenter();
+        if(Math.abs(c.lat - target.lat) < 0.15 && Math.abs(c.lng - target.lon) < 0.15) layer.openPopup();
+      });
+    }
+  };
+  if(map) setTimeout(run, 120);
+  else setTimeout(run, 500);
+}
 function toggleRadarExpand(){
   const stage = $('radarStage');
   const btn = $('radarExpandBtn');
@@ -416,7 +443,7 @@ function onIemTileError(){
   iemVelocitySite = null;
   saveLocRadarPrefs();
   $('radarMode').value = radarMode;
-  $('radarNote').textContent = 'Site velocity unavailable — using IEM reflectivity.';
+  setPanelUnavail($('radarNote'), 'radar_vel_unavail');
   stopRadarTimer();
   loadIemRadar('iem-n0q');
 }
@@ -524,7 +551,7 @@ function loadIemRadar(mode){
     return resolveIemVelocitySite().then(site => {
       if(gen !== iemLoadGen) return;
       if(!site){
-        $('radarNote').textContent = 'Velocity needs a US location \u2014 using reflectivity.';
+        setPanelUnavail($('radarNote'), 'radar_vel_site');
         radarMode = 'iem-n0q';
         saveLocRadarPrefs();
         $('radarMode').value = radarMode;
@@ -543,7 +570,8 @@ function finishIemRadarLoad(mode){
   radarIdx = iemFrames.length - 1;
   $('radarScrub').max = Math.max(0, iemFrames.length - 1);
   $('radarScrub').value = radarIdx;
-  $('radarNote').textContent = radarNoteForMode();
+  const note = $('radarNote');
+  if(note) note.textContent = radarNoteForMode();
   updateRadarLegend();
   showFrame(radarIdx);
   applyRadarZoomLimits();

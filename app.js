@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '162';
+const APP_VERSION = '163';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -193,7 +193,9 @@ const PANEL_UNAVAIL_MSG = {
   air_api: 'Air quality could not be loaded from AirNow or Open-Meteo.',
   buoy_offline: 'Station may be offline or seasonal — pick another or tap Nearest.',
   taf_proxy: 'TAF needs the server proxy — ensure /api/taf is deployed with PHP.',
-  taf_timeout: 'TAF request timed out — tap Refresh or try again in a moment.'
+  taf_timeout: 'TAF request timed out — tap Refresh or try again in a moment.',
+  radar_vel_unavail: 'Nearest NEXRAD velocity tile failed — showing reflectivity instead.',
+  radar_vel_site: 'No radar site resolved for this pin — velocity needs a US location.'
 };
 function panelUnavail(code, extra){
   const msg = PANEL_UNAVAIL_MSG[code] || 'Unavailable for this location.';
@@ -5507,7 +5509,9 @@ async function loadStreamGauges(loc){
   if(!panel || !list) return;
   if(!isLikelyUS(loc)){ panel.hidden = true; return; }
   const gen = ++streamLoadGen;
-  panel.hidden = true;
+  panel.hidden = false;
+  list.className = 'radar-note is-loading';
+  list.textContent = 'Checking nearby gauges\u2026';
   try{
     const pad = 0.45;
     const west = (loc.lon - pad).toFixed(2);
@@ -5518,7 +5522,11 @@ async function loadStreamGauges(loc){
       + '&parameterCd=00060,00065&siteStatus=active';
     const r = await fetch(url);
     if(gen !== streamLoadGen) return;
-    if(!r.ok) return;
+    if(!r.ok){
+      list.className = 'radar-note';
+      setPanelUnavail(list, 'api_error');
+      return;
+    }
     const j = await r.json();
     const sites = j.value?.timeSeries || [];
     const rows = [];
@@ -5543,14 +5551,20 @@ async function loadStreamGauges(loc){
       if(param === '00060') row.flow = val != null ? Math.round(val) + ' cfs' : null;
     });
     rows.sort((a, b) => a.dist - b.dist);
-    if(!rows.length || gen !== streamLoadGen) return;
-    panel.hidden = false;
+    if(gen !== streamLoadGen) return;
+    list.className = 'radar-note';
+    if(!rows.length){
+      setPanelUnavail(list, 'no_gauges');
+      return;
+    }
     list.innerHTML = '<div class="metrics" style="margin-top:0">' + rows.slice(0, 6).map(g =>
       '<div class="metric"><div class="k">' + esc(g.name) + '<small> \u00B7 ' + Math.round(g.dist) + ' mi</small></div><div class="v">'
       + esc([g.stage, g.flow].filter(Boolean).join(' \u00B7 ') || 'No recent reading') + '</div></div>'
     ).join('') + '</div>';
   }catch(e){
-    if(gen === streamLoadGen) panel.hidden = true;
+    if(gen !== streamLoadGen) return;
+    list.className = 'radar-note';
+    setPanelUnavail(list, 'api_error');
   }
 }
 

@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v151** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=151` in `index.html`).
+**Current version: v163** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=163` in `index.html`).
 
 ---
 
@@ -17,9 +17,23 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ---
 
-## What is shipped (v136–v151)
+## What is shipped (v136–v163)
 
-### v151 (latest)
+### v163 (latest)
+- Storm banner **Warning polygon** jump — centers radar on nearest active warning centroid, enables warning layer
+- **Auto threat layers** — storm reports + SPC Day 1 categorical turn on when storm mode fires (if off)
+- **panelUnavail** pass — river gauges show clear unavailable copy; radar velocity fallback messages
+
+### v161–v162
+- Station history 3-column layout; observation count below charts
+- Cross-browser in-app anchor navigation (`#afdPanel`, panel deep links)
+
+### v152–v160 (interim batches)
+- Lifestyle activity planner restored alongside impact hours; impact scoring fixes (UV, heat, cold)
+- Great Lakes GLF office selection, water verdict attribution, on-water wind from buoy/lake point
+- Inland hide for marine/coastal/water panels; AFD anchor scroll fix
+
+### v151
 - Storm banner actions: severe window on timeline, nearest SPC report jump
 - Chase-mode radar: Site radar nudge from MRMS; vel toggle when storm mode active
 - NWS hourly POP strip on Forecast tab (when precip likely)
@@ -86,14 +100,23 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 The original phased roadmap (Phases 1–4) is **largely complete**. Remaining work is **refinement and surfacing**, not greenfield features.
 
-### Suggested next batch — v152+ (not started)
+### Suggested next batch — v164+ (not started)
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Warning polygon jump** | Storm banner link to nearest warning polygon centroid on radar |
-| 2 | **Auto threat layers** | Enable reports + SPC cat when storm mode fires (if not already on) |
-| 3 | **panelUnavail pass** | Stream gauges, radar velocity edge cases |
-| 4 | **README / docs** | Keep feature list in sync as batches ship |
+| 1 | **Watch polygon jump** | Same pattern as warning jump for watch areas |
+| 2 | **README / docs** | Keep feature list in sync as batches ship |
+| 3 | **panelUnavail pass** | Remaining edge cases (radar load failure, etc.) |
+
+### v163 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Warning polygon jump | Done |
+| 2 | Auto threat layers (reports + SPC cat) | Done |
+| 3 | panelUnavail pass (gauges + velocity) | Done |
+
+### v152+ (superseded by v163 batch above)
 
 ### v151 (shipped)
 
@@ -128,7 +151,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v151'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v163'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
@@ -153,7 +176,9 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | Function | File | Purpose |
 |----------|------|---------|
-| `jumpRadarToStormReport` | `radar.js` | Center radar + scrub to report time |
+| `jumpRadarToWarningPolygon` | `radar.js` | Center radar on warning polygon centroid |
+| `nearestWarningPolygon` | `storm.js` | Nearest active warning geometry to pin |
+| `autoEnableStormThreatLayers` | `storm.js` | Turn on reports + SPC cat when storm mode fires |
 | `defaultRadarMode` | `app.js`, `radar.js` | MRMS for US, RainViewer elsewhere |
 | `waterVerdictPanel` / `renderWaterVerdict` | `app.js` | Unified boating summary |
 | `fetchLatestAfdText` | `app.js` | Shared AFD fetch for More + Forecast teaser |
