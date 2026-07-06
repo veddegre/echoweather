@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '175';
+const APP_VERSION = '176';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1474,16 +1474,17 @@ function buildConditionSegments(indices, hourly){
   return segs;
 }
 function dayExtrema(indices, hourly){
-  if(!indices.length) return { avg: null, lo: null, hi: null, loAt: '', hiAt: '', rain: 0, wind: 0 };
+  if(!indices.length) return { avg: null, lo: null, hi: null, loAt: '', hiAt: '', rain: 0, snow: 0, wind: 0 };
   let loI = indices[0], hiI = indices[0];
   let lo = hourly.temperature_2m[loI], hi = hourly.temperature_2m[hiI];
-  let sum = 0, rain = 0, wind = 0;
+  let sum = 0, rain = 0, snow = 0, wind = 0;
   for(const i of indices){
     const t = hourly.temperature_2m[i];
     sum += t;
     if(t < lo){ lo = t; loI = i; }
     if(t > hi){ hi = t; hiI = i; }
     rain += hourly.precipitation[i] ?? 0;
+    snow += hourly.snowfall?.[i] ?? 0;
     wind = Math.max(wind, hourly.wind_speed_10m[i] ?? 0);
   }
   return {
@@ -1491,8 +1492,22 @@ function dayExtrema(indices, hourly){
     lo, hi,
     loAt: hourLabel(hourly.time[loI]),
     hiAt: hourLabel(hourly.time[hiI]),
-    rain, wind: Math.round(wind)
+    rain, snow, wind: Math.round(wind)
   };
+}
+function fmtSnowSum(cm){
+  if(cm == null || cm < 0.05) return '';
+  return state.units === 'F' ? (cm / 2.54).toFixed(1) + ' in snow' : cm.toFixed(1) + ' cm snow';
+}
+function snowStormTotals(dd){
+  if(!dd?.snowfall_sum?.length) return null;
+  const s0 = dd.snowfall_sum[0] ?? 0;
+  const s1 = dd.snowfall_sum[1] ?? 0;
+  const s2 = dd.snowfall_sum[2] ?? 0;
+  const h48 = s0 + s1;
+  const h72 = h48 + s2;
+  if(h48 < 0.1 && h72 < 0.1) return null;
+  return { h48, h72 };
 }
 function fmtDayDate(iso){
   return new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { month:'long', day:'numeric' });
@@ -1690,10 +1705,11 @@ function renderDaily(d){
     const rainMeta = rainAmt
       ? 'Rain ' + rainAmt
       : (pop > 0 ? pop + '% rain' : '');
+    const snowMeta = fmtSnowSum(stats.snow) || (dd.snowfall_sum?.[i] > 0.05 ? fmtSnowSum(dd.snowfall_sum[i]) : '');
     const windSpd = stats.wind
       || Math.round(dd.wind_speed_10m_max?.[i] ?? dd.wind_gusts_10m_max?.[i] ?? 0);
     const windMeta = windSpd ? 'Wind ~' + windSpd + ' ' + windUnit() : '';
-    const metaParts = [rainMeta, windMeta].filter(Boolean);
+    const metaParts = [snowMeta, rainMeta, windMeta].filter(Boolean);
     const title = i === 0
       ? '<span class="day-dn">Today</span> <span class="day-date">' + fmtDayDate(t) + '</span>'
       : '<span class="day-dn">' + fmtDayWeekday(t) + '</span> <span class="day-date">' + fmtDayDate(t) + '</span>';
@@ -1713,7 +1729,7 @@ function renderDaily(d){
       + '<div class="day-card-title"><span class="day-ic" aria-hidden="true">' + icon + '</span>' + title
       + '<span class="day-cond">' + esc(cond) + '</span></div>'
       + (metaParts.length ? '<div class="day-card-meta">' + metaParts.map(p => {
-        const cls = /rain/i.test(p) ? ' class="day-rain"' : '';
+        const cls = /snow/i.test(p) ? ' class="day-snow"' : (/rain/i.test(p) ? ' class="day-rain"' : '');
         return '<span' + cls + '>' + esc(p) + '</span>';
       }).join('') + '</div>' : '')
       + '</div>'
@@ -1769,11 +1785,18 @@ function renderWinterOutlook(d){
   const snowDisp = snow != null
     ? (state.units === 'F' ? (snow / 25.4).toFixed(1) + ' in' : snow.toFixed(1) + ' cm')
     : null;
+  const stormTotals = snowStormTotals(dd);
   const depthDisp = snowDepth != null
     ? (state.units === 'F' ? (snowDepth * 3.281 / 12).toFixed(1) + ' in on ground' : snowDepth.toFixed(2) + ' m on ground')
     : null;
   let detail = '';
   if(snowDisp) detail += 'Modeled snowfall today: ' + snowDisp + '. ';
+  if(stormTotals){
+    const u = state.units === 'F' ? v => (v / 2.54).toFixed(1) + ' in' : v => v.toFixed(1) + ' cm';
+    detail += 'Storm accumulation: ' + u(stormTotals.h48) + ' (48h)';
+    if(stormTotals.h72 > stormTotals.h48 + 0.05) detail += ', ' + u(stormTotals.h72) + ' (72h)';
+    detail += '. ';
+  }
   if(depthDisp) detail += 'Snow depth: ' + depthDisp + '. ';
   if(/freezing rain|ice storm|sleet|black ice/i.test(nwsText)) detail += 'NWS mentions freezing precip or ice. ';
   if(windChill != null && windChill <= 10) detail += 'Wind chill near ' + windChill + '\u00B0F. ';
@@ -2355,7 +2378,7 @@ function forecastNeedsNbmStrip(d){
   }
   return false;
 }
-async function fetchNbmHourlyPeriods(loc, limit){
+async function fetchNwsGridHourlyPeriods(loc, limit){
   if(!isLikelyUS(loc)) return [];
   const pr = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
   if(!pr.ok) throw new Error('points');
@@ -2366,10 +2389,35 @@ async function fetchNbmHourlyPeriods(loc, limit){
   const r = await nwsFetch('https://api.weather.gov/gridpoints/' + wfo + '/' + gx + ',' + gy + '/forecast/hourly');
   if(!r.ok) throw new Error('hourly http ' + r.status);
   const j = await r.json();
+  return (j.properties?.periods || []).slice(0, limit || 18);
+}
+async function fetchNbmHourlyPeriods(loc, limit){
+  const periods = await fetchNwsGridHourlyPeriods(loc, 18);
   const max = limit || 8;
-  return (j.properties?.periods || []).slice(0, 18).filter(p =>
+  return periods.filter(p =>
     (p.probabilityOfPrecipitation?.value ?? 0) > 0 || /rain|shower|storm|snow|drizzle|sleet|freezing/i.test(p.shortForecast || '')
   ).slice(0, max);
+}
+function nwsHourlyTemp(p){
+  if(p.temperature == null) return '\u2014';
+  const u = p.temperatureUnit === 'C' ? 'C' : 'F';
+  return nwsTempToDisp(p.temperature, u) + '\u00B0';
+}
+function nwsHourlyWind(p){
+  const parts = [p.windSpeed, p.windDirection].filter(Boolean);
+  return parts.length ? parts.join(' ') : '';
+}
+function nwsHourlySky(p){
+  const t = (p.shortForecast || '').toLowerCase();
+  if(/thunder/.test(t)) return 'Storm';
+  if(/snow|flurr/.test(t)) return 'Snow';
+  if(/rain|shower|drizzle|sleet/.test(t)) return 'Rain';
+  if(/fog/.test(t)) return 'Fog';
+  if(/cloud|overcast/.test(t)) return 'Cloudy';
+  if(/partly/.test(t)) return 'Partly';
+  if(/clear|sunny/.test(t)) return 'Clear';
+  const words = (p.shortForecast || '').split(/\s+/).slice(0, 2).join(' ');
+  return words || '\u2014';
 }
 function renderNbmPeriodsHtml(periods, compact){
   return periods.map(p => {
@@ -2378,12 +2426,31 @@ function renderNbmPeriodsHtml(periods, compact){
     const high = prob != null && prob >= 50;
     if(compact){
       return '<div class="forecast-nbm-hour' + (high ? ' high' : '') + '"><span class="k">' + esc(start) + '</span>'
-        + '<span class="v">' + (prob != null ? prob + '%' : '\u2014') + '</span></div>';
+        + '<span class="v">' + nwsHourlyTemp(p) + '</span>'
+        + (nwsHourlyWind(p) ? '<span class="nbm-sub">' + esc(nwsHourlyWind(p)) + '</span>' : '')
+        + '<span class="nbm-sub">' + esc(nwsHourlySky(p)) + '</span>'
+        + '<span class="nbm-pop">' + (prob != null ? prob + '%' : '\u2014') + '</span></div>';
     }
     return '<div class="metric"><div class="k">' + esc(start) + '</div><div class="v">'
-      + (prob != null ? prob + '<small>% · ' + esc(p.shortForecast || '') + '</small>' : esc(p.shortForecast || '\u2014'))
-      + '</div></div>';
+      + nwsHourlyTemp(p) + '<small> \u00B7 ' + esc(nwsHourlyWind(p) || '\u2014') + ' \u00B7 ' + esc(nwsHourlySky(p))
+      + (prob != null ? ' \u00B7 ' + prob + '% precip' : '') + '</small></div></div>';
   }).join('');
+}
+function renderNbmGridPanel(periods){
+  const precip = periods.filter(p =>
+    (p.probabilityOfPrecipitation?.value ?? 0) > 0 || /rain|shower|storm|snow|drizzle|sleet|freezing/i.test(p.shortForecast || '')
+  ).slice(0, 8);
+  const grid = periods.slice(0, 12);
+  let html = '';
+  if(precip.length){
+    html += '<div class="nbm-section"><div class="forecast-nbm-lbl">Precip probability</div>'
+      + '<div class="forecast-nbm-hours">' + renderNbmPeriodsHtml(precip, true) + '</div></div>';
+  }
+  if(grid.length){
+    html += '<div class="nbm-section"><div class="forecast-nbm-lbl">Hourly grid (temp \u00B7 wind \u00B7 sky)</div>'
+      + '<div class="forecast-nbm-hours">' + renderNbmPeriodsHtml(grid, true) + '</div></div>';
+  }
+  return html || panelUnavail('no_precip_prob');
 }
 async function loadForecastNbmStrip(loc, d){
   const box = $('forecastNbmStrip');
@@ -2395,22 +2462,25 @@ async function loadForecastNbmStrip(loc, d){
   }
   const gen = ++forecastNbmGen;
   box.hidden = false;
-  box.innerHTML = '<div class="forecast-nbm-lbl">NWS hourly precip probability</div>'
-    + '<div class="radar-note">Loading probabilities\u2026</div>';
+  box.innerHTML = '<div class="forecast-nbm-lbl">NWS grid hourly</div>'
+    + '<div class="radar-note">Loading grid forecast\u2026</div>';
   try{
-    const periods = await fetchNbmHourlyPeriods(loc, 8);
+    const periods = await fetchNwsGridHourlyPeriods(loc, 12);
     if(gen !== forecastNbmGen) return;
-    if(!periods.length){
+    const precip = periods.filter(p =>
+      (p.probabilityOfPrecipitation?.value ?? 0) > 0 || /rain|shower|storm|snow|drizzle|sleet|freezing/i.test(p.shortForecast || '')
+    );
+    if(!precip.length && !periods.length){
       box.hidden = true;
       return;
     }
-    box.innerHTML = '<div class="forecast-nbm-lbl">NWS hourly precip probability</div>'
-      + '<div class="forecast-nbm-hours">' + renderNbmPeriodsHtml(periods, true) + '</div>'
-      + '<p class="radar-note" style="margin-top:8px">From NWS grid hourly forecast. Full list in More \u2192 NBM panel.</p>';
+    box.innerHTML = '<div class="forecast-nbm-lbl">NWS grid hourly</div>'
+      + '<div class="forecast-nbm-hours">' + renderNbmPeriodsHtml(periods.slice(0, 8), true) + '</div>'
+      + '<p class="radar-note" style="margin-top:8px">Temp, wind, sky, and precip chance from NWS grid. Full grid in More \u2192 NWS grid hourly.</p>';
   }catch(e){
     if(gen !== forecastNbmGen) return;
     box.hidden = false;
-    box.innerHTML = '<div class="forecast-nbm-lbl">NWS hourly precip probability</div>'
+    box.innerHTML = '<div class="forecast-nbm-lbl">NWS grid hourly</div>'
       + panelUnavail('api_error');
     console.warn('forecastNbmStrip', e);
   }
@@ -2421,14 +2491,15 @@ async function loadNbm(loc){
   if(!isLikelyUS(loc)){ panel.hidden = true; return; }
   return panelTask('nbmPanel', 'nbmStatus', async () => {
     panel.hidden = false;
-    body.textContent = 'Loading NWS probabilities\u2026';
+    body.textContent = 'Loading NWS grid forecast\u2026';
     try{
-      const periods = await fetchNbmHourlyPeriods(loc, 8);
+      const periods = await fetchNwsGridHourlyPeriods(loc, 18);
       if(!periods.length){
         body.innerHTML = panelUnavail('no_precip_prob');
         return;
       }
-      body.innerHTML = '<div class="metrics" style="margin-top:0">' + renderNbmPeriodsHtml(periods, false) + '</div>';
+      body.innerHTML = renderNbmGridPanel(periods)
+        + '<p class="radar-note" style="margin-top:10px">From NWS grid hourly forecast at your pin.</p>';
     }catch(e){
       panel.hidden = false;
       setPanelUnavail(body, 'api_error');

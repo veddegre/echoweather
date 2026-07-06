@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=175">
+<link rel="stylesheet" href="app.css?v=176">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -410,8 +410,8 @@
 
         <section class="panel nav-target" id="streamPanel" data-tab="impact" aria-label="Nearby river gauges" hidden>
           <h2>River Gauges <span class="panel-status" id="streamStatus"></span></h2>
-          <p class="activity-lede" id="streamLede">Active USGS streamgages within ~30 mi — stage and flow for flood awareness.</p>
-          <div id="streamList" class="radar-note is-loading">Checking nearby gauges&hellip;</div>
+          <p class="activity-lede" id="streamLede">Active USGS streamgages within ~30 mi — stage, flow, and NWS flood category with AHPS hydrograph links.</p>
+          <div id="streamList" class="stream-list is-loading">Checking nearby gauges&hellip;</div>
         </section>
       </div>
 
@@ -431,9 +431,9 @@
       <div class="loc-compare" id="locCompare"></div>
     </section>
 
-    <section class="panel full nav-target" id="nbmPanel" data-tab="more" aria-label="NWS precipitation probability" hidden>
-      <h2>NWS precip probability <span class="panel-status" id="nbmStatus"></span></h2>
-      <p class="activity-lede" id="nbmLede">Hourly precipitation chance from the NWS grid forecast for your location.</p>
+    <section class="panel full nav-target" id="nbmPanel" data-tab="more" aria-label="NWS grid hourly forecast" hidden>
+      <h2>NWS grid hourly <span class="panel-status" id="nbmStatus"></span></h2>
+      <p class="activity-lede" id="nbmLede">Precip probability, temperature, wind, and sky from the NWS grid forecast at your location.</p>
       <div id="nbmBody" class="radar-note">Loading&hellip;</div>
     </section>
 
@@ -504,14 +504,14 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=175"></script>
-<script src="nav.js?v=175"></script>
-<script src="impact.js?v=175"></script>
-<script src="marine.js?v=175"></script>
-<script src="air.js?v=175"></script>
-<script src="aviation.js?v=175"></script>
-<script src="storm.js?v=175"></script>
-<script src="radar.js?v=175"></script>
-<script src="boot.js?v=175"></script>
+<script src="app.js?v=176"></script>
+<script src="nav.js?v=176"></script>
+<script src="impact.js?v=176"></script>
+<script src="marine.js?v=176"></script>
+<script src="air.js?v=176"></script>
+<script src="aviation.js?v=176"></script>
+<script src="storm.js?v=176"></script>
+<script src="radar.js?v=176"></script>
+<script src="boot.js?v=176"></script>
 </body>
 </html>

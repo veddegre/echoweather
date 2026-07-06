@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v174** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=174` in `index.html`).
+**Current version: v176** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=176` in `index.html`).
 
 ---
 
@@ -19,7 +19,16 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v174 (latest)
+### v176 (latest)
+- **AHPS at streamgages** — NWPS flood category badges + hydrograph links per USGS gauge (`marine.js`)
+- **Snow accumulation** — hourly/daily snow on 5-day cards; 48h/72h storm totals in winter outlook
+- **NBM grid expansion** — temp, wind, sky + POP in forecast strip and More panel
+- **Loc compare fix** — preserve `#locCompare` grid class during loading (v175)
+
+### v175
+- Loc compare grid class regression fix
+
+### v174
 - **Alert expiration** — in-effect alerts show countdown when expiring soon (`Expires in N min`); multi-alert list sorted by severity then end time
 - **Shareable radar URLs** — `#radar?mode=…&frame=…&layers=…` encodes threat layer toggles; hash updates when layers change
 - **SPC meso links** — mesoanalysis, surface analysis, observed soundings in storm panel when risk elevated
@@ -141,23 +150,15 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 The original phased roadmap (Phases 1–4) is **largely complete**. Remaining work is **refinement and surfacing**, not greenfield features.
 
-### Phased enthusiast batch (v174–v176)
+### Phased enthusiast batch (v174–v177)
 
 | Batch | Items | Status |
 |-------|-------|--------|
-| **v174** | **1** Alert timeline/expiration · **4** Shareable radar URLs with layer state · **6** SPC meso/surface links · **7** Day 2/3 SPC discussion excerpts | **Shipped** |
-| **v175** | **2** AHPS at streamgages · **3** Winter snow accumulation · **9** NBM beyond POP | Planned |
-| **v176** | **5** Dual-pane radar · **8** CPC 6–10/8–14 teaser · **10** Mesonet · climo polish (low/precip anomaly) | Planned |
+| **v174** | Alert expiration · shareable radar URLs · SPC meso links · Day 2/3 discussions | **Shipped** |
+| **v175–v176** | AHPS streamgages · snow accumulation · NBM grid expansion · loc compare fix | **Shipped** (v176) |
+| **v177** | Dual-pane radar · CPC teaser · mesonet · climo polish | Planned |
 
-#### v175 detail
-
-| # | Item | Notes |
-|---|------|--------|
-| 2 | **AHPS at streamgages** | Link USGS gauges to NWS AHPS hydrographs / flood categories where available |
-| 3 | **Winter snow accumulation** | Running snow totals / storm accumulation on forecast or Impacts when wintry |
-| 9 | **NBM beyond POP** | Surface wind, temp, sky cover strips from NBM grid (More or Forecast) |
-
-#### v176 detail
+#### v177 detail (next)
 
 | # | Item | Notes |
 |---|------|--------|
@@ -166,18 +167,35 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | 10 | **Mesonet** | Regional mesonet strip or map layer for enthusiasts |
 | — | **Climate polish** | Low/precip anomaly vs 10-yr normals; optional USDM / daily records later |
 
+#### v175–v176 detail (shipped)
+
+| # | Item | Notes |
+|---|------|--------|
+| 2 | **AHPS at streamgages** | NWPS flood category + hydrograph links per USGS gauge |
+| 3 | **Winter snow accumulation** | Snow on 5-day cards; 48h/72h totals in winter outlook |
+| 9 | **NBM beyond POP** | Temp, wind, sky strips from NWS grid hourly (Forecast + More) |
+
 ### Climate (already partial)
 
 **Shipped:** `fetchClimoNormals()` + `dayClimoAnomaly()` — 10-year Open-Meteo archive; “+N° vs 10-yr avg high” on 5-day cards.
 
-**Not yet:** CPC outlooks (#8), low/precip anomaly, USDM drought, daily record highs/lows. Target **v176** with CPC + climo polish.
+**Not yet:** CPC outlooks (#8), low/precip anomaly, USDM drought, daily record highs/lows. Target **v177** with CPC + climo polish.
 
 ### Suggested next batch
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Deploy** | Push v174 when ready |
-| 2 | **v175** | AHPS, snow accumulation, NBM expansion |
+| 1 | **Deploy** | Push v176 when ready |
+| 2 | **v177** | Dual-pane radar, CPC teaser, mesonet (former v176 items 5, 8, 10) |
+
+### v176 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | AHPS/NWPS streamgages | Done |
+| 2 | Snow accumulation | Done |
+| 3 | NBM grid expansion | Done |
+| 4 | Loc compare class fix | Done |
 
 ### v174 (shipped)
 
@@ -274,7 +292,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v174'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v176'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |

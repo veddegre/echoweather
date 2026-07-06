@@ -815,15 +815,41 @@ async function loadMarine(loc){
   });
 }
 
-// ---------- USGS streamgages (US, free) ----------
+// ---------- USGS streamgages (US, free) + NWS NWPS/AHPS ----------
 let streamLoadGen = 0;
+const NWPS_GAUGE_URL = 'https://api.water.noaa.gov/nwps/v1/gauges/';
+const NWPS_FLOOD_LABEL = {
+  action: 'Action stage',
+  minor: 'Minor flood',
+  moderate: 'Moderate flood',
+  major: 'Major flood',
+  near_flood: 'Near flood',
+  low_threshold: 'Low water'
+};
+async function fetchNwpsGauge(usgsId){
+  if(!usgsId) return null;
+  try{
+    const r = await fetchTimeout(NWPS_GAUGE_URL + encodeURIComponent(usgsId), {}, 6000);
+    if(!r.ok) return null;
+    const j = await r.json();
+    if(j.code || !j.lid) return null;
+    return j;
+  }catch(e){ return null; }
+}
+function nwpsFloodHtml(nwps){
+  const cat = nwps?.status?.observed?.floodCategory || nwps?.ObservedFloodCategory;
+  if(!cat || cat === 'no_flooding' || cat === 'fcst_not_current') return '';
+  const lbl = NWPS_FLOOD_LABEL[cat] || String(cat).replace(/_/g, ' ');
+  const cls = /major|moderate/.test(cat) ? ' stream-flood-warn' : ' stream-flood-adv';
+  return '<span class="stream-flood' + cls + '">' + esc(lbl) + '</span>';
+}
 async function loadStreamGauges(loc){
   const panel = $('streamPanel'), list = $('streamList');
   if(!panel || !list) return;
   if(!isLikelyUS(loc)){ panel.hidden = true; syncImpactTabChrome(); return; }
   const gen = ++streamLoadGen;
   panel.hidden = false;
-  list.className = 'radar-note is-loading';
+  list.className = 'stream-list is-loading';
   list.textContent = 'Checking nearby gauges\u2026';
   try{
     const pad = 0.45;
@@ -836,7 +862,7 @@ async function loadStreamGauges(loc){
     const r = await fetch(url);
     if(gen !== streamLoadGen) return;
     if(!r.ok){
-      list.className = 'radar-note';
+      list.className = 'stream-list';
       setPanelUnavail(list, 'api_error');
       return;
     }
@@ -864,19 +890,28 @@ async function loadStreamGauges(loc){
       if(param === '00060') row.flow = val != null ? Math.round(val) + ' cfs' : null;
     });
     rows.sort((a, b) => a.dist - b.dist);
+    const top = rows.slice(0, 6);
+    const nwps = await Promise.all(top.map(g => fetchNwpsGauge(g.id)));
     if(gen !== streamLoadGen) return;
-    list.className = 'radar-note';
-    if(!rows.length){
+    list.className = 'stream-list';
+    if(!top.length){
       setPanelUnavail(list, 'no_gauges');
       return;
     }
-    list.innerHTML = '<div class="metrics" style="margin-top:0">' + rows.slice(0, 6).map(g =>
-      '<div class="metric"><div class="k">' + esc(g.name) + '<small> \u00B7 ' + Math.round(g.dist) + ' mi</small></div><div class="v">'
-      + esc([g.stage, g.flow].filter(Boolean).join(' \u00B7 ') || 'No recent reading') + '</div></div>'
-    ).join('') + '</div>';
+    list.innerHTML = top.map((g, i) => {
+      const meta = nwps[i];
+      const usgsUrl = 'https://waterdata.usgs.gov/monitoring-location/' + encodeURIComponent(g.id) + '/';
+      const ahpsUrl = meta?.lid ? 'https://water.noaa.gov/gauges/' + encodeURIComponent(meta.lid) : '';
+      const links = '<div class="stream-links">'
+        + (ahpsUrl ? '<a href="' + ahpsUrl + '" target="_blank" rel="noopener">AHPS hydrograph</a>' : '')
+        + '<a href="' + usgsUrl + '" target="_blank" rel="noopener">USGS data</a></div>';
+      return '<div class="stream-gauge"><div class="stream-gauge-head"><span class="k">' + esc(g.name)
+        + '<small> \u00B7 ' + Math.round(g.dist) + ' mi</small></span>' + nwpsFloodHtml(meta) + '</div><div class="v">'
+        + esc([g.stage, g.flow].filter(Boolean).join(' \u00B7 ') || 'No recent reading') + '</div>' + links + '</div>';
+    }).join('');
   }catch(e){
     if(gen !== streamLoadGen) return;
-    list.className = 'radar-note';
+    list.className = 'stream-list';
     setPanelUnavail(list, 'api_error');
   }
   if(gen === streamLoadGen) syncImpactTabChrome();
