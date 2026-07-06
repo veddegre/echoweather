@@ -32,8 +32,7 @@ function scheduleSyncChromeHeight(){
   });
 }
 
-function scrollToNavTarget(id){
-  if(!id || APP_TABS.includes(id)) return;
+function scrollToNavTargetPanel(id){
   const el = document.getElementById(id);
   if(!el || !el.classList.contains('nav-target')) return;
   const behavior = isMobileTabLayout() ? 'auto' : 'smooth';
@@ -56,6 +55,17 @@ function scrollToNavTarget(id){
   }, 180);
 }
 
+function scrollToNavTarget(id){
+  if(!id || APP_TABS.includes(id)) return;
+  const section = typeof impactSectionForPanel === 'function' ? impactSectionForPanel(id) : null;
+  if(section && isMobileTabLayout() && getAppTab() === 'impact'){
+    scrollToImpactSection(section);
+    setTimeout(() => scrollToNavTargetPanel(id), 140);
+    return;
+  }
+  scrollToNavTargetPanel(id);
+}
+
 function navPathFromHref(href){
   const raw = decodeURIComponent((href || '').replace(/^#/, ''));
   const qi = raw.indexOf('?');
@@ -68,7 +78,9 @@ function tabForNavPath(path){
   if(path === 'lightPanel' || path === 'hourlyPanel' || path === 'nowPanel') return 'now';
   if(path === 'dailyPanel' || path === 'forecastTextPanel' || path === 'obsPanel') return 'forecast';
   if(path === 'radarPanel' || path === 'stormLinks') return 'radar';
-  if(path === 'airPanel' || path === 'exposurePanel' || path === 'marinePanel' || path === 'activityPanel' || path === 'impactPanel') return 'impact';
+  if(path === 'airPanel' || path === 'exposurePanel' || path === 'marinePanel' || path === 'coastalPanel'
+    || path === 'waterVerdictPanel' || path === 'streamPanel' || path === 'auroraPanel'
+    || path === 'activityPanel' || path === 'impactPanel') return 'impact';
   if(path === 'afdPanel' || path === 'tafPanel' || path === 'moonPanel' || path === 'advPanel' || path === 'advCollapse') return 'more';
   return 'now';
 }

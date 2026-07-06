@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v172** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=172` in `index.html`).
+**Current version: v173** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=173` in `index.html`).
 
 ---
 
@@ -19,7 +19,13 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v172 (latest)
+### v173 (latest)
+- **`air.js`** — AQI, pollen, UV & exposure (~530 lines)
+- **`aviation.js`** — METAR + TAF (~300 lines)
+- **Impacts UX** — aria-label copy pass; mobile deep links scroll to matching section chip (desktop unchanged)
+- **README** synced for module split and v151–v173
+
+### v172
 - **`marine.js`** — Great Lakes, coastal/tides, buoy, stream gauges, water verdict (~1.2k lines extracted from `app.js`)
 - **panelUnavail polish** — marine/coastal error states, loc compare catastrophic failure, forecast NBM strip API errors, pollen note on air failure
 
@@ -133,15 +139,16 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Further splits** | Optional: aviation (TAF) or air/pollen from `app.js` |
-| 2 | **Deploy** | Push v172 when ready |
+| 1 | **Deploy** | Push v173 when ready |
+| 2 | **Optional splits** | obs/METAR history or AFD from `app.js` if `app.js` still feels large |
 
-### v172 (shipped)
+### v173 (shipped)
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | `marine.js` split | Done |
-| 2 | panelUnavail polish pass | Done |
+| 1 | `air.js` + `aviation.js` splits | Done |
+| 2 | Impacts aria + mobile deep-link scroll | Done |
+| 3 | README sync | Done |
 
 ### Earlier suggested batch (superseded)
 
@@ -212,19 +219,21 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 |------|------|
 | `index.html` | Shell, tab bar, panel markup |
 | `app.css` | All styles |
-| `app.js` | Core app: state, fetch, render, most panels (~3.8k lines) |
+| `app.js` | Core app: state, fetch, render (~3k lines) |
 | `nav.js` | In-page nav: tabs, hash deep links, chrome height |
 | `impact.js` | Impacts: activity/impact planners, aurora, section chips |
 | `marine.js` | Great Lakes, coastal/tides, buoy, stream gauges, water verdict |
+| `air.js` | Air quality, pollen, UV & exposure |
+| `aviation.js` | Aviation METAR + TAF |
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v172'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v173'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
 
-**Script load order:** `app.js` → `nav.js` → `impact.js` → `marine.js` → `storm.js` → `radar.js` → `boot.js`
+**Script load order:** `app.js` → `nav.js` → `impact.js` → `marine.js` → `air.js` → `aviation.js` → `storm.js` → `radar.js` → `boot.js`
 
 **Version bump checklist:**
 1. `APP_VERSION` in `app.js`

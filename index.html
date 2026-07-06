@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=172">
+<link rel="stylesheet" href="app.css?v=173">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -282,14 +282,14 @@
         <button type="button" data-impact-section="sky" hidden>Sky</button>
       </nav>
       <div class="impact-group impact-group-plan" id="impactGroupPlan">
-        <section class="panel nav-target" id="activityPanel" data-tab="impact" aria-label="Outdoor activity forecast">
+        <section class="panel nav-target" id="activityPanel" data-tab="impact" aria-label="Activity planner">
           <h2>Activity planner</h2>
           <p class="activity-lede" id="activityLede"><span class="lede-long">Best times in the next 24 hours — rain, wind, heat, UV, air quality, and active NWS advisories. Gray = after dark or outside usual hours; bar labels show clock times.</span><span class="lede-short">Next 24 hours — pin favorites to keep them on top; bars = good, fair, or poor.</span></p>
           <div class="activity-summary muted" id="activitySummary" hidden></div>
           <div class="activity-pin-bar" id="activityPinBar" hidden></div>
           <div id="activityList" class="planner-card-list radar-note is-loading">Loading activity forecast&hellip;</div>
         </section>
-        <section class="panel nav-target" id="impactPanel" data-tab="impact" aria-label="Impact hours forecast">
+        <section class="panel nav-target" id="impactPanel" data-tab="impact" aria-label="Impact hours planner">
           <h2>Impact hours</h2>
           <p class="activity-lede" id="impactLede"><span class="lede-long">Hourly weather stress — heat, wind, smoke, storms, cold, and UV. Green = low impact, amber = moderate, red = high. Gray = not applicable for that hour.</span><span class="lede-short">Hourly hazard stress — pin what you watch; green = low, amber = moderate, red = high.</span></p>
           <div class="activity-summary muted" id="impactSummary" hidden></div>
@@ -321,7 +321,7 @@
             <div class="airnow-row" id="airnowRow"></div>
           </section>
 
-          <section class="panel nav-target" id="exposurePanel" data-tab="impact" aria-label="UV and outdoor exposure">
+          <section class="panel nav-target" id="exposurePanel" data-tab="impact" aria-label="UV and exposure">
             <h2>UV &amp; Exposure</h2>
             <div class="outlook" style="margin-top:0">
               <div class="lbl">UV index</div>
@@ -504,12 +504,14 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=172"></script>
-<script src="nav.js?v=172"></script>
-<script src="impact.js?v=172"></script>
-<script src="marine.js?v=172"></script>
-<script src="storm.js?v=172"></script>
-<script src="radar.js?v=172"></script>
-<script src="boot.js?v=172"></script>
+<script src="app.js?v=173"></script>
+<script src="nav.js?v=173"></script>
+<script src="impact.js?v=173"></script>
+<script src="marine.js?v=173"></script>
+<script src="air.js?v=173"></script>
+<script src="aviation.js?v=173"></script>
+<script src="storm.js?v=173"></script>
+<script src="radar.js?v=173"></script>
+<script src="boot.js?v=173"></script>
 </body>
 </html>

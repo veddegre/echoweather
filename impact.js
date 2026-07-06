@@ -1372,6 +1372,20 @@ function syncImpactSkyGroup(){
   const panel = $('auroraPanel');
   if(grp && panel) grp.hidden = panel.hidden;
 }
+const IMPACT_PANEL_SECTION = {
+  activityPanel: 'plan',
+  impactPanel: 'plan',
+  airPanel: 'air',
+  exposurePanel: 'air',
+  waterVerdictPanel: 'water',
+  coastalPanel: 'water',
+  marinePanel: 'water',
+  streamPanel: 'water',
+  auroraPanel: 'sky'
+};
+function impactSectionForPanel(panelId){
+  return IMPACT_PANEL_SECTION[panelId] || null;
+}
 const IMPACT_SECTION_MAP = {
   plan: 'impactGroupPlan',
   air: 'impactGroupAir',

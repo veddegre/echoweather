@@ -18,8 +18,10 @@ coastal · aviation TAF · installable PWA with offline cache
                               └─ /api/status|airnow|pollen|buoy|taf (PHP proxies)
 ```
 
-`index.html` is the entire weather app — forecasts, radar, storm tracking, outdoor
-conditions, marine, alerts, and more, mostly fetched client-side from public APIs.
+`index.html` is the app shell — forecasts, radar, storm tracking, impacts,
+marine, alerts, and more, mostly fetched client-side from public APIs. Logic is
+split across `app.js` (core), `nav.js`, `impact.js`, `marine.js`, `air.js`,
+`aviation.js`, `storm.js`, `radar.js`, and `boot.js`.
 
 `api/*.php` is a thin PHP layer that:
 
@@ -33,7 +35,17 @@ conditions, marine, alerts, and more, mostly fetched client-side from public API
 
 | File / folder | Purpose |
 |---|---|
-| `index.html` | The weather app |
+| `index.html` | App shell and panel markup |
+| `app.css` | All styles |
+| `app.js` | Core: state, fetch, render, most panels |
+| `nav.js` | Tab bar, hash deep links, chrome height |
+| `impact.js` | Impacts: activity/impact planners, aurora, section chips |
+| `marine.js` | Great Lakes, coastal/tides, buoy, stream gauges, water verdict |
+| `air.js` | Air quality, pollen, UV & exposure |
+| `aviation.js` | Aviation METAR + TAF |
+| `storm.js` | SPC, storm mode, threat layers |
+| `radar.js` | Leaflet radar map and animation |
+| `boot.js` | Init glue |
 | `manifest.json` | PWA install manifest |
 | `sw.js` | Service worker |
 | `logo.svg`, `icon.svg`, `og-image.png` | Branding |
@@ -227,10 +239,11 @@ into `config.local.php` by hand.
 
 ### PWA version bump
 
-When you change `index.html` or `sw.js`, bump **both**:
+When you change client JS or CSS, bump **both**:
 
-- `APP_VERSION` in `index.html`
-- `CACHE` name in `sw.js` (e.g. `echo-weather-v128` → `echo-weather-v129`)
+- `APP_VERSION` in `app.js`
+- `CACHE` name in `sw.js` (e.g. `echo-weather-v172` → `echo-weather-v173`)
+- All `?v=` query strings on `app.css` and script tags in `index.html`
 
 Verify before deploy:
 
@@ -468,8 +481,7 @@ panels appear in one scrollable page with a compacting sticky header.
 | **Impacts** | Activity planner, impact hours, air quality & pollen, UV & exposure, aurora *(when active)*, water/coast/rivers |
 | **More** | Moon, advanced atmosphere (HRRR), aviation TAF, NWS forecast discussion |
 
-- **Deep links** — `#now`, `#forecast`, `#radar`, `#impact`, `#more`; legacy `#outdoor` and `#air` → Impacts; radar state
-  `#radar?mode=iem-n0q&frame=8`; legacy `#air` → Impacts tab.
+- **Deep links** — `#now`, `#forecast`, `#radar`, `#impact`, `#more`; legacy `#outdoor` and `#air` → Impacts; panel anchors (`#airPanel`, `#activityPanel`, `#marinePanel`, …); radar state `#radar?mode=iem-n0q&frame=8`. On mobile Impacts, panel links scroll to the matching section chip (Plan · Air · Water · Sky) first.
 - **Locations** — Geolocation, Open-Meteo search, multiple saved chips, shareable
   URLs (`?lat=42.97&lon=-85.92&name=Allendale`).
 - **Themes & units** — Light / Dark / System; °F / °C.
@@ -551,7 +563,7 @@ panels appear in one scrollable page with a compacting sticky header.
 
 ### Impacts
 
-- **Section chips** *(mobile)* — Sticky **Plan · Air · Water · Sky** jump links at the top of the tab.
+- **Section chips** *(mobile only)* — Sticky **Plan · Air · Water · Sky** jump links at the top of the tab; deep links to a panel activate the matching chip and scroll to that section.
 - **Activity planner** — Best times in the next 24 hours for **golf, hiking, yard
   work, running, beach/pool, cycling, dog walks, stargazing**, and *(when the
   local forecast is cold or snowy)* **skiing/sledding** and **snow shoveling**.
@@ -605,7 +617,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v166`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v173`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the
