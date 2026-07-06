@@ -359,6 +359,10 @@ body.radar-expanded{overflow:hidden}
 .activity-bar span{flex:1;min-width:3px}
 .activity-bar span.g{background:var(--good)}.activity-bar span.f{background:var(--warm)}.activity-bar span.p{background:var(--warn)}
 .activity-bar-lbl{display:flex;justify-content:space-between;font-size:.5625rem;color:var(--dim);margin-top:4px;letter-spacing:.03em}
+.activity-bar-times{position:relative;height:14px;margin-top:4px}
+.activity-bar-times span{position:absolute;top:0;font-size:.5625rem;color:var(--dim);letter-spacing:.03em;transform:translateX(-50%);white-space:nowrap}
+.activity-bar-times span.edge-start{left:0;transform:none}
+.activity-bar-times span.edge-end{left:100%;transform:translateX(-100%)}
 .activity-why{margin-top:8px;font-size:.72rem;color:var(--mut);line-height:1.45}
 .activity-why summary{cursor:pointer;color:var(--acc);user-select:none}
 #activityList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-height:8rem}
@@ -410,6 +414,9 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .trend-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px}
 .trend-range{font-size:.625rem;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
 .trend-foot{display:flex;justify-content:space-between;margin-top:4px;font-size:.5625rem;color:var(--dim);letter-spacing:.03em}
+.trend-hint{margin-top:3px;font-size:.5625rem;color:var(--dim);line-height:1.35}
+.trend-cat{font-size:.5625rem;font-weight:600;text-transform:capitalize;margin-left:5px;letter-spacing:0}
+.trend-cat.stable{color:var(--dim)}.trend-cat.marginal{color:var(--sky)}.trend-cat.unstable{color:var(--warn)}.trend-cat.very-unstable{color:var(--warm)}
 .trend svg{display:block;margin-top:4px;color:var(--sky);width:100%;height:28px}
 .trend.temp svg{color:var(--sun)}.trend.dew svg{color:var(--accent)}.trend.cape svg{color:var(--warn)}.trend.wind svg{color:var(--sky)}.trend.pres svg{color:var(--dim)}
 .obs-lede{font-size:.75rem;color:var(--mut);margin:4px 0 0;line-height:1.45}
@@ -714,7 +721,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 
     <section class="panel full nav-target" id="hourlyPanel" data-tab="now" aria-label="Hourly forecast">
       <h2>Next 24 Hours <span class="panel-status" id="hourlySource"></span></h2>
-      <p class="hourly-lede">Hour-by-hour forecast from now. Mini charts show the expected range over the next 24 hours (left = now, right = later); scroll the row below for each hour.</p>
+      <p class="hourly-lede">Hour-by-hour forecast from now. Mini charts track the next 24 hours (left = now, right = later); pressure, temperature, and dew point auto-scale to their range. CAPE uses a fixed instability scale (HRRR) so calm days read as stable rather than flat. Scroll the row below for each hour.</p>
       <div class="trends" id="trends"></div>
       <div class="hourly-strip" id="hourly"></div>
     </section>
@@ -849,7 +856,7 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 
       <section class="panel nav-target outdoor-wide" id="activityPanel" data-tab="outdoor" aria-label="Outdoor activity forecast">
         <h2>Activity planner</h2>
-        <p class="activity-lede" id="activityLede">Best times in the next 24 hours — rain, wind, heat, UV, and air quality. Activities adjust by season.</p>
+        <p class="activity-lede" id="activityLede">Best times in the next 24 hours — rain, wind, heat, UV, air quality, and active NWS advisories. Gray = after dark or outside usual hours; bar labels show clock times.</p>
         <div id="activityList" class="radar-note is-loading">Loading activity forecast&hellip;</div>
       </section>
 
@@ -1137,16 +1144,40 @@ function updatePanelFooter(){
 }
 
 // ---------- sparklines ----------
-function sparkline(values, w, h){
+function sparklineDomain(nums, opts){
+  opts = opts || {};
+  const dataMin = Math.min(...nums), dataMax = Math.max(...nums);
+  if(opts.domain){
+    return { min: opts.domain.min, max: opts.domain.max };
+  }
+  let min = dataMin, max = dataMax;
+  const minSpan = opts.minSpan ?? 0;
+  if(minSpan && max - min < minSpan){
+    const mid = (min + max) / 2;
+    min = mid - minSpan / 2;
+    max = mid + minSpan / 2;
+  }
+  return { min, max };
+}
+function sparkline(values, w, h, opts){
+  opts = opts || {};
   if(!values.length) return '';
-  const min = Math.min(...values), max = Math.max(...values);
+  const { min, max } = sparklineDomain(values, opts);
   const span = max - min || 1;
+  const yOf = v => h - 2 - ((v - min) / span) * (h - 4);
+  let bands = '';
+  (opts.refLines || []).forEach(rl => {
+    if(rl.value < min || rl.value > max) return;
+    const y = yOf(rl.value).toFixed(1);
+    bands += '<line x1="0" y1="' + y + '" x2="' + w + '" y2="' + y
+      + '" stroke="currentColor" stroke-opacity=".18" stroke-dasharray="2,3" vector-effect="non-scaling-stroke"/>';
+  });
   const pts = values.map((v, i) => {
     const x = values.length < 2 ? w / 2 : (i / (values.length - 1)) * w;
-    const y = h - 2 - ((v - min) / span) * (h - 4);
-    return x.toFixed(1) + ',' + y.toFixed(1);
+    return x.toFixed(1) + ',' + yOf(v).toFixed(1);
   }).join(' ');
-  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none"' + (opts.title ? ' aria-label="' + esc(opts.title) + '"' : '') + '>'
+    + bands
     + '<polyline points="' + pts + '" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>';
 }
 function sparklineCard(label, values, cls, unitSuffix, opts){
@@ -1155,16 +1186,23 @@ function sparklineCard(label, values, cls, unitSuffix, opts){
   if(!nums.length) return '';
   const fmt = opts.fmt || (v => String(Math.round(v)));
   const u = unitSuffix || '';
-  const min = Math.min(...nums), max = Math.max(...nums);
+  const dataMin = Math.min(...nums), dataMax = Math.max(...nums);
   const latest = nums[nums.length - 1];
-  const rangeTxt = min === max ? (fmt(min) + u) : (fmt(min) + u + ' \u2013 ' + fmt(max) + u);
+  const rangeTxt = opts.rangeFmt
+    ? opts.rangeFmt(dataMin, dataMax, latest, fmt, u)
+    : (dataMin === dataMax ? (fmt(dataMin) + u) : (fmt(dataMin) + u + ' \u2013 ' + fmt(dataMax) + u));
   const left = opts.left || 'Older';
   const right = (opts.rightPrefix || 'Latest') + ' \u00B7 ' + (opts.rightTail != null ? opts.rightTail : (fmt(latest) + u));
-  return '<div class="trend ' + cls + '">'
-    + '<div class="trend-head"><div class="lbl">' + esc(label) + '</div>'
+  const cat = opts.catFn ? opts.catFn(latest) : '';
+  const catCls = opts.catClsFn ? opts.catClsFn(latest) : (cat ? cat.replace(/\s+/g, '-') : '');
+  const catHtml = cat ? ' <span class="trend-cat ' + esc(catCls) + '">' + esc(cat) + '</span>' : '';
+  const hint = opts.hint ? '<div class="trend-hint">' + esc(opts.hint) + '</div>' : '';
+  return '<div class="trend ' + cls + '"' + (opts.title ? ' title="' + esc(opts.title) + '"' : '') + '>'
+    + '<div class="trend-head"><div class="lbl">' + esc(label) + catHtml + '</div>'
     + '<div class="trend-range">' + esc(rangeTxt) + '</div></div>'
-    + sparkline(nums, 100, 28)
+    + sparkline(nums, 100, 28, opts)
     + '<div class="trend-foot"><span>' + esc(left) + '</span><span>' + esc(right) + '</span></div>'
+    + hint
     + '</div>';
 }
 
@@ -1321,7 +1359,9 @@ function moonCompassHtml(az, alt, size){
 const degSym = () => state.units === 'F' ? '\u00B0F' : '\u00B0C';
 const windUnit = () => state.units === 'F' ? 'mph' : 'km/h';
 const uvCat = u => u < 3 ? 'Low' : u < 6 ? 'Moderate' : u < 8 ? 'High' : u < 11 ? 'Very High' : 'Extreme';
+const CAPE_SCALE_MAX = 2500;
 const capeCat = c => c < 300 ? 'stable' : c < 1000 ? 'marginal' : c < 2500 ? 'unstable' : 'very unstable';
+function capeCatCls(c){ return capeCat(c ?? 0).replace(/\s+/g, '-'); }
 
 // parse "2026-07-04T14:00" as wall time components (no tz conversion)
 function hm(iso){
@@ -2295,21 +2335,81 @@ function activityHourContext(d, i){
       : null
   };
 }
-function activityAlertCap(){
+function activityAlertCap(def){
   const feats = stormState.alertFeatures || [];
+  const actId = def?.id || '';
   let cap = 100;
   const notes = [];
+  const apply = (newCap, note) => {
+    if(newCap < cap){
+      cap = newCap;
+      if(note) notes.unshift(note);
+    }else if(newCap === cap && note && !notes.includes(note)){
+      notes.push(note);
+    }
+  };
   feats.forEach(f => {
-    const ev = (f.properties?.event || '').toLowerCase();
-    if(/tornado|severe thunderstorm|flash flood|hurricane|blizzard|ice storm|winter storm/.test(ev)){
-      cap = Math.min(cap, 20);
-      notes.push(f.properties.event);
-    }else if(/warning/.test(ev)){
-      cap = Math.min(cap, 35);
-      if(!notes.length) notes.push(f.properties.event);
+    const ev = f.properties?.event || '';
+    const evL = ev.toLowerCase();
+    if(actId === 'beach' && /beach hazards|rip current|high surf|rough surf|swim advisory|surf zone|dangerous rip/i.test(evL)){
+      apply(20, ev);
+      return;
+    }
+    if((actId === 'beach' || actId === 'hiking') && /coastal flood|high surf|lakeshore flood/i.test(evL)){
+      apply(30, ev);
+      return;
+    }
+    if(['running', 'hiking', 'cycling', 'dog'].includes(actId) && /air quality|ozone|particle pollution|smoke/i.test(evL)){
+      apply(35, ev);
+      return;
+    }
+    if(['running', 'yard', 'dog', 'hiking', 'golf', 'cycling'].includes(actId) && /heat advisory|excessive heat/i.test(evL)){
+      apply(35, ev);
+      return;
+    }
+    if(actId === 'beach' && /heat advisory|excessive heat/i.test(evL)){
+      apply(45, ev);
+      return;
+    }
+    if(actId === 'dog' && /heat advisory|excessive heat/i.test(evL)){
+      apply(25, ev);
+      return;
+    }
+    if(['cycling', 'golf'].includes(actId) && /wind advisory|high wind|lake wind/i.test(evL)){
+      apply(40, ev);
+      return;
+    }
+    if(['hiking', 'yard', 'cycling'].includes(actId) && /red flag|fire weather/i.test(evL)){
+      apply(30, ev);
+      return;
+    }
+    if(/tornado|severe thunderstorm|flash flood|hurricane|blizzard|ice storm|winter storm/.test(evL)){
+      apply(20, ev);
+    }else if(/warning/.test(evL)){
+      apply(35, ev);
+    }else if(/advisory|statement/.test(evL) && cap === 100){
+      apply(55, ev);
     }
   });
-  return { cap, notes };
+  return { cap, notes: notes.slice(0, 3) };
+}
+function penalizeAfternoonHeat(ctx, reasons, opts){
+  opts = opts || {};
+  if(!ctx.isDay) return 0;
+  const hr = new Date(ctx.time).getHours();
+  const start = opts.start ?? 13, end = opts.end ?? 18;
+  if(hr < start || hr >= end) return 0;
+  const hot = opts.hot ?? (state.units === 'F' ? 82 : 28);
+  const extreme = opts.extreme ?? (state.units === 'F' ? 88 : 31);
+  let s = 0;
+  if(ctx.temp >= extreme || ctx.wetBulb >= (opts.wetBulbExtreme ?? 80)){
+    s += opts.extremePenalty ?? 25;
+    reasons.push(opts.extremeNote || 'Afternoon heat peak');
+  }else if(ctx.temp >= hot){
+    s += opts.hotPenalty ?? 14;
+    reasons.push(opts.hotNote || 'Hot afternoon');
+  }
+  return s;
 }
 function penalizeRain(ctx, reasons, heavy, light){
   let s = 0;
@@ -2364,6 +2464,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 55, 28);
     s -= penalizeWind(ctx, reasons, 18, 10);
     s -= penalizeHeat(ctx, reasons, 85, 92);
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 80, extreme: 86 });
     s -= penalizeWinter(ctx, reasons);
     if(ctx.uv >= 8 && ctx.isDay) reasons.push('High UV — seek shade');
     return { score: clampActScore(s), reasons };
@@ -2374,6 +2475,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 50, 25);
     s -= penalizeWind(ctx, reasons, 28, 16);
     s -= penalizeHeat(ctx, reasons, 86, 94);
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 82, extreme: 88 });
     s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, true);
     if(ctx.uv >= 9 && ctx.isDay){ s -= 12; reasons.push('Very high UV'); }
@@ -2387,6 +2489,7 @@ const ACTIVITY_SCORERS = {
     if(ctx.precip > 0.02) s -= 25;
     s -= penalizeWind(ctx, reasons, 22, 14);
     s -= penalizeHeat(ctx, reasons, 88, 96);
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 84, extreme: 90, extremePenalty: 30 });
     s -= penalizeWinter(ctx, reasons);
     if(ctx.wetBulb >= 80) reasons.push('Heavy work in heat — hydrate');
     return { score: clampActScore(s), reasons };
@@ -2398,6 +2501,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeWind(ctx, reasons, 24, 14);
     const heat = penalizeHeat(ctx, reasons, 82, 90);
     s -= heat + (heat > 0 ? 5 : 0);
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 78, extreme: 85, hotPenalty: 18, extremePenalty: 28 });
     s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, true);
     if(ctx.temp >= 40 && ctx.temp <= 75 && ctx.pop < 25) reasons.push('Comfortable running temps');
@@ -2408,6 +2512,10 @@ const ACTIVITY_SCORERS = {
     const reasons = [];
     if(ctx.temp < 68){ s -= 40; reasons.push('Cool for swimming (' + Math.round(ctx.temp) + degSym() + ')'); }
     else if(ctx.temp < 75){ s -= 15; reasons.push('Water may feel cool'); }
+    s -= penalizeAfternoonHeat(ctx, reasons, {
+      hot: 84, extreme: 90, hotPenalty: 18, extremePenalty: 32,
+      hotNote: 'Hot afternoon sun', extremeNote: 'Afternoon heat — seek shade'
+    });
     s -= penalizeRain(ctx, reasons, 55, 30);
     s -= penalizeWind(ctx, reasons, 20, 12);
     if(ctx.uv >= 8 && ctx.isDay) reasons.push('High sun — sunscreen');
@@ -2420,6 +2528,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 50, 25);
     s -= penalizeWind(ctx, reasons, 16, 9);
     s -= penalizeHeat(ctx, reasons, 84, 92);
+    s -= penalizeAfternoonHeat(ctx, reasons, { hot: 82, extreme: 88 });
     s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, false);
     if(ctx.wind >= 20) s -= 15;
@@ -2431,6 +2540,11 @@ const ACTIVITY_SCORERS = {
     s -= penalizeRain(ctx, reasons, 40, 20);
     if(ctx.temp >= 85){ s -= 35; reasons.push('Hot pavement risk for paws'); }
     else if(ctx.temp >= 78){ s -= 15; reasons.push('Warm — short walks'); }
+    s -= penalizeAfternoonHeat(ctx, reasons, {
+      start: 11, end: 19, hot: 75, extreme: 82,
+      hotPenalty: 20, extremePenalty: 35,
+      hotNote: 'Warm midday — short walks', extremeNote: 'Hot pavement risk — walk early morning'
+    });
     if(ctx.temp <= 15){ s -= 25; reasons.push('Very cold for pets'); }
     s -= penalizeWinter(ctx, reasons);
     s -= penalizeAqi(extra, reasons, true);
@@ -2516,7 +2630,7 @@ function activityIneligibleNote(def){
 function buildActivityHours(d, def, extra){
   const scorer = ACTIVITY_SCORERS[def.id];
   if(!scorer || !d?.hourly?.time?.length) return [];
-  const alert = activityAlertCap();
+  const alert = activityAlertCap(def);
   const i0 = nowIndex(d);
   const hours = [];
   for(let j = i0; j < d.hourly.time.length && hours.length < HOURLY_HOURS; j++){
@@ -2530,10 +2644,30 @@ function buildActivityHours(d, def, extra){
     }
     let { score, reasons } = scorer(ctx, extra);
     score = Math.min(score, alert.cap);
-    if(alert.notes.length && score <= alert.cap) reasons = alert.notes.slice(0, 1).concat(reasons);
+    if(alert.notes.length && score <= alert.cap){
+      const note = alert.notes[0];
+      if(!reasons.includes(note)) reasons.unshift(note);
+    }
     hours.push({ time: ctx.time, score, grade: activityGrade(score), reasons: reasons.slice(0, 5), ineligible: false });
   }
   return hours;
+}
+function activityBarTimeLabels(hours){
+  if(!hours.length) return '';
+  const n = hours.length;
+  const slots = n <= 8 ? 3 : n <= 16 ? 4 : 5;
+  const picks = [];
+  for(let s = 0; s < slots; s++){
+    const i = slots === 1 ? 0 : Math.round(s * (n - 1) / (slots - 1));
+    if(picks.some(p => p.i === i)) continue;
+    picks.push({ i, lbl: i === 0 ? 'Now' : hourLabelCompact(hours[i].time) });
+  }
+  return picks.map((p, idx) => {
+    const pct = n < 2 ? 0 : (p.i / (n - 1)) * 100;
+    const edge = idx === 0 ? ' edge-start' : idx === picks.length - 1 ? ' edge-end' : '';
+    const style = edge ? '' : ' style="left:' + pct.toFixed(1) + '%"';
+    return '<span class="' + edge.trim() + '"' + style + '>' + esc(p.lbl) + '</span>';
+  }).join('');
 }
 function mergeActivityWindows(hours){
   if(!hours.length) return [];
@@ -2598,6 +2732,10 @@ function activityLaterConcerns(eligible){
 }
 function buildActivityWhyList(def, hours, windows, d, extra){
   const items = [];
+  const alert = activityAlertCap(def);
+  if(alert.notes.length && alert.cap < 70){
+    items.push('Active NWS alert: ' + alert.notes[0] + ' — outdoor rating capped.');
+  }
   const eligible = hours.filter(h => !h.ineligible);
   if(!eligible.length){
     return [def.nightOnly
@@ -2623,6 +2761,11 @@ function buildActivityWhyList(def, hours, windows, d, extra){
   const wc = activityWindChillF(ctx);
 
   items.push('At peak: ' + activityWxLabel(ctx) + ', ' + temp + degSym() + ', ' + hourlyComfortNote(temp, dew).toLowerCase());
+  const peakHr = new Date(ctx.time).getHours();
+  if(['golf', 'beach', 'yard', 'running', 'hiking', 'dog', 'cycling'].includes(def.id)
+    && peakHr >= 13 && peakHr < 18 && temp >= (state.units === 'F' ? 80 : 27)){
+    items.push('Peak hour is in the afternoon heat — morning may rate higher');
+  }
   if(pop <= 15) items.push('Rain unlikely (' + pop + '% chance)');
   else if(pop < 40) items.push('Some rain risk (' + pop + '% chance)');
   else items.push('Rain likely (' + pop + '% chance)');
@@ -2693,9 +2836,11 @@ function renderActivityCard(def, hours, d, extra){
   const windows = mergeActivityWindows(hours);
   const bar = hours.map(h => {
     const cls = h.ineligible ? 'na' : (h.grade === 'good' ? 'g' : h.grade === 'fair' ? 'f' : 'p');
-    const tip = hourLabelCompact(h.time) + ': ' + (h.ineligible ? activityIneligibleNote(def) : activityGradeLabel(h.grade));
+    let tip = hourLabelCompact(h.time) + ': ' + (h.ineligible ? activityIneligibleNote(def) : activityGradeLabel(h.grade));
+    if(!h.ineligible && h.reasons[0]) tip += ' — ' + h.reasons[0];
     return '<span class="' + cls + '" title="' + esc(tip) + '"></span>';
   }).join('');
+  const timeLbl = activityBarTimeLabels(hours);
   const whyList = buildActivityWhyList(def, hours, windows, d, extra)
     .map(line => '<li>' + esc(line) + '</li>').join('');
   return '<article class="activity-card">'
@@ -2703,8 +2848,9 @@ function renderActivityCard(def, hours, d, extra){
     + '<span class="activity-name">' + esc(def.name) + '</span>'
     + '<span class="activity-grade ' + overall + '">' + activityGradeLabel(overall) + '</span></div>'
     + '<div class="activity-window">' + esc(summarizeActivityWindows(windows, hours, def)) + '</div>'
-    + '<div class="activity-bar" aria-hidden="true">' + bar + '</div>'
-    + '<div class="activity-bar-lbl"><span>Now</span><span>+24h</span></div>'
+    + '<div class="activity-bar" role="img" aria-label="Hourly suitability for ' + esc(def.name) + ' over the next 24 hours">'
+    + bar + '</div>'
+    + '<div class="activity-bar-times">' + timeLbl + '</div>'
     + '<details class="activity-why"><summary>Why</summary><ul style="margin:6px 0 0;padding-left:1.1em">' + whyList + '</ul></details>'
     + '</article>';
 }
@@ -2720,7 +2866,7 @@ function renderActivityPlanner(d){
   const loc = state.locations[state.active];
   const season = getActivitySeason(loc, d);
   const defs = activitiesForSeason(season);
-  if(lede) lede.textContent = season.note + ' Daytime hours only for most activities (gray bar = after dark). Green = good, amber = fair, red = poor.';
+  if(lede) lede.textContent = season.note + ' Green = good, amber = fair, red = poor. Gray = after dark or outside usual hours. Bar labels show clock times; afternoon heat and active NWS advisories are factored in.';
   const extra = {
     aqi: outdoorAir.aqi,
     pm25: outdoorAir.pm25,
@@ -3038,11 +3184,22 @@ function renderHourly(d){
   const capes = slice(d.hourly.cape, v => v ?? 0);
   const foot = { left: 'Now', rightPrefix: 'Later' };
   const dU = degSym();
+  const capePeak = capes.length ? Math.max(...capes) : 0;
   $('trends').innerHTML = [
-    sparklineCard('Pressure', pres, 'pres', ' hPa', foot),
-    sparklineCard('Temperature', temps, 'temp', dU, foot),
-    sparklineCard('Dew point', dews, 'dew', dU, foot),
-    sparklineCard('CAPE', capes, 'cape', ' J/kg', foot)
+    sparklineCard('Pressure', pres, 'pres', ' hPa', { ...foot, minSpan: 6 }),
+    sparklineCard('Temperature', temps, 'temp', dU, { ...foot, minSpan: state.units === 'F' ? 8 : 5 }),
+    sparklineCard('Dew point', dews, 'dew', dU, { ...foot, minSpan: state.units === 'F' ? 8 : 5 }),
+    sparklineCard('CAPE', capes, 'cape', ' J/kg', {
+      ...foot,
+      domain: { min: 0, max: CAPE_SCALE_MAX },
+      refLines: [{ value: 300 }, { value: 1000 }, { value: 2500 }],
+      catFn: () => capeCat(capePeak),
+      catClsFn: () => capeCatCls(capePeak),
+      rangeFmt: (min, max, latest, fmt, u) => 'peak ' + fmt(max) + u + ' \u00B7 now ' + fmt(capes[0] ?? 0) + u,
+      hint: '0\u20132500 J/kg scale \u00B7 dashed: 300 marginal \u00B7 1000 unstable \u00B7 2500 very unstable',
+      title: 'Convective Available Potential Energy (HRRR). Peak next 24h: '
+        + Math.round(capePeak) + ' J/kg (' + capeCat(capePeak) + ').'
+    })
   ].join('');
 
   const out = [];
@@ -4497,6 +4654,7 @@ async function refreshStormTracking(loc, d){
     syncStormReportMarkers();
     refreshFireWeather(loc, d);
     renderAlertsBox(alertFeats);
+    if(state.data) renderActivityPlanner(state.data);
   }catch(e){
     console.error('storm intel', e);
     stormState.loaded = false;
@@ -5979,6 +6137,15 @@ const BUOY_PRESETS = [
   // Lake St Clair
   { id: '45147', name: 'Lake St Clair', lake: 'Lake St Clair', lat: 42.430, lon: -82.680 }
 ];
+// Sparse nearshore anchors where NDBC buoy coverage is thin (esp. WI west shore).
+const LAKE_NEARSHORE = [
+  { lake: 'Lake Michigan', lat: 44.52, lon: -88.01 },
+  { lake: 'Lake Michigan', lat: 44.10, lon: -87.66 },
+  { lake: 'Lake Michigan', lat: 43.75, lon: -87.71 },
+  { lake: 'Lake Michigan', lat: 42.73, lon: -87.78 },
+  { lake: 'Lake Michigan', lat: 45.10, lon: -87.60 }
+];
+const GLAKE_MAX_NM = 50;
 const NDBC_STATION_URL = 'https://www.ndbc.noaa.gov/station_page.php?station=';
 const NDBC_MAP_BASE = 'https://www.ndbc.noaa.gov/';
 function ndbcMapUrl(loc){
@@ -5995,6 +6162,22 @@ function distNm(lat1, lon1, lat2, lon2){
   const a = Math.sin(dLat / 2) ** 2
     + Math.cos(lat1 * RAD) * Math.cos(lat2 * RAD) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function lakeProximityNm(lat, lon){
+  const lake = greatLakeName(lat, lon);
+  if(!lake) return null;
+  let bestD = Infinity;
+  const check = (la, lo) => {
+    const d = distNm(lat, lon, la, lo);
+    if(d < bestD) bestD = d;
+  };
+  for(const b of BUOY_PRESETS){
+    if(b.lake === lake) check(b.lat, b.lon);
+  }
+  for(const s of LAKE_NEARSHORE){
+    if(s.lake === lake) check(s.lat, s.lon);
+  }
+  return bestD;
 }
 function buoyCoords(id){
   return BUOY_PRESETS.find(b => b.id === (id || '').toUpperCase()) || null;
@@ -6781,7 +6964,9 @@ function updateRadarStormMark(){
   mark.title = 'Severe window ' + stormState.severeWindow.label;
 }
 function isGreatLakesLoc(loc){
-  return loc && isLikelyUS(loc) && !!greatLakeName(loc.lat, loc.lon);
+  if(!loc || !isLikelyUS(loc)) return false;
+  const d = lakeProximityNm(loc.lat, loc.lon);
+  return d !== null && d <= GLAKE_MAX_NM;
 }
 function syncMarinePanelVisibility(loc){
   const panel = $('marinePanel');
