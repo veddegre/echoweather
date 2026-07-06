@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '156';
+const APP_VERSION = '158';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -4595,13 +4595,66 @@ function greatLakeName(lat, lon){
   return null;
 }
 const LAKE_GLF_OFFICES = {
-  'Lake Superior': ['KMQT', 'KDLH'],
-  'Lake Huron': ['KDTX', 'KAPX', 'KGRB'],
-  'Lake Michigan': ['KMKX', 'KGRB', 'KLOT'],
-  'Lake Erie': ['KCLE', 'KBUF'],
+  'Lake Superior': ['KMQT', 'KDLH', 'KGRB'],
+  'Lake Huron': ['KAPX', 'KDTX', 'KGRR'],
+  'Lake Michigan': ['KGRR', 'KMKX', 'KGRB', 'KLOT'],
+  'Lake Erie': ['KCLE', 'KDTX', 'KBUF'],
   'Lake Ontario': ['KBUF'],
-  'Lake St Clair': ['KDTX']
+  'Lake St Clair': ['KDTX', 'KGRR']
 };
+function normalizeNwsOffice(cwa){
+  if(!cwa) return '';
+  const u = String(cwa).trim().toUpperCase();
+  return u.startsWith('K') ? u : 'K' + u;
+}
+function lakeGlfOfficesForLoc(lake, lat, lon){
+  const base = LAKE_GLF_OFFICES[lake] || [];
+  if(lat == null || lon == null) return base;
+
+  if(lake === 'Lake Superior'){
+    // MN/WI north shore vs UP / east shore
+    if(lon < -90.5) return ['KDLH', 'KGRB', 'KMQT'];
+    if(lon >= -87.5) return ['KMQT', 'KDLH', 'KGRB'];
+    return ['KMQT', 'KDLH', 'KGRB'];
+  }
+  if(lake === 'Lake Michigan'){
+    if(lon >= -87.0) return ['KGRR', 'KGRB', 'KMKX', 'KLOT'];
+    if(lon <= -87.6) return ['KMKX', 'KLOT', 'KGRB', 'KGRR'];
+    return ['KGRB', 'KGRR', 'KMKX', 'KLOT'];
+  }
+  if(lake === 'Lake Huron'){
+    // Thumb / Saginaw / Georgian approach vs northeast (Alpena) vs straits
+    if(lon >= -82.5) return ['KAPX', 'KDTX', 'KGRR'];
+    if(lon >= -84.5) return ['KDTX', 'KAPX', 'KGRR'];
+    return ['KGRR', 'KAPX', 'KDTX'];
+  }
+  if(lake === 'Lake Erie'){
+    if(lon >= -79.2) return ['KBUF', 'KCLE'];
+    if(lon >= -82.2) return ['KCLE', 'KBUF', 'KDTX'];
+    return ['KDTX', 'KCLE', 'KBUF'];
+  }
+  if(lake === 'Lake Ontario'){
+    return ['KBUF'];
+  }
+  if(lake === 'Lake St Clair'){
+    if(lon >= -82.75) return ['KDTX', 'KGRR'];
+    return ['KGRR', 'KDTX'];
+  }
+  return base;
+}
+function pickGlfCandidate(candidates, prefer, offices){
+  if(!candidates.length) return null;
+  if(prefer){
+    const hit = candidates.find(c => c.office === prefer);
+    if(hit) return hit;
+  }
+  let best = null, bestIdx = 99;
+  for(const c of candidates){
+    const idx = offices.indexOf(c.office);
+    if(idx >= 0 && idx < bestIdx){ best = c; bestIdx = idx; }
+  }
+  return best || candidates[0];
+}
 const LAKE_GLF_CODE = {
   'Lake Michigan': 'GLFLM',
   'Lake Superior': 'GLFLS',
@@ -4901,6 +4954,9 @@ function glfHeadline(text){
   for(const raw of text.split('\n')){
     const line = raw.trim();
     if(!line) continue;
+    if(/^National Weather Service\b/i.test(line)) continue;
+    if(/^NWS\b/i.test(line)) continue;
+    if(/^\d{3,4}\s+(AA|BB|CC|DD|EE|FF|GG|HH|II|KK|LL|MM|NN|OO|PP|QQ|RR|SS|TT|UU|VV|WW|XX|YY|ZZ)/i.test(line)) continue;
     if(/^\.\w+\.\.\./i.test(line)){
       return line.replace(/^\.+/, '').replace(/\.\.\./g, ' \u2014 ').slice(0, 180);
     }
@@ -4909,7 +4965,11 @@ function glfHeadline(text){
   }
   const hit = text.split('\n').find(l => {
     const t = l.trim();
-    return t.length > 24 && !/^GLFL/i.test(t) && !/^LAKE\b/i.test(t);
+    if(t.length <= 24) return false;
+    if(/^GLFL/i.test(t)) return false;
+    if(/^LAKE\b/i.test(t)) return false;
+    if(/^National Weather Service\b/i.test(t)) return false;
+    return true;
   });
   return hit ? hit.trim().slice(0, 180) : '';
 }
@@ -5031,23 +5091,24 @@ function extractGlfSection(text, code){
   const section = next >= 0 ? tail.slice(0, next + 1) : tail;
   return trimGlfProduct(section);
 }
-async function fetchGlfLakeProduct(lake, preferOffice){
+async function fetchGlfLakeProduct(lake, preferOffice, lat, lon){
   const code = LAKE_GLF_CODE[lake];
   if(!code) return null;
   const lr = await nwsFetch('https://api.weather.gov/products/types/GLF');
   if(!lr.ok) return null;
-  const items = ((await lr.json())['@graph'] || []).slice(0, 32);
-  const offices = LAKE_GLF_OFFICES[lake] || [];
+  const items = ((await lr.json())['@graph'] || []).slice(0, 48);
+  const prefer = normalizeNwsOffice(preferOffice);
+  const offices = lakeGlfOfficesForLoc(lake, lat, lon);
   let pool = items;
-  if(offices.length){
+  if(offices.length || prefer){
     const officeHits = items.filter(item =>
-      item.issuingOffice === preferOffice || offices.includes(item.issuingOffice)
+      (prefer && item.issuingOffice === prefer) || offices.includes(item.issuingOffice)
     );
     if(officeHits.length) pool = officeHits;
   }
   pool = [...pool].sort((a, b) => {
-    if(a.issuingOffice === preferOffice) return -1;
-    if(b.issuingOffice === preferOffice) return 1;
+    if(prefer && a.issuingOffice === prefer) return -1;
+    if(prefer && b.issuingOffice === prefer) return 1;
     const ai = offices.indexOf(a.issuingOffice);
     const bi = offices.indexOf(b.issuingOffice);
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
@@ -5065,15 +5126,19 @@ async function fetchGlfLakeProduct(lake, preferOffice){
   }));
   const candidates = results.filter(Boolean);
   if(!candidates.length) return null;
-  const hit = candidates.find(c => c.office === preferOffice)
-    || candidates.find(c => offices.includes(c.office))
-    || candidates[0];
-  return { source: 'NWS Great Lakes \u2014 ' + lake, text: hit.section };
+  const hit = pickGlfCandidate(candidates, prefer, offices);
+  const officeLabel = hit && hit.office
+    ? hit.office.replace(/^K/, '') + ' WFO'
+    : '';
+  return {
+    source: 'NWS Great Lakes \u2014 ' + lake + (officeLabel ? ' (' + officeLabel + ')' : ''),
+    text: hit.section
+  };
 }
 async function fetchNwsMarineText(loc, pointsProps){
   const lake = greatLakeName(loc.lat, loc.lon);
   if(lake && isLikelyUS(loc)){
-    const glf = await fetchGlfLakeProduct(lake, pointsProps && pointsProps.cwa);
+    const glf = await fetchGlfLakeProduct(lake, pointsProps && pointsProps.cwa, loc.lat, loc.lon);
     if(glf) return glf;
   }
   const marineUrl = pointsProps && pointsProps.forecastMarineZone;
