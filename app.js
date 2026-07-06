@@ -5858,6 +5858,17 @@ function isMobileTabLayout(){
   return window.matchMedia('(max-width:860px)').matches;
 }
 
+function scrollToNavTarget(id){
+  if(!id || APP_TABS.includes(id)) return;
+  const el = document.getElementById(id);
+  if(!el || !el.classList.contains('nav-target')) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: isMobileTabLayout() ? 'auto' : 'smooth', block: 'start' });
+    });
+  });
+}
+
 function parseNavHash(){
   const raw = (location.hash || '').replace(/^#/, '');
   const qi = raw.indexOf('?');
@@ -5987,7 +5998,9 @@ function initPageNav(){
   const syncLayout = () => {
     syncChromeHeight();
     applyRadarDeepLinkFromHash();
+    const { path } = parseNavHash();
     setAppTab(tabFromHash(), { skipScroll: true, skipHash: true });
+    scrollToNavTarget(path);
   };
 
   window.addEventListener('hashchange', syncLayout);
