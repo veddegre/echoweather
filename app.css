@@ -211,6 +211,12 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .buoy-picker-body select{min-width:min(100%,220px);flex:1 1 180px}
 .buoy-picker-body input{width:90px;flex:0 0 auto}
 .buoy-card-metrics{padding:0 14px 10px}
+.nearshore-summary{margin:0 0 12px;padding:12px 14px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--accent)}
+.nearshore-headline{font-size:.8125rem;line-height:1.45;color:var(--ink);font-weight:500}
+.nearshore-stats{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px}
+.nearshore-stat{display:flex;flex-direction:column;gap:2px;min-width:4.5rem}
+.nearshore-stat .ns-k{font-size:.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
+.nearshore-stat .ns-v{font-size:.875rem;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
 .buoy-picker-body .buoy-find{font-size:.75rem;color:var(--sky);text-decoration:none;font-weight:500;white-space:nowrap}
 .buoy-picker-body .buoy-find:hover{text-decoration:underline}
 .grid{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;margin-top:8px;min-width:0}
@@ -451,6 +457,7 @@ footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .threat-layer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:6px 10px;padding:0 12px 10px;font-size:.75rem;color:var(--mut)}
 .threat-layer-grid label{display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
 .threat-layer-grid input{accent-color:var(--accent)}
+.threat-layer-hint{font-weight:400;color:var(--dim)}
 .radar-scrub-wrap{position:relative;flex:1 1 10rem;min-width:0;display:flex;align-items:center}
 .radar-scrub-wrap .radar-scrub{flex:1}
 .radar-storm-mark{position:absolute;top:50%;height:10px;transform:translateY(-50%);background:var(--warn);opacity:.45;border-radius:3px;pointer-events:none;z-index:1}

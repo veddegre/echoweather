@@ -1,8 +1,10 @@
-const CACHE = 'echo-weather-v136';
+const CACHE = 'echo-weather-v138';
 const ICON_Q = '?v=86';
 const ASSETS = [
   './app.css',
   './app.js',
+  './storm.js',
+  './radar.js',
   './manifest.json',
   './icon.svg',
   './icon-maskable.svg',

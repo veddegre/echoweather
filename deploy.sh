@@ -41,6 +41,8 @@ RSYNC_FILES=(
   index.html
   app.css
   app.js
+  storm.js
+  radar.js
   manifest.json
   sw.js
   .htaccess

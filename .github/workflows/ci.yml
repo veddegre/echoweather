@@ -11,5 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify APP_VERSION matches service worker cache
-        run: ./scripts/check-versions.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Version sync, JS syntax, static assets
+        run: ./scripts/ci-check.sh
+      - name: Smoke tests (PHP built-in server)
+        run: |
+          cp config.example.php config.local.php
+          php -S 127.0.0.1:8765 -t . router.php > /tmp/ew-php.log 2>&1 &
+          echo $! > /tmp/ew-php.pid
+          sleep 2
+          BASE_URL=http://127.0.0.1:8765 SMOKE_HOST=localhost bash ./scripts/smoke.sh
+        env:
+          CI: true

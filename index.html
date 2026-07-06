@@ -223,7 +223,7 @@
             </div>
           </span>
           <details class="threat-layers" id="threatLayers">
-            <summary>Map threat layers</summary>
+            <summary>Map threat layers <span class="threat-layer-hint">(saved per location)</span></summary>
             <div class="threat-layer-grid" id="threatLayerGrid">
               <label><input type="checkbox" data-threat="stormReports" checked> Storm reports</label>
               <label><input type="checkbox" data-threat="wpcEro"> WPC excessive rain</label>
@@ -331,6 +331,10 @@
 
       <section class="panel nav-target outdoor-wide" id="marinePanel" data-tab="outdoor" aria-label="Great Lakes water conditions" hidden>
         <h2><span id="marineTitle">Great Lakes</span> <span class="panel-status" id="marineStatus"></span></h2>
+        <div class="nearshore-summary" id="nearshoreSummary" hidden>
+          <div class="nearshore-headline" id="nearshoreHeadline"></div>
+          <div class="nearshore-stats" id="nearshoreStats"></div>
+        </div>
         <div class="outlook" id="lakeOutlook" style="margin-top:0;display:none">
           <div class="lbl">Lake-air delta</div>
           <div class="verdict" id="lakeVerdict">&mdash;</div>
@@ -441,5 +445,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="app.js"></script>
+<script src="storm.js"></script>
+<script src="radar.js"></script>
 </body>
 </html>
