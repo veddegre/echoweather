@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=150">
+<link rel="stylesheet" href="app.css?v=151">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -175,6 +175,7 @@
       </div>
       <div id="winterOutlook" hidden aria-label="Winter weather outlook"></div>
       <div id="forecastAfdTeaser" hidden aria-live="polite"></div>
+      <div id="forecastNbmStrip" class="forecast-nbm-strip" hidden aria-live="polite"></div>
       <div class="daily" id="daily"></div>
     </section>
 
@@ -274,9 +275,9 @@
 
     <div class="outdoor-layout" id="outdoorGrid" style="margin-top:16px">
       <div class="outdoor-group outdoor-group-plan">
-        <section class="panel nav-target" id="activityPanel" data-tab="outdoor" aria-label="Outdoor activity forecast">
-          <h2>Activity planner</h2>
-          <p class="activity-lede" id="activityLede">Best times in the next 24 hours — rain, wind, heat, UV, air quality, and active NWS advisories. Gray = after dark or outside usual hours; bar labels show clock times.</p>
+        <section class="panel nav-target" id="activityPanel" data-tab="outdoor" aria-label="Impact hours forecast">
+          <h2>Impact hours</h2>
+          <p class="activity-lede" id="activityLede">Hourly weather stress — heat, wind, smoke, storms, cold, and UV. Green = low impact, amber = moderate, red = high. Gray = not applicable (e.g. UV at night).</p>
           <div class="activity-summary muted" id="activitySummary" hidden></div>
           <div class="activity-pin-bar" id="activityPinBar" hidden></div>
           <div id="activityList" class="radar-note is-loading">Loading activity forecast&hellip;</div>
@@ -488,9 +489,9 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=150"></script>
-<script src="storm.js?v=150"></script>
-<script src="radar.js?v=150"></script>
-<script src="boot.js?v=150"></script>
+<script src="app.js?v=151"></script>
+<script src="storm.js?v=151"></script>
+<script src="radar.js?v=151"></script>
+<script src="boot.js?v=151"></script>
 </body>
 </html>

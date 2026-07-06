@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v150** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=150` in `index.html`).
+**Current version: v151** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=151` in `index.html`).
 
 ---
 
@@ -17,7 +17,15 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ---
 
-## What is shipped (v136–v150)
+## What is shipped (v136–v151)
+
+### v151 (latest)
+- Storm banner actions: severe window on timeline, nearest SPC report jump
+- Chase-mode radar: Site radar nudge from MRMS; vel toggle when storm mode active
+- NWS hourly POP strip on Forecast tab (when precip likely)
+- Impact hours planner (replaces lifestyle activity cards)
+
+## What was shipped (v136–v150)
 
 ### Infrastructure & code health
 - Split `index.html` → `app.css` + `app.js` (+ later `storm.js`, `radar.js`, `boot.js`)
@@ -78,21 +86,27 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 The original phased roadmap (Phases 1–4) is **largely complete**. Remaining work is **refinement and surfacing**, not greenfield features.
 
-### Suggested next batch — v151 (discussed, not started)
+### Suggested next batch — v152+ (not started)
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Storm desk hero actions** | Storm banner has narrative + "Open radar". Add: jump radar to **severe window** on timeline; jump to **nearest SPC report** (reuse `jumpRadarToStormReport`). Files: `storm.js`, `radar.js`. |
-| 2 | **Chase-mode radar UX** | `radarVelToggle` exists but only visible for `iem-n0q` / `iem-n0u`. Promote reflectivity/velocity toggle when **storm mode** active; optionally nudge US users from MRMS toward site radar during chase. Files: `radar.js`, `storm.js`, `index.html`. |
-| 3 | **NBM on Forecast** | `loadNbm()` / `#nbmPanel` live in More tab. Surface compact NBM precip strip on **Forecast** when today/tomorrow has meaningful precip (POP or NWS hourly rain). Files: `app.js`, `index.html`, `app.css`. |
-| 4 | **Impacts copy pass** | Reframe activity planner as **"impact hours"** (heat, wind, smoke, lightning) vs lifestyle (golf/beach). Update README tab table: Outdoor → Impacts. Files: `index.html`, `app.js` (activity strings), `README.md`. |
+| 1 | **Warning polygon jump** | Storm banner link to nearest warning polygon centroid on radar |
+| 2 | **Auto threat layers** | Enable reports + SPC cat when storm mode fires (if not already on) |
+| 3 | **panelUnavail pass** | Stream gauges, radar velocity edge cases |
+| 4 | **README / docs** | Keep feature list in sync as batches ship |
+
+### v151 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Storm desk hero actions | Done |
+| 2 | Chase-mode radar UX | Done |
+| 3 | NBM on Forecast | Done |
+| 4 | Impacts copy pass | Done |
 
 ### Smaller follow-ons (no batch assigned)
 
 - Extend `panelUnavail()` to remaining edge cases (stream gauges when API fails, radar site velocity notes, etc.)
-- Auto-enable threat layers when storm mode fires (reports + SPC cat already default-on)
-- Storm banner: link to nearest **warning polygon** centroid on radar
-- README / docs sync with v136–v150 feature set (still references "Outdoor" tab in places)
 - Optional: split more logic out of `app.js` (maintenance; radar/storm already split)
 
 ### Explicitly deprioritized (do not build unless scope changes)
@@ -114,7 +128,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v150'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v151'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
@@ -169,4 +183,4 @@ Useful context: conversation history lived in agent transcript `9d70f5e6-8cb6-48
 
 ---
 
-*Generated for handoff after v150 (Impacts tab, unavail messaging, OVATION depth, METAR trends, AFD teaser).*
+*Generated for handoff after v151 (storm banner actions, chase radar, NBM strip, impact hours).*

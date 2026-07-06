@@ -478,8 +478,16 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .radar-scrub-wrap .radar-scrub{flex:1}
 .radar-storm-mark{position:absolute;top:50%;height:10px;transform:translateY(-50%);background:var(--warn);opacity:.45;border-radius:3px;pointer-events:none;z-index:1}
 .storm-mode-banner .storm-narrative{display:block;margin-top:6px;font-size:.8125rem;font-weight:400;color:var(--ink);line-height:1.45}
-.storm-mode-banner .storm-banner-actions{margin-top:8px;font-size:.75rem}
-.storm-mode-banner .storm-banner-actions a{color:var(--sky);font-weight:600;text-decoration:none}
+.storm-mode-banner .storm-banner-actions{margin-top:8px;font-size:.75rem;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.storm-mode-banner .storm-banner-actions a,.storm-mode-banner .storm-banner-actions .storm-banner-link{color:var(--sky);font-weight:600;text-decoration:none;cursor:pointer;background:none;border:none;padding:0;font-family:inherit;font-size:inherit}
+.storm-mode-banner .storm-banner-actions .storm-banner-link:hover,.storm-mode-banner .storm-banner-actions a:hover{text-decoration:underline}
+.forecast-nbm-strip{margin:12px 0 4px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.forecast-nbm-lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.forecast-nbm-hours{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.forecast-nbm-hour{flex:0 0 auto;min-width:4.5rem;padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:.75rem;line-height:1.35}
+.forecast-nbm-hour .k{color:var(--mut);font-size:.6875rem;display:block;margin-bottom:2px}
+.forecast-nbm-hour .v{font-weight:600;font-variant-numeric:tabular-nums}
+.forecast-nbm-hour.high{border-color:color-mix(in srgb,var(--warn) 55%,var(--line));background:color-mix(in srgb,var(--warn) 8%,var(--panel))}
 .storm-report-filters{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
 .storm-report-filters button{padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--mut);font-size:.6875rem;font-weight:600;cursor:pointer}
 .storm-report-filters button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}

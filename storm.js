@@ -1052,6 +1052,40 @@ function convectiveIndexNote(d, i){
   if(cape >= 500) return 'Weak to moderate instability';
   return null;
 }
+function nearestStormReport(){
+  const reports = filteredStormReports();
+  if(!reports.length) return null;
+  return reports.reduce((a, b) => ((a.dist ?? 9999) < (b.dist ?? 9999) ? a : b));
+}
+function buildStormBannerActions(){
+  const parts = ['<button type="button" class="storm-banner-link" data-storm-open-radar>Open radar &rarr;</button>'];
+  if(stormState.severeWindow){
+    parts.push('<button type="button" class="storm-banner-link" data-storm-radar-window>Severe window on timeline</button>');
+  }
+  const near = nearestStormReport();
+  if(near){
+    const dist = near.dist != null ? ' (' + Math.round(near.dist) + ' mi)' : '';
+    parts.push('<button type="button" class="storm-banner-link" data-storm-radar-report>Nearest report' + esc(dist) + '</button>');
+  }
+  return '<div class="storm-banner-actions">' + parts.join('') + '</div>';
+}
+function bindStormBannerActions(){
+  const box = $('stormModeBanner');
+  if(!box) return;
+  box.querySelector('[data-storm-open-radar]')?.addEventListener('click', e => {
+    e.preventDefault();
+    setAppTab('radar');
+  });
+  box.querySelector('[data-storm-radar-window]')?.addEventListener('click', e => {
+    e.preventDefault();
+    jumpRadarToSevereWindow();
+  });
+  box.querySelector('[data-storm-radar-report]')?.addEventListener('click', e => {
+    e.preventDefault();
+    const r = nearestStormReport();
+    if(r) jumpRadarToStormReport(r);
+  });
+}
 function renderStormBanner(){
   const box = $('stormModeBanner');
   if(!box) return;
@@ -1060,8 +1094,9 @@ function renderStormBanner(){
   if(stormState.stormMode && (text || narrative)){
     box.innerHTML = (text ? '<div>' + text + '</div>' : '')
       + (narrative ? '<div class="storm-narrative">' + esc(narrative) + '</div>' : '')
-      + '<div class="storm-banner-actions"><a href="#radar" data-nav="radar">Open radar &rarr;</a></div>';
+      + buildStormBannerActions();
     box.classList.add('visible');
+    bindStormBannerActions();
   } else {
     box.innerHTML = '';
     box.classList.remove('visible');
@@ -1176,6 +1211,7 @@ function bindStormReportJumps(box, reports){
 function updateStormUi(loc, d){
   renderStormBanner();
   renderStormSetup(d);
+  if(typeof syncRadarVelToggle === 'function') syncRadarVelToggle();
   const box = $('stormLinks');
   if(!box) return;
   const show = stormState.maxDn >= 2 || stormState.mcds.length > 0 || stormState.reports.length > 0

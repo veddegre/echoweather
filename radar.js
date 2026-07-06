@@ -41,15 +41,51 @@ function radarMaxZoom(){
 function isLiveOnlyRadar(){
   return radarMode === 'mrms' || !!(IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity);
 }
+function isChaseRadarMode(){
+  return !!(stormState.stormMode || stormState.severeWindow
+    || (stormState.loaded && (stormState.maxDn >= 3 || stormState.reports.length > 0)));
+}
 function syncRadarVelToggle(){
   const btn = $('radarVelToggle');
   if(!btn) return;
   const loc = state.locations[state.active];
-  const show = loc && isLikelyUS(loc) && (radarMode === 'iem-n0q' || radarMode === 'iem-n0u');
+  const chase = isChaseRadarMode();
+  const iemMode = radarMode === 'iem-n0q' || radarMode === 'iem-n0u';
+  const show = loc && isLikelyUS(loc) && (iemMode || (chase && radarMode === 'mrms'));
   btn.hidden = !show;
   if(btn.hidden) return;
+  if(radarMode === 'mrms' && chase){
+    btn.textContent = 'Site radar';
+    btn.setAttribute('aria-label', 'Switch to animated NEXRAD site radar');
+    return;
+  }
   const vel = radarMode === 'iem-n0u';
   btn.textContent = vel ? 'Reflectivity' : 'Velocity';
+  btn.setAttribute('aria-label', vel ? 'Switch to reflectivity' : 'Switch to velocity');
+}
+function jumpRadarToSevereWindow(){
+  const win = stormState.severeWindow;
+  if(!win) return;
+  if(radarMode === 'mrms' && isLikelyUS(state.locations[state.active])){
+    radarMode = 'iem-n0q';
+    saveLocRadarPrefs();
+    if($('radarMode')) $('radarMode').value = radarMode;
+    radarLoadId++;
+    iemLoadGen++;
+  }
+  setAppTab('radar');
+  const run = () => {
+    if(!map) return;
+    centerRadarMap();
+    const tMs = new Date(win.start).getTime();
+    const fi = findRadarFrameForTime(tMs);
+    if(fi != null && radarFrameCount() > 1){
+      stopRadarTimer();
+      showFrame(fi);
+    }
+    updateRadarStormMark();
+  };
+  setTimeout(run, map ? 150 : 550);
 }
 function buildRadarHash(){
   const parts = [];
@@ -666,8 +702,11 @@ document.querySelectorAll('[data-threat]').forEach(inp => {
 const radarVelBtn = $('radarVelToggle');
 if(radarVelBtn){
   radarVelBtn.addEventListener('click', () => {
-    const next = (radarMode === 'iem-n0u') ? 'iem-n0q' : 'iem-n0u';
-    radarMode = next;
+    if(radarMode === 'mrms' && isChaseRadarMode()){
+      radarMode = 'iem-n0q';
+    }else{
+      radarMode = (radarMode === 'iem-n0u') ? 'iem-n0q' : 'iem-n0u';
+    }
     saveLocRadarPrefs();
     $('radarMode').value = radarMode;
     radarLoadId++;
@@ -675,6 +714,7 @@ if(radarVelBtn){
     stopRadarTimer();
     applyRadarZoomLimits();
     updateRadarLegend();
+    syncRadarVelToggle();
     loadRadar();
   });
 }
