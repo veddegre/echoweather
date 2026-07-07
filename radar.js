@@ -132,19 +132,20 @@ function applyRadarZoomLimits(){
 function swapOverlaySlot(layers, slot, opacity){
   layers.forEach((l, i) => { if(l) l.setOpacity(i === slot ? opacity : 0); });
 }
-function ensurePingPongLayer(layers, slot, onError, opts){
-  if(!map) return null;
+function ensurePingPongLayer(layers, slot, onError, opts, targetMap){
+  const m = targetMap || map;
+  if(!m) return null;
   if(!layers[slot]){
     layers[slot] = L.tileLayer('', { ...opts, opacity: 0 });
     if(onError) layers[slot].on('tileerror', onError);
-    layers[slot].addTo(map);
-  } else if(!map.hasLayer(layers[slot])) {
-    layers[slot].addTo(map);
+    layers[slot].addTo(m);
+  } else if(!m.hasLayer(layers[slot])) {
+    layers[slot].addTo(m);
   }
   return layers[slot];
 }
-function loadPingPongFrame(layers, slotFrames, slot, frameIdx, url, opacity, onError, showWhenReady, layerOpts){
-  const layer = ensurePingPongLayer(layers, slot, onError, layerOpts || RV_TILE_OPTS);
+function loadPingPongFrame(layers, slotFrames, slot, frameIdx, url, opacity, onError, showWhenReady, layerOpts, targetMap){
+  const layer = ensurePingPongLayer(layers, slot, onError, layerOpts || RV_TILE_OPTS, targetMap);
   if(slotFrames[slot] === frameIdx && layer._url === url){
     if(showWhenReady) swapOverlaySlot(layers, slot, opacity);
     return;
@@ -166,7 +167,7 @@ function loadPingPongFrame(layers, slotFrames, slot, frameIdx, url, opacity, onE
   layer.setOpacity(0);
   layer.setUrl(url);
 }
-function showPingPongFrame(layers, slotFrames, activeSlot, frameIdx, url, opacity, onError, layerOpts){
+function showPingPongFrame(layers, slotFrames, activeSlot, frameIdx, url, opacity, onError, layerOpts, targetMap){
   if(slotFrames[activeSlot] === frameIdx){
     swapOverlaySlot(layers, activeSlot, opacity);
     return activeSlot;
@@ -176,13 +177,13 @@ function showPingPongFrame(layers, slotFrames, activeSlot, frameIdx, url, opacit
     swapOverlaySlot(layers, inactive, opacity);
     return inactive;
   }
-  loadPingPongFrame(layers, slotFrames, inactive, frameIdx, url, opacity, onError, true, layerOpts);
+  loadPingPongFrame(layers, slotFrames, inactive, frameIdx, url, opacity, onError, true, layerOpts, targetMap);
   return inactive;
 }
-function preloadPingPongFrame(layers, slotFrames, activeSlot, frameIdx, url, onError, layerOpts){
+function preloadPingPongFrame(layers, slotFrames, activeSlot, frameIdx, url, onError, layerOpts, targetMap){
   const preloadSlot = 1 - activeSlot;
   if(slotFrames[preloadSlot] === frameIdx) return;
-  loadPingPongFrame(layers, slotFrames, preloadSlot, frameIdx, url, 0, onError, false, layerOpts);
+  loadPingPongFrame(layers, slotFrames, preloadSlot, frameIdx, url, 0, onError, false, layerOpts, targetMap);
 }
 const SAT_TILE_OPTS = { ...RV_TILE_OPTS, zIndex: 448 };
 const IEM_TILE_OPTS = {
@@ -213,6 +214,7 @@ function resetPingPongSlots(){
 }
 function clearDualPaneOverlays(){
   removePingPongLayers(iemOverlayLayersB, mapB);
+  removePingPongLayers(iemOverlayLayersB, map);
 }
 function clearRadarLayers(){
   removePingPongLayers(radarOverlayLayers, map);
@@ -360,7 +362,7 @@ function showDualPaneFrame(i){
   hidePingPongLayers(iemOverlayLayersB);
   const url = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png';
   const err = IEM_TILES[secMode].velocity ? onIemTileError : null;
-  iemOverlaySlotB = showPingPongFrame(iemOverlayLayersB, iemSlotFrameB, iemOverlaySlotB, frameIdx, url, 0.78, err, IEM_TILE_OPTS);
+  iemOverlaySlotB = showPingPongFrame(iemOverlayLayersB, iemSlotFrameB, iemOverlaySlotB, frameIdx, url, 0.78, err, IEM_TILE_OPTS, mapB);
   if(basemapLayerB) basemapLayerB.bringToBack();
   if(mapBMarker) mapBMarker.bringToFront();
 }
