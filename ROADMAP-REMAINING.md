@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v185** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=185` in `index.html`).
+**Current version: v192** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=192` in `index.html`).
 
 ---
 
@@ -19,7 +19,22 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v185 (latest)
+### v192 (latest)
+- **panelUnavail polish** — specific codes for mesonet, NBM, streamgages, storm intel, loc compare, CPC/USDM teasers; storm panel shows error instead of vanishing on fetch failure
+
+### v191
+- **Regional mesonet fix** — use NWS `/points/{lat},{lon}/stations` (or cached `observationStations`); old `?latitude=&radius=` query returned 400
+
+### v190
+- **SPC storm links** — mesoanalysis `…/mesoanalysis/` (not `mesoscale/`); surface `…/surfaceMaps/` (case); SKYWARN `…/skywarn` (not `/spotter`); rounded MapClick coords
+
+### v189
+- **MRMS animation** — ~2 hr loop from NOAA opengeo GetCapabilities + WMS `time` ping-pong (~30 frames, ~5 min stride)
+
+### v186–v188
+- **Radar expand fullscreen** — flex/hidden-pane layout fix; explicit expand heights; `invalidateSize` on open/close
+
+### v185
 - **Dual-pane polish** — animated reflectivity on pane B when primary is velocity; dual-pane pref saved per location
 - **NWS CLI records** — official record high/low on day cards via IEM CLI (nearest ASOS)
 - **Radar/refresh fixes** (v182–v184) — refresh reloads radar; velocity clears on mode switch; pane B tile target fix
@@ -180,9 +195,10 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | **v180** | USDM drought · daily record hints | **Shipped** |
 | **v181** | MRMS dual-pane · README sync | **Shipped** |
 | **v182–v185** | Radar refresh/dual-pane fixes · NWS records · polish | **Shipped** (v185) |
-| **v185+** | Optional depth / maintenance | Planned |
+| **v186–v192** | Expand fix · MRMS animation · link fixes · mesonet · panelUnavail | **Shipped** (v192) |
+| **v192+** | Optional depth / maintenance | Planned |
 
-### v179 (latest)
+### v179 detail
 - **Dual-pane radar** — side-by-side reflectivity + velocity on IEM NEXRAD (Dual pane button)
 - **CPC teaser** — 6–10 / 8–14 day temp & precip outlook at your location on Forecast
 - **Regional mesonet** — nearest ASOS strip on More tab
@@ -215,7 +231,21 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Deploy** | Push v185 when ready |
+| 1 | **MRMS loop refresh** | Re-fetch frame list when animation reaches live end |
+| 2 | **MRMS frame stride** | Optional 2 / 5 / 10 min density control |
+| 3 | **Mesonet depth** | Station names, distance sort label, regional spread hint |
+
+### Smaller follow-ons (no batch assigned)
+
+- Extend `panelUnavail()` to remaining edge cases (threat layer tile failures, lightning WS, etc.)
+- Optional: split more logic out of `app.js` (maintenance; radar/storm already split)
+
+### Explicitly deprioritized (do not build unless scope changes)
+
+- Push notifications
+- Global/international alert parity
+- Lifestyle-first outdoor marketing
+- ECMWF hobby APIs, MeteoAlarm, PurpleAir (unless urban smoke granularity becomes a goal)
 
 ### v185 (shipped)
 
@@ -325,18 +355,6 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | 3 | NBM on Forecast | Done |
 | 4 | Impacts copy pass | Done |
 
-### Smaller follow-ons (no batch assigned)
-
-- Extend `panelUnavail()` to remaining edge cases (stream gauges when API fails, radar site velocity notes, etc.)
-- Optional: split more logic out of `app.js` (maintenance; radar/storm already split)
-
-### Explicitly deprioritized (do not build unless scope changes)
-
-- Push notifications
-- Global/international alert parity
-- Lifestyle-first outdoor marketing
-- ECMWF hobby APIs, MeteoAlarm, PurpleAir (unless urban smoke granularity becomes a goal)
-
 ---
 
 ## Architecture quick reference
@@ -354,7 +372,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v185'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v192'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
@@ -388,7 +406,10 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `waterVerdictPanel` / `renderWaterVerdict` | `app.js` | Unified boating summary |
 | `fetchLatestAfdText` | `app.js` | Shared AFD fetch for More + Forecast teaser |
 | `loadForecastAfdTeaser` | `app.js` | Synoptic excerpt on 5-day panel |
+| `nwsPointForecastUrl` / `nwsSkywarnUrl` | `app.js` | NWS MapClick + local SKYWARN links |
+| `SPC_STORM_LINKS` | `storm.js` | Canonical SPC external link URLs |
 | `panelUnavail` / `setPanelUnavail` | `app.js` | Consistent unavailable copy |
+| `fetchMrmsFrameTimes` / `showMrmsPingPongFrame` | `radar.js` | MRMS animated loop via opengeo WMS time |
 | `renderOvationStrip` | `app.js` | Aurora OVATION bar chart |
 | `metarHistorySummary` | `app.js` | 24h/7d temp + pressure trend note |
 

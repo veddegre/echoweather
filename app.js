@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '191';
+const APP_VERSION = '192';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -205,7 +205,13 @@ const PANEL_UNAVAIL_MSG = {
   aurora_api: 'NOAA space weather data could not be reached — try again later.',
   cpc_api: 'CPC extended outlook could not be loaded.',
   usdm_api: 'U.S. Drought Monitor data could not be loaded.',
-  coastal_api: 'Coastal marine and tide data could not be loaded.'
+  coastal_api: 'Coastal marine and tide data could not be loaded.',
+  mesonet_api: 'Regional ASOS observations could not be loaded from NWS.',
+  nbm_api: 'NWS grid hourly forecast could not be loaded.',
+  stream_api: 'USGS streamgage data could not be reached.',
+  storm_api: 'SPC outlook or storm reports could not be loaded.',
+  mrms_api: 'MRMS frame list could not be loaded — try refresh or another radar source.',
+  loc_compare_api: 'Saved location comparison could not be loaded.'
 };
 function panelUnavail(code, extra){
   const msg = PANEL_UNAVAIL_MSG[code] || 'Unavailable for this location.';
@@ -2437,8 +2443,8 @@ async function loadForecastCpcTeaser(loc){
       + '<p class="radar-note" style="margin-top:8px"><a href="https://www.cpc.ncep.noaa.gov/products/predictions/long_range/" target="_blank" rel="noopener">Full CPC outlook maps \u2192</a></p>';
   }catch(e){
     if(gen !== forecastCpcGen) return;
-    box.hidden = true;
-    box.innerHTML = '';
+    box.hidden = false;
+    box.innerHTML = '<div class="forecast-cpc-lbl">CPC extended outlook</div>' + panelUnavail('cpc_api');
     console.warn('cpcTeaser', e);
   }
 }
@@ -2493,8 +2499,9 @@ async function loadForecastUsdmTeaser(loc){
       + '<p class="radar-note" style="margin-top:6px"><a href="https://droughtmonitor.unl.edu/" target="_blank" rel="noopener">Full drought map \u2192</a></p>';
   }catch(e){
     if(gen !== forecastUsdmGen) return;
-    box.hidden = true;
-    box.innerHTML = '';
+    box.hidden = false;
+    box.className = 'forecast-usdm-teaser';
+    box.innerHTML = '<div class="forecast-usdm-lbl">U.S. Drought Monitor</div>' + panelUnavail('usdm_api');
     console.warn('usdmTeaser', e);
   }
 }
@@ -2543,7 +2550,7 @@ async function loadMesonetStrip(loc){
         + '<span class="mesonet-wind">' + esc(row.wind || '\u2014') + '</span></div>'
       ).join('') + '</div>';
     }catch(e){
-      setPanelUnavail(body, 'api_error');
+      setPanelUnavail(body, 'mesonet_api');
       console.warn('mesonet', e);
     }
   });
@@ -2774,7 +2781,7 @@ async function loadForecastNbmStrip(loc, d){
     if(gen !== forecastNbmGen) return;
     box.hidden = false;
     box.innerHTML = '<div class="forecast-nbm-lbl">NWS grid hourly</div>'
-      + panelUnavail('api_error');
+      + panelUnavail('nbm_api');
     console.warn('forecastNbmStrip', e);
   }
 }
@@ -2795,7 +2802,7 @@ async function loadNbm(loc){
         + '<p class="radar-note" style="margin-top:10px">From NWS grid hourly forecast at your location.</p>';
     }catch(e){
       panel.hidden = false;
-      setPanelUnavail(body, 'api_error');
+      setPanelUnavail(body, 'nbm_api');
       console.warn('nbm', e);
     }
   });
@@ -2889,7 +2896,7 @@ async function renderLocCompare(){
       + (c.badges || '') + '</div>'
     ).join('');
   }catch(e){
-    box.innerHTML = '<div class="lc-status" style="grid-column:1/-1">' + panelUnavail('api_error') + '</div>';
+    box.innerHTML = '<div class="lc-status" style="grid-column:1/-1">' + panelUnavail('loc_compare_api') + '</div>';
     console.warn('locCompare', e);
   }
 }

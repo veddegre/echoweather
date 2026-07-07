@@ -884,7 +884,7 @@ async function loadStreamGauges(loc){
     if(gen !== streamLoadGen) return;
     if(!r.ok){
       list.className = 'stream-list';
-      setPanelUnavail(list, 'api_error');
+      setPanelUnavail(list, 'stream_api');
       return;
     }
     const j = await r.json();
@@ -933,7 +933,7 @@ async function loadStreamGauges(loc){
   }catch(e){
     if(gen !== streamLoadGen) return;
     list.className = 'stream-list';
-    setPanelUnavail(list, 'api_error');
+    setPanelUnavail(list, 'stream_api');
   }
   if(gen === streamLoadGen) syncImpactTabChrome();
 }

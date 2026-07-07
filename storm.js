@@ -1438,7 +1438,12 @@ async function refreshStormTracking(loc, d){
     console.error('storm intel', e);
     stormState.loaded = false;
     const box = $('stormLinks');
-    if(box){
+    if(box && loc && isLikelyUS(loc)){
+      box.classList.add('visible');
+      box.innerHTML = '<div class="storm-head"><div class="lbl">Convective outlook</div>'
+        + '<div class="storm-meta">SPC at your location</div></div>'
+        + panelUnavail('storm_api');
+    }else if(box){
       box.classList.remove('visible');
       box.innerHTML = '';
     }

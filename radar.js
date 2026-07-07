@@ -732,7 +732,7 @@ async function loadMrmsRadar(loadId){
     mrmsFrames = frames;
   }catch(e){
     if(loadId !== radarLoadId) return;
-    setPanelUnavail($('radarNote'), 'radar_load');
+    setPanelUnavail($('radarNote'), 'mrms_api');
     $('radarTime').textContent = 'MRMS unavailable';
     console.error('mrms', e);
     return;

@@ -537,8 +537,8 @@ panels appear in one scrollable page with a compacting sticky header.
 ### Radar & storm tracking
 
 - **Radar sources** — RainViewer (animated + optional GOES IR satellite),
-  **MRMS** composite (live CONUS), IEM NEXRAD base/composite (50‑min animation),
-  or **nearest-site velocity** (live US).
+  **MRMS** composite (animated ~2 hr CONUS loop, or live latest frame), IEM NEXRAD
+  base/composite (50‑min animation), or **nearest-site velocity** (live US).
 - **Reflectivity ↔ velocity toggle** — Quick switch between IEM base
   reflectivity and nearest NEXRAD velocity; **dual pane** side-by-side compare
   on IEM modes or **MRMS reflectivity + nearest-site velocity** (US). Dual-pane
@@ -547,7 +547,7 @@ panels appear in one scrollable page with a compacting sticky header.
 - **Shareable radar URLs** — Hash encodes mode, frame, and threat-layer toggles
   (`#radar?mode=mrms&layers=warnings,watches,stormReports`).
 - **Animation** — Scrubber, play/pause, storm-window marker on the timeline,
-  fullscreen expand, center on location.
+  fullscreen expand (single- and dual-pane), center on location.
 - **Lightning** — Optional live strike overlay (Blitzortung; connects only while
   the toggle is on).
 - **Map threat layers** — Toggle warnings/watches/advisories (including alert
@@ -570,8 +570,8 @@ panels appear in one scrollable page with a compacting sticky header.
 - **Convective outlook panel** — SPC Day 1–3 categorical risk; Day 1 tornado/
   hail/wind probabilities; **Day 2/3 discussion excerpts**; best storm window;
   nearby SPC reports; lake-effect hints; **SPC mesoanalysis / surface / sounding
-  links** when risk is elevated; mesoscale discussions with expandable text;
-  flood signal when NWS text mentions heavy rain.
+  links** when risk is elevated (corrected NOAA URLs as of v190); mesoscale
+  discussions with expandable text; flood signal when NWS text mentions heavy rain.
 
 ### Impacts
 
@@ -620,7 +620,7 @@ panels appear in one scrollable page with a compacting sticky header.
   blocks browser CORS).
 - **NWS Forecast Discussion** — Full AFD text for your forecast office.
 - **Regional mesonet** *(US)* — Horizontal strip of nearest ASOS observations
-  (temp and wind) within ~45 km.
+  (temp and wind) within ~30 mi via NWS observation stations API.
 - **NBM grid** — NWS grid hourly temp, wind, sky, and precip probability when
   available.
 
@@ -634,7 +634,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v185`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v192`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the
