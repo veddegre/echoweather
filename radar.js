@@ -275,7 +275,7 @@ function syncExpandedRadarLayout(){
   const wrapH = Math.max(200, stage.clientHeight - (ctl ? ctl.offsetHeight + gap : 0) - gap);
   wrap.style.height = wrapH + 'px';
   panes.style.height = wrapH + 'px';
-  panes.querySelectorAll('#radar, #radarB').forEach(el => {
+  panes.querySelectorAll('.radar-pane:not([hidden]) #radar, .radar-pane:not([hidden]) #radarB').forEach(el => {
     const pane = el.closest('.radar-pane');
     if(!pane || pane.hidden) return;
     const lbl = pane.querySelector('.radar-pane-lbl:not([hidden])');
