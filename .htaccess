@@ -22,8 +22,11 @@
         Header set Cache-Control "no-cache, must-revalidate"
     </FilesMatch>
 
-    # PWA icons — avoid stale CDN/browser caches after regenerating PNGs.
+    # PWA icons & branding — avoid stale CDN/browser caches after updates.
     <FilesMatch "^(apple-touch-icon|icon-192|icon-512)\.png$">
+        Header set Cache-Control "public, max-age=0, must-revalidate"
+    </FilesMatch>
+    <FilesMatch "^(icon|icon-maskable|logo)\.svg$">
         Header set Cache-Control "public, max-age=0, must-revalidate"
     </FilesMatch>
 </IfModule>

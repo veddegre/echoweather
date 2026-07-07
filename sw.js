@@ -17,7 +17,7 @@ const ASSETS = [
   './loc-compare.js',
   './radar.js',
   './boot.js',
-  './manifest.json',
+  './manifest.json?v=197',
   './icon.svg' + ICON_Q,
   './icon-maskable.svg' + ICON_Q,
   './icon-192.png' + ICON_Q,
@@ -63,6 +63,12 @@ function isIconRequest(u){
   return /\/(apple-touch-icon|icon-192|icon-512)\.png$/i.test(u.pathname);
 }
 
+function isBrandingRequest(u){
+  return isIconRequest(u)
+    || /\/(icon|icon-maskable|logo)\.svg$/i.test(u.pathname)
+    || u.pathname.endsWith('/manifest.json');
+}
+
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if(e.request.method !== 'GET' || u.origin !== location.origin) return;
@@ -85,7 +91,7 @@ self.addEventListener('fetch', e => {
       return;
     }
     e.respondWith(
-      isIconRequest(u)
+      isBrandingRequest(u)
         ? fetchFresh.catch(() => caches.match(e.request))
         : caches.match(e.request).then(cached => fetchFresh.catch(() => cached))
     );

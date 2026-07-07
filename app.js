@@ -2415,7 +2415,7 @@ async function initServiceWorker(){
     }
   });
   try{
-    swReg = await navigator.serviceWorker.register('sw.js');
+    swReg = await navigator.serviceWorker.register('sw.js?v=' + APP_VERSION);
     swReg.addEventListener('updatefound', () => {
       const nw = swReg.installing;
       if(!nw) return;
