@@ -8,6 +8,7 @@ let radarIdx = 0, radarTimer = null, radarHost = '', radarSatOn = false, radarLo
 let rvPastCount = 0;
 let rainviewerTileErrors = 0;
 let iemVelocitySite = null;
+let iemReflectFrames = [];
 let iemLoadGen = 0;
 let mrmsLayer = null;
 let radarDeepFrame = null;
@@ -42,6 +43,7 @@ function radarMaxZoom(){
   return IEM_TILES[radarMode] ? RADAR_ZOOM.iem : RADAR_ZOOM.rainviewer;
 }
 function isLiveOnlyRadar(){
+  if(radarDualOn && radarMode === 'iem-n0u') return false;
   return radarMode === 'mrms' || !!(IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity);
 }
 function isChaseRadarMode(){
@@ -347,7 +349,8 @@ function dualPaneSecondarySuffix(frameIdx){
   const secMode = dualPaneSecondaryMode();
   if(!secMode || !IEM_TILES[secMode]) return '900913';
   if(IEM_TILES[secMode].velocity) return '0';
-  const raw = iemFrames[frameIdx] ?? iemFrames[iemFrames.length - 1] ?? '900913';
+  const src = (radarMode === 'iem-n0u' && iemReflectFrames.length) ? iemReflectFrames : iemFrames;
+  const raw = src[frameIdx] ?? src[src.length - 1] ?? '900913';
   return raw === '0' ? '900913' : raw;
 }
 function showDualPaneFrame(i){
@@ -376,6 +379,7 @@ function syncRadarDualUi(){
   if(btn){
     btn.hidden = !avail;
     btn.classList.toggle('on', radarDualOn && avail);
+    btn.title = avail ? '' : 'Dual pane needs IEM NEXRAD or MRMS (US locations only)';
   }
   if(!avail) radarDualOn = false;
   if(panes) panes.classList.toggle('dual-pane', radarDualOn && avail);
@@ -633,6 +637,7 @@ function updateRadarLegend(){
 function radarFrameCount(){
   if(radarMode === 'rainviewer') return radarFrames.length;
   if(radarMode === 'mrms') return 0;
+  if(radarMode === 'iem-n0u' && radarDualOn && iemReflectFrames.length) return iemReflectFrames.length;
   return iemFrames.length;
 }
 function hideGoesSatellite(){
@@ -734,16 +739,28 @@ function loadIemRadar(mode){
       }
       iemVelocitySite = site;
       iemFrames = ['0'];
+      iemReflectFrames = radarDualOn ? IEM_SUFFIXES.slice() : [];
       finishIemRadarLoad(mode);
     });
   }
   iemFrames = IEM_SUFFIXES.slice();
+  iemReflectFrames = [];
   finishIemRadarLoad(mode);
 }
 function finishIemRadarLoad(mode){
-  setRadarAnimControls(true);
-  radarIdx = iemFrames.length - 1;
-  $('radarScrub').max = Math.max(0, iemFrames.length - 1);
+  const spec = IEM_TILES[mode];
+  const velDual = !!(spec?.velocity && radarDualOn && iemReflectFrames.length);
+  setRadarAnimControls(velDual || !spec?.velocity);
+  if(velDual){
+    radarIdx = iemReflectFrames.length - 1;
+    $('radarScrub').max = Math.max(0, iemReflectFrames.length - 1);
+  }else if(spec?.velocity){
+    radarIdx = 0;
+    $('radarScrub').max = 0;
+  }else{
+    radarIdx = iemFrames.length - 1;
+    $('radarScrub').max = Math.max(0, iemFrames.length - 1);
+  }
   $('radarScrub').value = radarIdx;
   const note = $('radarNote');
   if(note) note.textContent = radarNoteForMode();
@@ -826,25 +843,33 @@ function showFrame(i){
   }else if(IEM_TILES[radarMode]){
     if(!iemFrames.length) return;
     const mode = radarMode;
-    if(IEM_TILES[mode].velocity && !iemVelocitySite) return;
-    const suffix = iemFrames[i];
+    const isVel = IEM_TILES[mode].velocity;
+    if(isVel && !iemVelocitySite) return;
+    const velDual = isVel && radarDualOn && iemReflectFrames.length;
+    const primFrame = isVel ? 0 : i;
+    const suffix = iemFrames[isVel ? 0 : i];
     const name = iemLayerName(mode, suffix);
     if(!name) return;
     hidePingPongLayers(radarOverlayLayers);
     hidePingPongLayers(satOverlayLayers);
     hideGoesSatellite();
     const url = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png';
-    const iemErr = IEM_TILES[mode] && IEM_TILES[mode].velocity ? onIemTileError : null;
-    iemOverlaySlot = showPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, i, url, 0.78, iemErr, IEM_TILE_OPTS);
-    const next = (i + 1) % iemFrames.length;
-    const ns = iemFrames[next];
-    if(ns){
-      const nname = iemLayerName(mode, ns);
-      preloadPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, next, 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + nname + '/{z}/{x}/{y}.png', iemErr, IEM_TILE_OPTS);
+    const iemErr = isVel ? onIemTileError : null;
+    iemOverlaySlot = showPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, primFrame, url, 0.78, iemErr, IEM_TILE_OPTS);
+    if(!isVel){
+      const next = (i + 1) % iemFrames.length;
+      const ns = iemFrames[next];
+      if(ns){
+        const nname = iemLayerName(mode, ns);
+        preloadPingPongFrame(iemOverlayLayers, iemSlotFrame, iemOverlaySlot, next, 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + nname + '/{z}/{x}/{y}.png', iemErr, IEM_TILE_OPTS);
+      }
+      $('radarTime').textContent = IEM_MINS[i] === 0 ? 'Live \u00B7 now' : IEM_MINS[i] + ' min ago';
+    }else if(velDual){
+      $('radarTime').textContent = (IEM_MINS[i] === 0 ? 'Reflectivity live' : 'Reflectivity ' + IEM_MINS[i] + ' min ago')
+        + ' \u00B7 velocity live';
+    }else{
+      $('radarTime').textContent = 'Live \u00B7 ' + (iemVelocitySite || 'site');
     }
-    $('radarTime').textContent = IEM_TILES[mode] && IEM_TILES[mode].velocity
-      ? 'Live \u00B7 ' + (iemVelocitySite || 'site')
-      : (IEM_MINS[i] === 0 ? 'Live \u00B7 now' : IEM_MINS[i] + ' min ago');
   }
   if(basemapLayer) basemapLayer.bringToBack();
   bringStormMapLayersFront();
@@ -881,9 +906,21 @@ if(radarDualBtn){
       if(!ok){
         radarDualOn = false;
         setPanelUnavail($('radarNote'), 'radar_vel_site');
+      }else if(radarMode === 'iem-n0u'){
+        iemReflectFrames = IEM_SUFFIXES.slice();
+        radarIdx = iemReflectFrames.length - 1;
+        $('radarScrub').max = Math.max(0, iemReflectFrames.length - 1);
+        setRadarAnimControls(true);
       }
+    }else if(radarMode === 'iem-n0u'){
+      iemReflectFrames = [];
+      setRadarAnimControls(false);
+      radarIdx = 0;
+      $('radarScrub').max = 0;
     }
+    saveLocRadarPrefs();
     syncRadarDualUi();
+    if(radarDualOn && radarMode === 'iem-n0u' && iemReflectFrames.length) showFrame(radarIdx);
   });
 }
 $('radarScrub').addEventListener('input', e => {

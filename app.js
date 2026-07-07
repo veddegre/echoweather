@@ -3,11 +3,12 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '184';
+const APP_VERSION = '185';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
 let climoNormals = null;
+let nwsCliByDoy = null;
 let urlLocPinned = false;
 let lastHiddenAt = 0;
 let stormReportFilter = 'all';
@@ -201,7 +202,10 @@ const PANEL_UNAVAIL_MSG = {
   radar_load: 'Radar tiles could not be loaded — try another source or refresh.',
   radar_rainviewer: 'RainViewer rate limited — switched to IEM NEXRAD reflectivity.',
   metar_history: 'METAR observation history could not be loaded for this station.',
-  aurora_api: 'NOAA space weather data could not be reached — try again later.'
+  aurora_api: 'NOAA space weather data could not be reached — try again later.',
+  cpc_api: 'CPC extended outlook could not be loaded.',
+  usdm_api: 'U.S. Drought Monitor data could not be loaded.',
+  coastal_api: 'Coastal marine and tide data could not be loaded.'
 };
 function panelUnavail(code, extra){
   const msg = PANEL_UNAVAIL_MSG[code] || 'Unavailable for this location.';
@@ -1192,6 +1196,14 @@ async function enrichWeatherBackground(loc){
     d.sources.current = 'metar';
     renderCurrent(d);
     if(tabPanelsLoaded.more) loadTaf(loc);
+    if(!nwsCliByDoy){
+      fetchNwsCliByDoy(metar.id).then(cli => {
+        if(cli && state.data === d){
+          nwsCliByDoy = cli;
+          renderDaily(d);
+        }
+      });
+    }
   }
 }
 function nowIndex(d){
@@ -1643,27 +1655,77 @@ function dayClimoAnomaly(dateStr, hi, lo, precipMm){
   }
   return parts.join(' \u00B7 ');
 }
+function formatRecYears(years){
+  if(!years?.length) return '';
+  const show = years.slice(0, 2).map(String);
+  return show.join(', ') + (years.length > 2 ? '\u2026' : '');
+}
 function dayClimoRecord(dateStr, hi, lo){
-  if(!climoNormals) return '';
-  const n = climoNormals[dateStr.slice(5)];
-  if(!n) return '';
+  const doy = dateStr.slice(5);
   const toDisp = c => state.units === 'F' ? Math.round(c * 9 / 5 + 32) : Math.round(c);
+  const cliToDisp = v => v == null ? null : (state.units === 'F' ? Math.round(v) : Math.round((v - 32) * 5 / 9));
   const hDisp = toDisp(hi);
   const lDisp = toDisp(lo);
   const parts = [];
-  if(n.recHi){
-    const rec = toDisp(n.recHi.v);
-    if(hDisp >= rec) parts.push({ text: 'Record high for date (' + rec + '\u00B0 in ' + n.recHi.year + ')', record: true });
-    else if(hDisp >= rec - 2) parts.push({ text: 'Near 10-yr high (' + rec + '\u00B0 in ' + n.recHi.year + ')', record: false });
+  const nws = nwsCliByDoy?.[doy];
+  if(nws?.recHi != null){
+    const rec = cliToDisp(nws.recHi);
+    const yrs = formatRecYears(nws.recHiYears);
+    if(hDisp >= rec) parts.push({ text: 'NWS record high (' + rec + '\u00B0' + (yrs ? ', ' + yrs : '') + ')', record: true });
+    else if(hDisp >= rec - 2) parts.push({ text: 'Near NWS record high (' + rec + '\u00B0' + (yrs ? ', ' + yrs : '') + ')', record: false });
   }
-  if(n.recLo){
-    const rec = toDisp(n.recLo.v);
-    if(lDisp <= rec) parts.push({ text: 'Record low for date (' + rec + '\u00B0 in ' + n.recLo.year + ')', record: true });
-    else if(lDisp <= rec + 2) parts.push({ text: 'Near 10-yr low (' + rec + '\u00B0 in ' + n.recLo.year + ')', record: false });
+  if(nws?.recLo != null){
+    const rec = cliToDisp(nws.recLo);
+    const yrs = formatRecYears(nws.recLoYears);
+    if(lDisp <= rec) parts.push({ text: 'NWS record low (' + rec + '\u00B0' + (yrs ? ', ' + yrs : '') + ')', record: true });
+    else if(lDisp <= rec + 2) parts.push({ text: 'Near NWS record low (' + rec + '\u00B0' + (yrs ? ', ' + yrs : '') + ')', record: false });
+  }
+  if(!parts.length && climoNormals){
+    const n = climoNormals[doy];
+    if(n){
+      if(n.recHi){
+        const rec = toDisp(n.recHi.v);
+        if(hDisp >= rec) parts.push({ text: '10-yr high for date (' + rec + '\u00B0 in ' + n.recHi.year + ')', record: true });
+        else if(hDisp >= rec - 2) parts.push({ text: 'Near 10-yr high (' + rec + '\u00B0 in ' + n.recHi.year + ')', record: false });
+      }
+      if(n.recLo){
+        const rec = toDisp(n.recLo.v);
+        if(lDisp <= rec) parts.push({ text: '10-yr low for date (' + rec + '\u00B0 in ' + n.recLo.year + ')', record: true });
+        else if(lDisp <= rec + 2) parts.push({ text: 'Near 10-yr low (' + rec + '\u00B0 in ' + n.recLo.year + ')', record: false });
+      }
+    }
   }
   if(!parts.length) return '';
   const anyRec = parts.some(p => p.record);
   return '<div class="day-record' + (anyRec ? ' is-record' : '') + '">' + esc(parts.map(p => p.text).join(' \u00B7 ')) + '</div>';
+}
+async function fetchNwsCliByDoy(stationId){
+  if(!stationId) return null;
+  const cacheKey = 'st_nwscli_' + stationId;
+  const hit = store.get(cacheKey);
+  if(hit && Date.now() - hit.t < 14 * 24 * 3600 * 1000) return hit.data;
+  const year = new Date().getFullYear();
+  const byDoy = {};
+  for(const y of [year - 1, year, year + 1]){
+    try{
+      const r = await fetch('https://mesonet.agron.iastate.edu/json/cli.py?station='
+        + encodeURIComponent(stationId) + '&year=' + y);
+      if(!r.ok) continue;
+      const j = await r.json();
+      (j.results || []).forEach(row => {
+        if(!row.valid || row.high_record == null) return;
+        byDoy[row.valid.slice(5)] = {
+          recHi: row.high_record,
+          recLo: row.low_record,
+          recHiYears: row.high_record_years || [],
+          recLoYears: row.low_record_years || []
+        };
+      });
+    }catch(e){ /* ignore */ }
+  }
+  if(!Object.keys(byDoy).length) return null;
+  store.set(cacheKey, { t: Date.now(), data: byDoy });
+  return byDoy;
 }
 async function fetchClimoNormals(loc){
   const cacheKey = 'st_climo3_' + loc.lat.toFixed(1) + '_' + loc.lon.toFixed(1);
@@ -1710,7 +1772,13 @@ async function fetchClimoNormals(loc){
   }catch(e){ return null; }
 }
 async function loadClimoNormals(loc){
-  climoNormals = await fetchClimoNormals(loc);
+  const stationId = state.data?.metar?.id || state.data?.current?.station;
+  const [normals, cli] = await Promise.all([
+    fetchClimoNormals(loc),
+    fetchNwsCliByDoy(stationId)
+  ]);
+  climoNormals = normals;
+  nwsCliByDoy = cli;
   if(state.data) renderDaily(state.data);
 }
 function afdHighlightText(text){

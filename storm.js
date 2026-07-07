@@ -55,19 +55,19 @@ function getLocRadarPrefs(loc){
     });
   }
   const saved = loc?.radarPrefs;
-  if(!saved) return { mode: fallbackMode, threatLayers };
+  if(!saved) return { mode: fallbackMode, threatLayers, dualPane: false };
   const mode = saved.mode || fallbackMode;
   if(saved.threatLayers && typeof saved.threatLayers === 'object'){
     Object.keys(threatLayers).forEach(k => {
       if(saved.threatLayers[k] !== undefined) threatLayers[k] = !!saved.threatLayers[k];
     });
   }
-  return { mode, threatLayers };
+  return { mode, threatLayers, dualPane: !!saved.dualPane };
 }
 function saveLocRadarPrefs(){
   const loc = state.locations[state.active];
   if(!loc) return;
-  loc.radarPrefs = { mode: radarMode, threatLayers: { ...threatLayerOpts } };
+  loc.radarPrefs = { mode: radarMode, threatLayers: { ...threatLayerOpts }, dualPane: !!radarDualOn };
   persist();
   store.set('st_radar_mode', radarMode);
   store.set('st_threat_layers', { ...threatLayerOpts });
@@ -83,6 +83,7 @@ function applyLocRadarPrefs(loc, opts){
     if(k in threatLayerOpts) inp.checked = threatLayerOpts[k];
   });
   radarMode = p.mode;
+  if(typeof radarDualOn !== 'undefined') radarDualOn = !!p.dualPane;
   const sel = $('radarMode');
   if(sel) sel.value = radarMode;
   syncRadarVelToggle();
@@ -97,6 +98,7 @@ function applyLocRadarPrefs(loc, opts){
   syncThreatOverlays();
   syncStormReportMarkers();
   if(stormState.alertFeatures) syncAlertPolygons(stormState.alertFeatures);
+  if(typeof syncRadarDualUi === 'function') syncRadarDualUi();
 }
 function loadThreatLayerPrefs(){
   applyLocRadarPrefs(state.locations[state.active], { reloadRadar: false });

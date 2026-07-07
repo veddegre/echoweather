@@ -1220,9 +1220,9 @@ async function loadCoastal(loc){
         windAt
       });
     }catch(e){
-      setPanelUnavail($('coastalNote'), 'no_tides');
+      setPanelUnavail($('coastalNote'), 'coastal_api');
       const metrics = $('coastalMetrics');
-      if(metrics) metrics.innerHTML = panelUnavail('no_tides');
+      if(metrics) metrics.innerHTML = panelUnavail('coastal_api');
       const verdict = $('coastalVerdict'), detail = $('coastalDetail');
       if(verdict) verdict.textContent = 'Unavailable';
       if(detail) detail.textContent = '';

@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v181** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=181` in `index.html`).
+**Current version: v185** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=185` in `index.html`).
 
 ---
 
@@ -19,7 +19,13 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v181 (latest)
+### v185 (latest)
+- **Dual-pane polish** — animated reflectivity on pane B when primary is velocity; dual-pane pref saved per location
+- **NWS CLI records** — official record high/low on day cards via IEM CLI (nearest ASOS)
+- **Radar/refresh fixes** (v182–v184) — refresh reloads radar; velocity clears on mode switch; pane B tile target fix
+- **panelUnavail** — coastal API failures, CPC/USDM codes
+
+### v181
 - **MRMS dual-pane** — side-by-side MRMS reflectivity + nearest-site velocity (Dual pane on MRMS mode)
 - **README sync** — v174–v180 feature list in README
 
@@ -173,7 +179,8 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | **v177–v179** | Dual-pane radar · CPC teaser · mesonet · climo polish | **Shipped** (v179) |
 | **v180** | USDM drought · daily record hints | **Shipped** |
 | **v181** | MRMS dual-pane · README sync | **Shipped** |
-| **v181+** | Further refinement / deploy | Planned |
+| **v182–v185** | Radar refresh/dual-pane fixes · NWS records · polish | **Shipped** (v185) |
+| **v185+** | Optional depth / maintenance | Planned |
 
 ### v179 (latest)
 - **Dual-pane radar** — side-by-side reflectivity + velocity on IEM NEXRAD (Dual pane button)
@@ -200,15 +207,25 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 ### Climate
 
-**Shipped:** `fetchClimoNormals()` + `dayClimoAnomaly()` — 10-year Open-Meteo archive; high/low/precip anomaly vs 10-yr normals on 5-day cards; CPC 6–10 / 8–14 teaser; USDM drought teaser; 10-yr record/near-record hints on day cards.
+**Shipped:** `fetchClimoNormals()` + `dayClimoAnomaly()` — 10-year Open-Meteo archive; high/low/precip anomaly vs 10-yr normals on 5-day cards; CPC 6–10 / 8–14 teaser; USDM drought teaser; **NWS CLI record/near-record** hints on day cards (falls back to 10-yr archive).
 
-**Not yet:** Official NWS daily records (would need station-specific NCEI data).
+**Not yet:** Nothing critical in climate lane.
 
 ### Suggested next batch
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Deploy** | Push v181 when ready |
+| 1 | **Deploy** | Push v185 when ready |
+
+### v185 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| — | Dual-pane reflectivity animation (velocity primary) | Done |
+| — | Dual-pane pref per location | Done |
+| — | NWS CLI official records on day cards | Done |
+| — | Radar refresh / dual-pane bugfixes (v182–184) | Done |
+| — | panelUnavail coastal + teaser codes | Done |
 
 ### v181 (shipped)
 
@@ -337,7 +354,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v181'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v185'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |

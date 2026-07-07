@@ -511,8 +511,8 @@ panels appear in one scrollable page with a compacting sticky header.
 ### Forecast
 
 - **5-Day Forecast** — Day cards with condition text, high/low and time-of-extrema,
-  rain/wind/snow meta, **climate anomaly** (vs 10-yr normals) and **record/near-record**
-  hints, and an **hour-by-hour sky-condition strip** (clear, partly
+  rain/wind/snow meta, **climate anomaly** (vs 10-yr normals), **NWS record /
+  near-record** hints (official CLI at nearest ASOS, 10-yr fallback), and an **hour-by-hour sky-condition strip** (clear, partly
   cloudy, cloudy, fog, rain, snow, storm) with a color legend and readable
   light/dark/mobile palettes; temperature sparkline with hourly ticks; **now**
   marker on Today (distinct from storm red).
@@ -541,7 +541,9 @@ panels appear in one scrollable page with a compacting sticky header.
   or **nearest-site velocity** (live US).
 - **Reflectivity ↔ velocity toggle** — Quick switch between IEM base
   reflectivity and nearest NEXRAD velocity; **dual pane** side-by-side compare
-  on IEM modes or **MRMS reflectivity + nearest-site velocity** (US).
+  on IEM modes or **MRMS reflectivity + nearest-site velocity** (US). Dual-pane
+  on/off is saved per location; when primary is velocity, the reflectivity pane
+  animates over the last 50 minutes.
 - **Shareable radar URLs** — Hash encodes mode, frame, and threat-layer toggles
   (`#radar?mode=mrms&layers=warnings,watches,stormReports`).
 - **Animation** — Scrubber, play/pause, storm-window marker on the timeline,
@@ -632,7 +634,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v181`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v185`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the
