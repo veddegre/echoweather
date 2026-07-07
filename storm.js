@@ -675,6 +675,12 @@ function setLightningOverlay(on){
 }
 
 // ---------- active weather (SPC outlook + MCD at your location) ----------
+const SPC_STORM_LINKS = {
+  outlook: 'https://www.spc.noaa.gov/products/outlook/',
+  mesoanalysis: 'https://www.spc.noaa.gov/exper/mesoanalysis/',
+  surfaceMaps: 'https://www.spc.noaa.gov/exper/surfaceMaps/',
+  soundings: 'https://www.spc.noaa.gov/exper/soundings/'
+};
 function pointInRing(lon, lat, ring){
   let inside = false;
   for(let i = 0, j = ring.length - 1; i < ring.length; j = i++){
@@ -1328,21 +1334,19 @@ function renderStormPanel(box, loc, opts){
     floodHtml = '<div class="storm-window"><strong>Heavy rain / flood signal:</strong> '
       + 'NWS forecast mentions flooding or excessive rainfall — enable <em>WPC excessive rain</em> on the radar map for regional outlook polygons.</div>';
   }
-  const fcUrl = 'https://forecast.weather.gov/MapClick.php?lat=' + loc.lat + '&lon=' + loc.lon;
-  const skywarnUrl = state.data?.nwsPoints?.cwa
-    ? 'https://www.weather.gov/' + String(state.data.nwsPoints.cwa).toLowerCase() + '/spotter'
-    : 'https://www.weather.gov/skywarn/';
+  const fcUrl = nwsPointForecastUrl(loc);
+  const skywarnUrl = nwsSkywarnUrl(state.data?.nwsPoints?.cwa);
   box.classList.toggle('storm-panel-muted', !!muted);
   box.innerHTML = '<div class="storm-head"><div class="lbl">Convective outlook</div>'
     + '<div class="storm-meta">SPC at your location</div></div>'
     + '<div class="storm-risks">' + riskHtml + '</div>'
     + probHtml + windowHtml + lakeHtml + floodHtml + mcdHtml + reportHtml + discHtml
     + '<div class="storm-foot">'
-    + '<a href="https://www.spc.noaa.gov/products/outlook/" target="_blank" rel="noopener">SPC outlook maps</a>'
+    + '<a href="' + SPC_STORM_LINKS.outlook + '" target="_blank" rel="noopener">SPC outlook maps</a>'
     + (maxDn >= 2 || stormState.stormMode
-      ? '<a href="https://www.spc.noaa.gov/exper/mesoscale/" target="_blank" rel="noopener">SPC mesoanalysis</a>'
-        + '<a href="https://www.spc.noaa.gov/exper/surfacemaps/" target="_blank" rel="noopener">Surface analysis</a>'
-        + '<a href="https://www.spc.noaa.gov/exper/soundings/" target="_blank" rel="noopener">Observed soundings</a>'
+      ? '<a href="' + SPC_STORM_LINKS.mesoanalysis + '" target="_blank" rel="noopener">SPC mesoanalysis</a>'
+        + '<a href="' + SPC_STORM_LINKS.surfaceMaps + '" target="_blank" rel="noopener">Surface analysis</a>'
+        + '<a href="' + SPC_STORM_LINKS.soundings + '" target="_blank" rel="noopener">Observed soundings</a>'
       : '')
     + '<a href="' + fcUrl + '" target="_blank" rel="noopener">NWS point forecast</a>'
     + '<a href="' + skywarnUrl + '" target="_blank" rel="noopener">SKYWARN / spotter info</a>'

@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '188';
+const APP_VERSION = '190';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -519,6 +519,15 @@ function estimateSkyDarkness(moonFrac, cloudPct, sunAlt){
 }
 const dayName = iso => new Date(iso + 'T12:00:00').toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
 function esc(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function nwsPointForecastUrl(loc){
+  if(!loc) return 'https://forecast.weather.gov/';
+  return 'https://forecast.weather.gov/MapClick.php?lat=' + Number(loc.lat).toFixed(4) + '&lon=' + Number(loc.lon).toFixed(4);
+}
+function nwsSkywarnUrl(cwa){
+  return cwa
+    ? 'https://www.weather.gov/' + String(cwa).toLowerCase() + '/skywarn'
+    : 'https://www.weather.gov/skywarn/';
+}
 function cssColor(v){
   const s = String(v || '').trim();
   return /^#[0-9A-Fa-f]{3,8}$/.test(s) ? s : '';
@@ -1973,7 +1982,7 @@ function renderForecastText(d){
   const FULL_PERIODS = 6;
   if(periods && periods.length){
     const office = d.nwsPoints && d.nwsPoints.cwa;
-    const fcUrl = 'https://forecast.weather.gov/MapClick.php?lat=' + loc.lat + '&lon=' + loc.lon;
+    const fcUrl = nwsPointForecastUrl(loc);
     meta.innerHTML = 'National Weather Service zone forecast'
       + (office ? ' \u00B7 office ' + esc(office) : '')
       + ' \u00B7 days 1\u20133 below \u00B7 tap to expand days 4\u20137'

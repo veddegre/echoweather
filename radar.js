@@ -10,12 +10,15 @@ let rainviewerTileErrors = 0;
 let iemVelocitySite = null;
 let iemReflectFrames = [];
 let iemLoadGen = 0;
-let mrmsLayer = null;
+let mrmsFrames = [];
+let mrmsOverlayLayers = [null, null], mrmsSlotFrame = [-1, -1], mrmsOverlaySlot = 0;
 let radarDeepFrame = null;
 let mapB = null, mapBMarker = null, basemapLayerB = null;
 let iemOverlayLayersB = [null, null], iemSlotFrameB = [-1, -1], iemOverlaySlotB = 0;
 let radarDualOn = false, mapSyncLock = false;
 const MRMS_WMS_URL = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows';
+const MRMS_MAX_FRAMES = 30;
+const MRMS_TARGET_STRIDE_MS = 5 * 60 * 1000;
 let radarMode = store.get('st_radar_mode') || defaultRadarMode(state.locations[state.active]);
 const IEM_SUFFIXES = ['900913-m50m','900913-m45m','900913-m40m','900913-m35m','900913-m30m','900913-m25m','900913-m20m','900913-m15m','900913-m10m','900913-m05m','900913'];
 const IEM_MINS = [50,45,40,35,30,25,20,15,10,5,0];
@@ -44,7 +47,7 @@ function radarMaxZoom(){
 }
 function isLiveOnlyRadar(){
   if(radarDualOn && radarMode === 'iem-n0u') return false;
-  return radarMode === 'mrms' || !!(IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity);
+  return !!(IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity);
 }
 function isChaseRadarMode(){
   return !!(stormState.stormMode || stormState.severeWindow
@@ -129,7 +132,9 @@ function applyRadarZoomLimits(){
   iemOverlayLayers.forEach(l => {
     if(l){ l.options.maxNativeZoom = RADAR_ZOOM.iem; l.options.maxZoom = RADAR_ZOOM.iem; }
   });
-  if(mrmsLayer){ mrmsLayer.options.maxZoom = RADAR_ZOOM.mrms; }
+  mrmsOverlayLayers.forEach(l => {
+    if(l) l.options.maxZoom = RADAR_ZOOM.mrms;
+  });
 }
 function swapOverlaySlot(layers, slot, opacity){
   layers.forEach((l, i) => { if(l) l.setOpacity(i === slot ? opacity : 0); });
@@ -198,6 +203,15 @@ const IEM_TILE_OPTS = {
   keepBuffer: 1,
   attribution: 'IEM / NOAA NEXRAD'
 };
+const MRMS_TILE_OPTS = {
+  opacity: 0.78,
+  maxZoom: RADAR_ZOOM.mrms,
+  zIndex: 450,
+  updateWhenIdle: true,
+  updateWhenZooming: false,
+  keepBuffer: 1,
+  attribution: 'NOAA MRMS'
+};
 function hidePingPongLayers(layers){
   layers.forEach(l => { if(l) l.setOpacity(0); });
 }
@@ -211,7 +225,8 @@ function resetPingPongSlots(){
   satSlotFrame = [-1, -1];
   iemSlotFrame = [-1, -1];
   iemSlotFrameB = [-1, -1];
-  radarOverlaySlot = satOverlaySlot = iemOverlaySlot = 0;
+  mrmsSlotFrame = [-1, -1];
+  radarOverlaySlot = satOverlaySlot = iemOverlaySlot = mrmsOverlaySlot = 0;
   iemOverlaySlotB = 0;
 }
 function clearDualPaneOverlays(){
@@ -222,9 +237,9 @@ function clearRadarLayers(){
   removePingPongLayers(radarOverlayLayers, map);
   removePingPongLayers(satOverlayLayers, map);
   removePingPongLayers(iemOverlayLayers, map);
+  removePingPongLayers(mrmsOverlayLayers, map);
   clearDualPaneOverlays();
   hideGoesSatellite();
-  if(mrmsLayer && map && map.hasLayer(mrmsLayer)) map.removeLayer(mrmsLayer);
   resetPingPongSlots();
 }
 function stopRadarTimer(){
@@ -506,6 +521,14 @@ function findRadarFrameForTime(targetMs){
     });
     return best;
   }
+  if(radarMode === 'mrms' && mrmsFrames.length){
+    let best = 0, bestDiff = Infinity;
+    mrmsFrames.forEach((iso, i) => {
+      const diff = Math.abs(Date.parse(iso) - targetMs);
+      if(diff < bestDiff){ bestDiff = diff; best = i; }
+    });
+    return best;
+  }
   return null;
 }
 function jumpRadarToStormReport(r){
@@ -571,6 +594,114 @@ function jumpRadarToWarningPolygon(target){
 function jumpRadarToWatchPolygon(target){
   jumpRadarToAlertPolygon(target, 'watches');
 }
+function ensureMrmsWmsLayer(slot){
+  if(!map) return null;
+  if(!mrmsOverlayLayers[slot]){
+    mrmsOverlayLayers[slot] = L.tileLayer.wms(MRMS_WMS_URL, {
+      layers: 'conus_bref_qcd',
+      format: 'image/png',
+      transparent: true,
+      version: '1.1.1',
+      time: mrmsFrames[0] || '',
+      opacity: 0,
+      ...MRMS_TILE_OPTS
+    });
+    mrmsOverlayLayers[slot].addTo(map);
+  }else if(!map.hasLayer(mrmsOverlayLayers[slot])){
+    mrmsOverlayLayers[slot].addTo(map);
+  }
+  return mrmsOverlayLayers[slot];
+}
+function loadMrmsPingPongFrame(slot, frameIdx, timeIso, showWhenReady){
+  const layer = ensureMrmsWmsLayer(slot);
+  if(!layer) return;
+  if(mrmsSlotFrame[slot] === frameIdx && layer.wmsParams?.time === timeIso){
+    if(showWhenReady) swapOverlaySlot(mrmsOverlayLayers, slot, 0.78);
+    return;
+  }
+  mrmsSlotFrame[slot] = frameIdx;
+  if(showWhenReady){
+    let done = false;
+    const finish = () => {
+      if(done) return;
+      done = true;
+      swapOverlaySlot(mrmsOverlayLayers, slot, 0.78);
+    };
+    layer.once('load', finish);
+    layer.once('tileerror', finish);
+    layer.setOpacity(0);
+    layer.setParams({ time: timeIso }, false);
+    return;
+  }
+  layer.setOpacity(0);
+  layer.setParams({ time: timeIso }, false);
+}
+function showMrmsPingPongFrame(frameIdx, timeIso){
+  if(mrmsSlotFrame[mrmsOverlaySlot] === frameIdx){
+    swapOverlaySlot(mrmsOverlayLayers, mrmsOverlaySlot, 0.78);
+    return mrmsOverlaySlot;
+  }
+  const inactive = 1 - mrmsOverlaySlot;
+  if(mrmsSlotFrame[inactive] === frameIdx){
+    swapOverlaySlot(mrmsOverlayLayers, inactive, 0.78);
+    return inactive;
+  }
+  loadMrmsPingPongFrame(inactive, frameIdx, timeIso, true);
+  return inactive;
+}
+function preloadMrmsPingPongFrame(frameIdx, timeIso){
+  const preloadSlot = 1 - mrmsOverlaySlot;
+  if(mrmsSlotFrame[preloadSlot] === frameIdx) return;
+  loadMrmsPingPongFrame(preloadSlot, frameIdx, timeIso, false);
+}
+function parseMrmsTimesFromCapabilities(xml){
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  const dim = doc.querySelector('Dimension[name="time"]');
+  if(!dim || !dim.textContent) return null;
+  return dim.textContent.split(',').map(s => s.trim()).filter(Boolean);
+}
+function pickMrmsFrames(allTimes){
+  if(allTimes.length <= MRMS_MAX_FRAMES) return allTimes;
+  const parsed = allTimes.map(iso => ({ iso, ms: Date.parse(iso) })).filter(p => !isNaN(p.ms));
+  if(parsed.length <= MRMS_MAX_FRAMES) return parsed.map(p => p.iso);
+  const newest = parsed[parsed.length - 1].ms;
+  const oldest = parsed[0].ms;
+  const stride = Math.max(MRMS_TARGET_STRIDE_MS, Math.ceil((newest - oldest) / (MRMS_MAX_FRAMES - 1)));
+  const out = [];
+  for(let target = oldest; target <= newest + 1 && out.length < MRMS_MAX_FRAMES; target += stride){
+    let best = parsed[0], bestD = Infinity;
+    for(const p of parsed){
+      const d = Math.abs(p.ms - target);
+      if(d < bestD){ bestD = d; best = p; }
+    }
+    if(!out.length || out[out.length - 1] !== best.iso) out.push(best.iso);
+  }
+  const last = parsed[parsed.length - 1].iso;
+  if(out[out.length - 1] !== last) out.push(last);
+  return out;
+}
+async function fetchMrmsFrameTimes(loadId){
+  const r = await fetch(MRMS_WMS_URL + '?service=WMS&version=1.3.0&request=GetCapabilities');
+  if(loadId !== radarLoadId) return null;
+  if(!r.ok) throw new Error('MRMS capabilities ' + r.status);
+  const times = parseMrmsTimesFromCapabilities(await r.text());
+  if(!times || !times.length) throw new Error('no MRMS frames');
+  return pickMrmsFrames(times);
+}
+function mrmsLoopMinutes(){
+  if(mrmsFrames.length < 2) return 0;
+  return Math.max(1, Math.round((Date.parse(mrmsFrames[mrmsFrames.length - 1]) - Date.parse(mrmsFrames[0])) / 60000));
+}
+function mrmsNoteText(){
+  const mins = mrmsLoopMinutes();
+  if(mrmsFrames.length < 2) return 'NOAA MRMS composite reflectivity \u00B7 CONUS';
+  return 'NOAA MRMS composite \u00B7 last ' + mins + ' min \u00B7 CONUS';
+}
+function formatMrmsFrameTime(iso, isLatest){
+  const t = new Date(iso);
+  const s = t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return isLatest ? 'Live \u00B7 ' + s : s;
+}
 function toggleRadarExpand(){
   const stage = $('radarStage');
   const btn = $('radarExpandBtn');
@@ -584,44 +715,45 @@ function toggleRadarExpand(){
   setTimeout(refreshRadarMapSize, 80);
   setTimeout(refreshRadarMapSize, 280);
 }
-function ensureMrmsLayer(){
-  if(!map) return null;
-  if(!mrmsLayer){
-    mrmsLayer = L.tileLayer.wms(MRMS_WMS_URL, {
-      layers: 'conus_bref_qcd',
-      format: 'image/png',
-      transparent: true,
-      version: '1.1.1',
-      opacity: 0.78,
-      maxZoom: RADAR_ZOOM.mrms,
-      zIndex: 450,
-      attribution: 'NOAA MRMS'
-    });
-  }
-  return mrmsLayer;
-}
-function loadMrmsRadar(){
+async function loadMrmsRadar(loadId){
   clearRadarLayers();
   stopRadarTimer();
   radarSatOn = false;
   $('radarSat').classList.remove('on');
   if(!radarDualOn) iemVelocitySite = null;
   iemFrames = radarDualOn ? ['0'] : [];
-  setRadarAnimControls(false);
+  mrmsFrames = [];
+  $('radarTime').textContent = 'Loading\u2026';
+  $('radarNote').textContent = 'NOAA MRMS composite \u00B7 loading frames\u2026';
+  try{
+    const frames = await fetchMrmsFrameTimes(loadId);
+    if(loadId !== radarLoadId) return;
+    if(!frames || !frames.length) throw new Error('no MRMS frames');
+    mrmsFrames = frames;
+  }catch(e){
+    if(loadId !== radarLoadId) return;
+    setPanelUnavail($('radarNote'), 'radar_load');
+    $('radarTime').textContent = 'MRMS unavailable';
+    console.error('mrms', e);
+    return;
+  }
+  setRadarAnimControls(mrmsFrames.length > 1);
   syncRadarVelToggle();
-  const layer = ensureMrmsLayer();
-  if(layer && map && !map.hasLayer(layer)) layer.addTo(map);
-  $('radarTime').textContent = 'Live \u00B7 MRMS';
-  $('radarNote').textContent = 'NOAA MRMS composite reflectivity \u00B7 CONUS';
+  radarIdx = mrmsFrames.length - 1;
+  $('radarScrub').max = Math.max(0, mrmsFrames.length - 1);
+  $('radarScrub').value = radarIdx;
+  $('radarNote').textContent = mrmsNoteText();
   updateRadarLegend();
   applyRadarZoomLimits();
+  showFrame(radarIdx);
   syncStormReportMarkers();
   applyPendingRadarFrame();
   updateRadarHash();
   syncRadarDualUi();
   if(radarDualOn){
     ensureDualPaneVelocitySite().then(ok => {
-      if(ok) showDualPaneFrame(0);
+      if(loadId !== radarLoadId) return;
+      if(ok) showDualPaneFrame(radarIdx);
       else{
         radarDualOn = false;
         syncRadarDualUi();
@@ -678,7 +810,7 @@ function updateRadarLegend(){
 }
 function radarFrameCount(){
   if(radarMode === 'rainviewer') return radarFrames.length;
-  if(radarMode === 'mrms') return 0;
+  if(radarMode === 'mrms') return mrmsFrames.length;
   if(radarMode === 'iem-n0u' && radarDualOn && iemReflectFrames.length) return iemReflectFrames.length;
   return iemFrames.length;
 }
@@ -738,6 +870,7 @@ function rainviewerCoverageNote(){
   return parts.join(' \u00B7 ');
 }
 function radarNoteForMode(){
+  if(radarMode === 'mrms') return mrmsNoteText();
   const spec = IEM_TILES[radarMode];
   if(spec){
     if(spec.velocity && iemVelocitySite){
@@ -848,7 +981,7 @@ async function loadRadar(){
       if(radarMode === 'rainviewer') await loadRainViewerRadar(loadId);
       else if(radarMode === 'mrms'){
         if(loadId !== radarLoadId) return;
-        loadMrmsRadar();
+        await loadMrmsRadar(loadId);
       }
       else if(IEM_TILES[radarMode]){
         if(loadId !== radarLoadId) return;
@@ -912,6 +1045,18 @@ function showFrame(i){
     }else{
       $('radarTime').textContent = 'Live \u00B7 ' + (iemVelocitySite || 'site');
     }
+  }else if(radarMode === 'mrms'){
+    if(!mrmsFrames.length) return;
+    hidePingPongLayers(radarOverlayLayers);
+    hidePingPongLayers(iemOverlayLayers);
+    hidePingPongLayers(satOverlayLayers);
+    hideGoesSatellite();
+    const timeIso = mrmsFrames[i];
+    mrmsOverlaySlot = showMrmsPingPongFrame(i, timeIso);
+    const next = (i + 1) % mrmsFrames.length;
+    if(mrmsFrames[next]) preloadMrmsPingPongFrame(next, mrmsFrames[next]);
+    $('radarTime').textContent = formatMrmsFrameTime(timeIso, i === mrmsFrames.length - 1);
+    if(radarDualOn) $('radarTime').textContent += ' \u00B7 velocity live';
   }
   if(basemapLayer) basemapLayer.bringToBack();
   bringStormMapLayersFront();
@@ -942,9 +1087,7 @@ if(radarDualBtn){
         note.textContent = 'Resolving velocity site\u2026';
       }
       const ok = await ensureDualPaneVelocitySite();
-      if(note) note.textContent = radarMode === 'mrms'
-        ? 'NOAA MRMS composite reflectivity \u00B7 CONUS'
-        : radarNoteForMode();
+      if(note) note.textContent = radarMode === 'mrms' ? mrmsNoteText() : radarNoteForMode();
       if(!ok){
         radarDualOn = false;
         setPanelUnavail($('radarNote'), 'radar_vel_site');
@@ -1046,6 +1189,14 @@ function updateRadarStormMark(){
     radarFrames.forEach((f, i) => {
       if(f.time >= t0 - 1800 && i0 < 0) i0 = i;
       if(f.time <= t1 + 1800) i1 = i;
+    });
+  }else if(radarMode === 'mrms' && mrmsFrames.length){
+    const t0 = new Date(winStart).getTime();
+    const t1 = new Date(winEnd).getTime();
+    mrmsFrames.forEach((iso, i) => {
+      const ft = Date.parse(iso);
+      if(ft >= t0 - 900000 && i0 < 0) i0 = i;
+      if(ft <= t1 + 900000) i1 = i;
     });
   }else if(iemFrames.length){
     const now = Date.now();
