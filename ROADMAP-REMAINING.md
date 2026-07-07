@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v193** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=193` in `index.html`).
+**Current version: v194** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=194` in `index.html`).
 
 ---
 
@@ -19,7 +19,11 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v193 (latest)
+### v194 (latest)
+- **Mesonet auto-refresh** — regional strip refreshes on 15‑min `loadAll` when More tab was open; also when storm mode / elevated SPC risk / MCDs load
+- **MRMS velocity** — opengeo per-site `sr_bvel` via Velocity toggle on MRMS mode (nearest NWS radar site); animated time loop like reflectivity
+
+### v193
 - **MRMS loop refresh** — re-fetches opengeo frame list when animation wraps past live
 - **MRMS frame stride** — 2 / 5 / 10 min density selector (saved per location)
 - **Mesonet depth** — station names, distance labels, regional temp spread footnote
@@ -200,8 +204,8 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | **v180** | USDM drought · daily record hints | **Shipped** |
 | **v181** | MRMS dual-pane · README sync | **Shipped** |
 | **v182–v185** | Radar refresh/dual-pane fixes · NWS records · polish | **Shipped** (v185) |
-| **v186–v193** | Expand · MRMS animation · links · mesonet · panelUnavail · MRMS polish | **Shipped** (v193) |
-| **v193+** | Optional depth / maintenance | Planned |
+| **v186–v194** | Expand · MRMS animation · links · mesonet · panelUnavail · MRMS polish · velocity | **Shipped** (v194) |
+| **v194+** | Optional depth / maintenance | Planned |
 
 ### v179 detail
 - **Dual-pane radar** — side-by-side reflectivity + velocity on IEM NEXRAD (Dual pane button)
@@ -236,9 +240,8 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Mesonet auto-refresh** | Refresh strip when storm mode active |
-| 2 | **MRMS velocity layer** | opengeo velocity product exploration |
-| 3 | **Code maintenance** | Further `app.js` splits if desired |
+| 1 | **Code maintenance** | Further `app.js` splits if desired |
+| 2 | **panelUnavail depth** | Threat layer tile failures, lightning WS, etc. |
 
 ### Smaller follow-ons (no batch assigned)
 
@@ -377,7 +380,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v193'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v194'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |

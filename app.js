@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '193';
+const APP_VERSION = '194';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2585,6 +2585,15 @@ function mesonetSpreadNote(rows){
   if(spread < thresh) return '';
   return '<p class="mesonet-foot">Regional spread: ' + spread + degSym() + ' across ' + temps.length + ' stations.</p>';
 }
+function shouldRefreshMesonet(loc){
+  if(!loc || !isLikelyUS(loc)) return false;
+  if(stormState.stormMode || stormState.maxDn >= 2 || (stormState.mcds && stormState.mcds.length > 0)) return true;
+  return false;
+}
+function refreshMesonetIfNeeded(loc, opts){
+  if(!loc || !isLikelyUS(loc)) return;
+  if(opts?.moreTab || shouldRefreshMesonet(loc)) loadMesonetStrip(loc);
+}
 async function loadAFD(loc){
   return panelTask('afdPanel', 'afdStatus', async () => {
     const a = $('afdLink');
@@ -3108,6 +3117,7 @@ async function loadAll(){
   const loc = state.locations[state.active];
   applyLocRadarPrefs(loc, { reloadRadar: getAppTab() === 'radar' });
   const reloadBuoy = tabPanelsLoaded.impact;
+  const reloadMesonet = tabPanelsLoaded.more;
   syncMarinePanelVisibility(loc);
   waterVerdictState.marine = null;
   waterVerdictState.coastal = null;
@@ -3145,6 +3155,7 @@ async function loadAll(){
       refreshStormTracking(loc, state.data);
       refreshFireWeather(loc, state.data);
     }
+    if(reloadMesonet) refreshMesonetIfNeeded(loc, { moreTab: true });
     enrichWeatherBackground(loc);
     if(map) initMap(loc);
     ensureTabPanels(getAppTab());

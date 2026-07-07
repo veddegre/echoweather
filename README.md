@@ -538,10 +538,12 @@ panels appear in one scrollable page with a compacting sticky header.
 
 - **Radar sources** — RainViewer (animated + optional GOES IR satellite),
   **MRMS** composite (animated ~2 hr CONUS loop with 2 / 5 / 10 min frame stride;
-  loop refreshes frames at wrap), IEM NEXRAD
+  loop refreshes frames at wrap) or **MRMS velocity** (nearest NWS site via NOAA
+  opengeo, animated time loop), IEM NEXRAD
   base/composite (50‑min animation), or **nearest-site velocity** (live US).
 - **Reflectivity ↔ velocity toggle** — Quick switch between IEM base
-  reflectivity and nearest NEXRAD velocity; **dual pane** side-by-side compare
+  reflectivity and nearest NEXRAD velocity; on **MRMS**, toggle CONUS reflectivity
+  vs nearest-site velocity (opengeo `sr_bvel`). **Dual pane** side-by-side compare
   on IEM modes or **MRMS reflectivity + nearest-site velocity** (US). Dual-pane
   on/off is saved per location; when primary is velocity, the reflectivity pane
   animates over the last 50 minutes.
@@ -622,6 +624,7 @@ panels appear in one scrollable page with a compacting sticky header.
 - **NWS Forecast Discussion** — Full AFD text for your forecast office.
 - **Regional mesonet** *(US)* — Nearest six ASOS stations within ~30 mi: ID,
   distance, temp, wind, station name, and regional spread note when temps diverge.
+  Auto-refreshes on 15‑min app refresh and when storm mode or elevated SPC risk loads.
 - **NBM grid** — NWS grid hourly temp, wind, sky, and precip probability when
   available.
 
@@ -635,7 +638,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v193`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v194`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the

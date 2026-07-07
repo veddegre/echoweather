@@ -12,11 +12,16 @@ let iemReflectFrames = [];
 let iemLoadGen = 0;
 let mrmsFrames = [];
 let mrmsOverlayLayers = [null, null], mrmsSlotFrame = [-1, -1], mrmsOverlaySlot = 0;
+let mrmsProduct = 'bref';
+let mrmsVelocitySite = null;
+let mrmsWmsLayerKey = '';
 let radarDeepFrame = null;
 let mapB = null, mapBMarker = null, basemapLayerB = null;
 let iemOverlayLayersB = [null, null], iemSlotFrameB = [-1, -1], iemOverlaySlotB = 0;
 let radarDualOn = false, mapSyncLock = false;
-const MRMS_WMS_URL = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows';
+const MRMS_BREF_WMS_URL = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows';
+const MRMS_GEOSERVER_OWS = 'https://opengeo.ncep.noaa.gov/geoserver/ows';
+const MRMS_WMS_URL = MRMS_BREF_WMS_URL;
 const MRMS_MAX_FRAMES = 60;
 const MRMS_STRIDE_OPTS = [2, 5, 10];
 const MRMS_STRIDE_DEFAULT = 5;
@@ -62,12 +67,18 @@ function syncRadarVelToggle(){
   const loc = state.locations[state.active];
   const chase = isChaseRadarMode();
   const iemMode = radarMode === 'iem-n0q' || radarMode === 'iem-n0u';
-  const show = loc && isLikelyUS(loc) && (iemMode || (chase && radarMode === 'mrms'));
+  const show = loc && isLikelyUS(loc) && (iemMode || radarMode === 'mrms');
   btn.hidden = !show;
   if(btn.hidden) return;
   if(radarMode === 'mrms' && chase){
     btn.textContent = 'Site radar';
     btn.setAttribute('aria-label', 'Switch to animated NEXRAD site radar');
+    return;
+  }
+  if(radarMode === 'mrms'){
+    const vel = mrmsProduct === 'bvel';
+    btn.textContent = vel ? 'Reflectivity' : 'Velocity';
+    btn.setAttribute('aria-label', vel ? 'Switch to MRMS reflectivity' : 'Switch to MRMS velocity');
     return;
   }
   const vel = radarMode === 'iem-n0u';
@@ -319,7 +330,9 @@ function refreshRadarMapSize(){
 }
 function dualPaneAvailable(){
   const loc = state.locations[state.active];
-  return !!(loc && isLikelyUS(loc) && (radarMode === 'iem-n0q' || radarMode === 'iem-n0u' || radarMode === 'mrms'));
+  if(!loc || !isLikelyUS(loc)) return false;
+  if(radarMode === 'iem-n0q' || radarMode === 'iem-n0u') return true;
+  return radarMode === 'mrms' && mrmsProduct === 'bref';
 }
 function dualPaneSecondaryMode(){
   if(radarMode === 'iem-n0q' || radarMode === 'mrms') return 'iem-n0u';
@@ -327,7 +340,7 @@ function dualPaneSecondaryMode(){
   return null;
 }
 function dualPanePrimaryLabel(){
-  if(radarMode === 'mrms') return 'MRMS reflectivity';
+  if(radarMode === 'mrms') return mrmsProduct === 'bvel' ? 'MRMS velocity' : 'MRMS reflectivity';
   if(radarMode === 'iem-n0u') return 'Velocity';
   return 'Reflectivity';
 }
@@ -597,11 +610,40 @@ function jumpRadarToWarningPolygon(target){
 function jumpRadarToWatchPolygon(target){
   jumpRadarToAlertPolygon(target, 'watches');
 }
+function mrmsOpengeoSiteId(){
+  if(mrmsVelocitySite) return mrmsVelocitySite;
+  const rs = state.data?.nwsPoints?.radarStation;
+  if(rs) return rs.replace(/^K/i, '').toUpperCase();
+  return iemVelocitySite || null;
+}
+function mrmsVelocityLayerName(){
+  const site = mrmsOpengeoSiteId();
+  if(!site) return null;
+  const id = site.toLowerCase();
+  return id + ':' + id + '_sr_bvel';
+}
+function mrmsWmsConfig(){
+  if(mrmsProduct === 'bvel'){
+    const layers = mrmsVelocityLayerName();
+    if(!layers) return null;
+    return { url: MRMS_GEOSERVER_OWS, layers, styles: 'radar_velocity' };
+  }
+  return { url: MRMS_BREF_WMS_URL, layers: 'conus_bref_qcd', styles: '' };
+}
 function ensureMrmsWmsLayer(slot){
   if(!map) return null;
+  const cfg = mrmsWmsConfig();
+  if(!cfg) return null;
+  const key = cfg.url + '|' + cfg.layers + '|' + cfg.styles;
+  if(mrmsOverlayLayers[slot] && mrmsWmsLayerKey && mrmsWmsLayerKey !== key){
+    if(map.hasLayer(mrmsOverlayLayers[slot])) map.removeLayer(mrmsOverlayLayers[slot]);
+    mrmsOverlayLayers[slot] = null;
+  }
+  mrmsWmsLayerKey = key;
   if(!mrmsOverlayLayers[slot]){
-    mrmsOverlayLayers[slot] = L.tileLayer.wms(MRMS_WMS_URL, {
-      layers: 'conus_bref_qcd',
+    mrmsOverlayLayers[slot] = L.tileLayer.wms(cfg.url, {
+      layers: cfg.layers,
+      styles: cfg.styles || '',
       format: 'image/png',
       transparent: true,
       version: '1.1.1',
@@ -679,8 +721,20 @@ function resetMrmsPingPongSlots(){
   mrmsSlotFrame = [-1, -1];
   mrmsOverlaySlot = 0;
 }
-function parseMrmsTimesFromCapabilities(xml){
+function parseMrmsTimesFromCapabilities(xml, layerName){
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  if(layerName){
+    const layers = doc.querySelectorAll('Layer');
+    for(const layer of layers){
+      const nameEl = layer.querySelector(':scope > Name');
+      if(!nameEl || nameEl.textContent !== layerName) continue;
+      const dim = layer.querySelector('Dimension[name="time"]');
+      if(dim?.textContent){
+        return dim.textContent.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    return null;
+  }
   const dim = doc.querySelector('Dimension[name="time"]');
   if(!dim || !dim.textContent) return null;
   return dim.textContent.split(',').map(s => s.trim()).filter(Boolean);
@@ -709,10 +763,14 @@ function pickMrmsFrames(allTimes, strideMin){
   return out.slice(-maxFrames);
 }
 async function fetchMrmsRawTimes(loadId){
-  const r = await fetch(MRMS_WMS_URL + '?service=WMS&version=1.3.0&request=GetCapabilities');
+  const bvel = mrmsProduct === 'bvel';
+  const layerName = bvel ? mrmsVelocityLayerName() : null;
+  const capUrl = bvel ? MRMS_GEOSERVER_OWS : MRMS_BREF_WMS_URL;
+  if(bvel && !layerName) throw new Error('no MRMS velocity site');
+  const r = await fetch(capUrl + '?service=WMS&version=1.3.0&request=GetCapabilities');
   if(loadId !== radarLoadId) return null;
   if(!r.ok) throw new Error('MRMS capabilities ' + r.status);
-  return parseMrmsTimesFromCapabilities(await r.text());
+  return parseMrmsTimesFromCapabilities(await r.text(), layerName);
 }
 async function fetchMrmsFrameTimes(loadId, strideMin){
   const times = await fetchMrmsRawTimes(loadId);
@@ -769,6 +827,12 @@ function mrmsLoopMinutes(){
 }
 function mrmsNoteText(){
   const mins = mrmsLoopMinutes();
+  const site = mrmsOpengeoSiteId();
+  if(mrmsProduct === 'bvel'){
+    if(mrmsFrames.length < 2) return 'NOAA MRMS velocity \u00B7 ' + (site || 'site');
+    return 'NOAA MRMS velocity \u00B7 ' + (site || 'site') + ' \u00B7 last ' + mins + ' min \u00B7 '
+      + mrmsStrideMin() + ' min frames';
+  }
   if(mrmsFrames.length < 2) return 'NOAA MRMS composite reflectivity \u00B7 CONUS';
   return 'NOAA MRMS composite \u00B7 last ' + mins + ' min \u00B7 '
     + mrmsStrideMin() + ' min frames \u00B7 CONUS';
@@ -800,8 +864,24 @@ async function loadMrmsRadar(loadId){
   iemFrames = radarDualOn ? ['0'] : [];
   mrmsFrames = [];
   mrmsAllTimes = [];
+  mrmsWmsLayerKey = '';
   $('radarTime').textContent = 'Loading\u2026';
-  $('radarNote').textContent = 'NOAA MRMS composite \u00B7 loading frames\u2026';
+  const loadingNote = mrmsProduct === 'bvel'
+    ? 'NOAA MRMS velocity \u00B7 resolving site\u2026'
+    : 'NOAA MRMS composite \u00B7 loading frames\u2026';
+  $('radarNote').textContent = loadingNote;
+  if(mrmsProduct === 'bvel'){
+    mrmsVelocitySite = await resolveIemVelocitySite();
+    if(loadId !== radarLoadId) return;
+    if(!mrmsVelocityLayerName()){
+      mrmsProduct = 'bref';
+      saveLocRadarPrefs();
+      syncRadarVelToggle();
+      updateRadarLegend();
+    }
+  }else{
+    mrmsVelocitySite = null;
+  }
   try{
     const frames = await fetchMrmsFrameTimes(loadId, mrmsStrideMin());
     if(loadId !== radarLoadId) return;
@@ -809,6 +889,17 @@ async function loadMrmsRadar(loadId){
     mrmsFrames = frames;
   }catch(e){
     if(loadId !== radarLoadId) return;
+    if(mrmsProduct === 'bvel'){
+      mrmsProduct = 'bref';
+      mrmsVelocitySite = null;
+      saveLocRadarPrefs();
+      syncRadarVelToggle();
+      updateRadarLegend();
+      setPanelUnavail($('radarNote'), 'radar_vel_unavail');
+      $('radarTime').textContent = 'Velocity unavailable';
+      console.warn('mrms velocity', e);
+      return loadMrmsRadar(loadId);
+    }
     setPanelUnavail($('radarNote'), 'mrms_api');
     $('radarTime').textContent = 'MRMS unavailable';
     console.error('mrms', e);
@@ -882,7 +973,8 @@ function onIemTileError(){
 function updateRadarLegend(){
   const leg = document.querySelector('.radar-legend');
   if(!leg) return;
-  const vel = IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity;
+  const vel = (IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity)
+    || (radarMode === 'mrms' && mrmsProduct === 'bvel');
   leg.innerHTML = vel
     ? '<div>Velocity</div><div class="bar" style="background:linear-gradient(90deg,#00f,#0ff,#0f0,#ff0,#f00,#f0f)"></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>In</span><span>0</span><span>Out</span></div>'
     : '<div>Reflectivity (dBZ)</div><div class="bar"></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>5</span><span>35</span><span>65+</span></div>';
@@ -1259,9 +1351,32 @@ if(radarVelBtn){
   radarVelBtn.addEventListener('click', () => {
     if(radarMode === 'mrms' && isChaseRadarMode()){
       radarMode = 'iem-n0q';
-    }else{
-      radarMode = (radarMode === 'iem-n0u') ? 'iem-n0q' : 'iem-n0u';
+      saveLocRadarPrefs();
+      $('radarMode').value = radarMode;
+      radarLoadId++;
+      iemLoadGen++;
+      applyRadarZoomLimits();
+      updateRadarLegend();
+      syncRadarVelToggle();
+      syncRadarDualUi();
+      loadRadar();
+      return;
     }
+    if(radarMode === 'mrms'){
+      mrmsProduct = mrmsProduct === 'bvel' ? 'bref' : 'bvel';
+      if(mrmsProduct === 'bvel' && radarDualOn){
+        radarDualOn = false;
+      }
+      saveLocRadarPrefs();
+      radarLoadId++;
+      applyRadarZoomLimits();
+      updateRadarLegend();
+      syncRadarVelToggle();
+      syncRadarDualUi();
+      loadRadar();
+      return;
+    }
+    radarMode = (radarMode === 'iem-n0u') ? 'iem-n0q' : 'iem-n0u';
     saveLocRadarPrefs();
     $('radarMode').value = radarMode;
     radarLoadId++;

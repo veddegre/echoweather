@@ -55,20 +55,27 @@ function getLocRadarPrefs(loc){
     });
   }
   const saved = loc?.radarPrefs;
-  if(!saved) return { mode: fallbackMode, threatLayers, dualPane: false, mrmsStride: 5 };
+  if(!saved) return { mode: fallbackMode, threatLayers, dualPane: false, mrmsStride: 5, mrmsProduct: 'bref' };
   const mode = saved.mode || fallbackMode;
   if(saved.threatLayers && typeof saved.threatLayers === 'object'){
     Object.keys(threatLayers).forEach(k => {
       if(saved.threatLayers[k] !== undefined) threatLayers[k] = !!saved.threatLayers[k];
     });
   }
-  return { mode, threatLayers, dualPane: !!saved.dualPane, mrmsStride: saved.mrmsStride || 5 };
+  return {
+    mode,
+    threatLayers,
+    dualPane: !!saved.dualPane,
+    mrmsStride: saved.mrmsStride || 5,
+    mrmsProduct: saved.mrmsProduct === 'bvel' ? 'bvel' : 'bref'
+  };
 }
 function saveLocRadarPrefs(){
   const loc = state.locations[state.active];
   if(!loc) return;
   const prefs = { mode: radarMode, threatLayers: { ...threatLayerOpts }, dualPane: !!radarDualOn };
   if(typeof mrmsStrideMin === 'function') prefs.mrmsStride = mrmsStrideMin();
+  if(typeof mrmsProduct !== 'undefined') prefs.mrmsProduct = mrmsProduct;
   loc.radarPrefs = prefs;
   persist();
   store.set('st_radar_mode', radarMode);
@@ -79,6 +86,7 @@ function applyLocRadarPrefs(loc, opts){
   if(!loc) return;
   const p = getLocRadarPrefs(loc);
   const modeChanged = radarMode !== p.mode;
+  const prevProduct = typeof mrmsProduct !== 'undefined' ? mrmsProduct : 'bref';
   Object.keys(threatLayerOpts).forEach(k => { threatLayerOpts[k] = !!p.threatLayers[k]; });
   document.querySelectorAll('[data-threat]').forEach(inp => {
     const k = inp.getAttribute('data-threat');
@@ -86,11 +94,13 @@ function applyLocRadarPrefs(loc, opts){
   });
   radarMode = p.mode;
   if(typeof radarDualOn !== 'undefined') radarDualOn = !!p.dualPane;
+  if(typeof mrmsProduct !== 'undefined') mrmsProduct = p.mrmsProduct || 'bref';
+  const productChanged = prevProduct !== mrmsProduct;
   const sel = $('radarMode');
   if(sel) sel.value = radarMode;
   syncRadarVelToggle();
   updateRadarLegend();
-  if(modeChanged || opts.forceReload){
+  if(modeChanged || productChanged || opts.forceReload){
     radarLoadId++;
     iemLoadGen++;
     stopRadarTimer();
@@ -1431,6 +1441,7 @@ async function refreshStormTracking(loc, d){
     stormState.loaded = true;
     autoEnableStormThreatLayers();
     updateStormUi(loc, d);
+    if(typeof refreshMesonetIfNeeded === 'function') refreshMesonetIfNeeded(loc);
     syncAlertPolygons(alertFeats.filter(f => f.geometry));
     syncStormReportMarkers();
     refreshFireWeather(loc, d);
