@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=194">
+<link rel="stylesheet" href="app.css?v=195">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -235,6 +235,7 @@
             <option value="10">MRMS every 10 min</option>
           </select>
           <button type="button" id="radarVelToggle" class="radar-vel-toggle" hidden aria-label="Toggle reflectivity or velocity">Velocity</button>
+          <button type="button" id="radarSiteBtn" class="radar-site-btn" hidden aria-label="Switch to animated NEXRAD site radar">Site radar</button>
           <span id="radarAnimCtl" class="radar-anim-ctl">
             <button id="radarPlay" type="button" aria-label="Play or pause radar animation">&#9654; Play</button>
             <div class="radar-scrub-wrap">
@@ -262,6 +263,7 @@
               <label><input type="checkbox" data-threat="spcWind"> Wind prob</label>
               <label><input type="checkbox" data-threat="nhc"> NHC storms</label>
             </div>
+            <p class="threat-layer-status radar-note" id="threatLayerStatus" hidden></p>
           </details>
           <div class="radar-meta">
             <span class="radar-time" id="radarTime">&mdash;</span>
@@ -273,6 +275,7 @@
     </section>
 
     <section class="storm-panel" id="stormLinks" data-tab="radar" aria-label="Convective outlook"></section>
+    <div id="radarMesonet" class="radar-mesonet" data-tab="radar" hidden aria-label="Regional observations"></div>
 
     <div class="grid adv-only" id="obsAfdGrid" style="margin-top:16px">
       <section class="panel nav-target" id="obsPanel" data-tab="forecast" aria-label="Observations vs forecast">
@@ -527,14 +530,17 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=194"></script>
-<script src="nav.js?v=194"></script>
-<script src="impact.js?v=194"></script>
-<script src="marine.js?v=194"></script>
-<script src="air.js?v=194"></script>
-<script src="aviation.js?v=194"></script>
-<script src="storm.js?v=194"></script>
-<script src="radar.js?v=194"></script>
-<script src="boot.js?v=194"></script>
+<script src="app.js?v=195"></script>
+<script src="tabs.js?v=195"></script>
+<script src="nav.js?v=195"></script>
+<script src="impact.js?v=195"></script>
+<script src="marine.js?v=195"></script>
+<script src="air.js?v=195"></script>
+<script src="forecast-extras.js?v=195"></script>
+<script src="mesonet.js?v=195"></script>
+<script src="aviation.js?v=195"></script>
+<script src="storm.js?v=195"></script>
+<script src="radar.js?v=195"></script>
+<script src="boot.js?v=195"></script>
 </body>
 </html>

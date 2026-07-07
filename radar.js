@@ -15,6 +15,9 @@ let mrmsOverlayLayers = [null, null], mrmsSlotFrame = [-1, -1], mrmsOverlaySlot 
 let mrmsProduct = 'bref';
 let mrmsVelocitySite = null;
 let mrmsWmsLayerKey = '';
+let mrmsOverlayLayerB = null;
+let mrmsFrameIdxB = -1;
+let mrmsWmsLayerKeyB = '';
 let radarDeepFrame = null;
 let mapB = null, mapBMarker = null, basemapLayerB = null;
 let iemOverlayLayersB = [null, null], iemSlotFrameB = [-1, -1], iemOverlaySlotB = 0;
@@ -65,16 +68,10 @@ function syncRadarVelToggle(){
   const btn = $('radarVelToggle');
   if(!btn) return;
   const loc = state.locations[state.active];
-  const chase = isChaseRadarMode();
   const iemMode = radarMode === 'iem-n0q' || radarMode === 'iem-n0u';
   const show = loc && isLikelyUS(loc) && (iemMode || radarMode === 'mrms');
   btn.hidden = !show;
   if(btn.hidden) return;
-  if(radarMode === 'mrms' && chase){
-    btn.textContent = 'Site radar';
-    btn.setAttribute('aria-label', 'Switch to animated NEXRAD site radar');
-    return;
-  }
   if(radarMode === 'mrms'){
     const vel = mrmsProduct === 'bvel';
     btn.textContent = vel ? 'Reflectivity' : 'Velocity';
@@ -84,6 +81,13 @@ function syncRadarVelToggle(){
   const vel = radarMode === 'iem-n0u';
   btn.textContent = vel ? 'Reflectivity' : 'Velocity';
   btn.setAttribute('aria-label', vel ? 'Switch to reflectivity' : 'Switch to velocity');
+}
+function syncRadarSiteBtn(){
+  const btn = $('radarSiteBtn');
+  if(!btn) return;
+  const loc = state.locations[state.active];
+  const show = loc && isLikelyUS(loc) && radarMode === 'mrms' && isChaseRadarMode();
+  btn.hidden = !show;
 }
 function jumpRadarToSevereWindow(){
   const win = stormState.severeWindow;
@@ -332,10 +336,11 @@ function dualPaneAvailable(){
   const loc = state.locations[state.active];
   if(!loc || !isLikelyUS(loc)) return false;
   if(radarMode === 'iem-n0q' || radarMode === 'iem-n0u') return true;
-  return radarMode === 'mrms' && mrmsProduct === 'bref';
+  return radarMode === 'mrms';
 }
 function dualPaneSecondaryMode(){
-  if(radarMode === 'iem-n0q' || radarMode === 'mrms') return 'iem-n0u';
+  if(radarMode === 'mrms') return mrmsProduct === 'bvel' ? 'mrms-bref' : 'mrms-bvel';
+  if(radarMode === 'iem-n0q') return 'iem-n0u';
   if(radarMode === 'iem-n0u') return 'iem-n0q';
   return null;
 }
@@ -345,11 +350,18 @@ function dualPanePrimaryLabel(){
   return 'Reflectivity';
 }
 function dualPaneSecondaryLabel(){
+  if(radarMode === 'mrms') return mrmsProduct === 'bvel' ? 'Reflectivity' : 'Velocity';
   if(radarMode === 'iem-n0u') return 'Reflectivity';
   return 'Velocity';
 }
 async function ensureDualPaneVelocitySite(){
-  if(!radarDualOn || dualPaneSecondaryMode() !== 'iem-n0u') return true;
+  if(!radarDualOn) return true;
+  const sec = dualPaneSecondaryMode();
+  if(sec === 'mrms-bvel'){
+    if(!mrmsOpengeoSiteId()) mrmsVelocitySite = await resolveIemVelocitySite();
+    return !!mrmsVelocityLayerName();
+  }
+  if(sec !== 'iem-n0u') return true;
   if(iemVelocitySite) return true;
   iemVelocitySite = await resolveIemVelocitySite();
   return !!iemVelocitySite;
@@ -380,6 +392,12 @@ function syncMapAFromB(){
 }
 function destroyMapB(){
   clearDualPaneOverlays();
+  if(mrmsOverlayLayerB && mapB){
+    mapB.removeLayer(mrmsOverlayLayerB);
+    mrmsOverlayLayerB = null;
+    mrmsFrameIdxB = -1;
+    mrmsWmsLayerKeyB = '';
+  }
   if(!mapB) return;
   if(map) map.off('moveend', syncMapBFromA);
   mapB.off('moveend', syncMapAFromB);
@@ -426,9 +444,19 @@ function dualPaneSecondarySuffix(frameIdx){
 function showDualPaneFrame(i){
   if(!mapB || !radarDualOn || !dualPaneAvailable()) return;
   const secMode = dualPaneSecondaryMode();
-  if(!secMode || !IEM_TILES[secMode]) return;
+  if(!secMode) return;
+  if(secMode === 'mrms-bref' || secMode === 'mrms-bvel'){
+    if(secMode === 'mrms-bvel' && !mrmsVelocityLayerName()) return;
+    hidePingPongLayers(iemOverlayLayersB);
+    const frameIdx = radarIdx;
+    showDualPaneMrmsFrame(frameIdx, secMode === 'mrms-bref' ? 'bref' : 'bvel');
+    if(basemapLayerB) basemapLayerB.bringToBack();
+    if(mapBMarker) mapBMarker.bringToFront();
+    return;
+  }
+  if(!IEM_TILES[secMode]) return;
   if(IEM_TILES[secMode].velocity && !iemVelocitySite) return;
-  const frameIdx = radarMode === 'mrms' ? 0 : i;
+  const frameIdx = i;
   const suffix = dualPaneSecondarySuffix(frameIdx);
   const name = iemLayerName(secMode, suffix);
   if(!name) return;
@@ -473,6 +501,7 @@ function activateRadarPanel(){
   loadRadar();
   updateRadarLegend();
   syncRadarVelToggle();
+  syncRadarSiteBtn();
   if(radarLightningOn) setLightningOverlay(true);
   else syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
   syncStormReportMarkers();
@@ -622,13 +651,52 @@ function mrmsVelocityLayerName(){
   const id = site.toLowerCase();
   return id + ':' + id + '_sr_bvel';
 }
-function mrmsWmsConfig(){
-  if(mrmsProduct === 'bvel'){
+function mrmsWmsConfigForProduct(product){
+  if(product === 'bvel'){
     const layers = mrmsVelocityLayerName();
     if(!layers) return null;
     return { url: MRMS_GEOSERVER_OWS, layers, styles: 'radar_velocity' };
   }
   return { url: MRMS_BREF_WMS_URL, layers: 'conus_bref_qcd', styles: '' };
+}
+function mrmsWmsConfig(){
+  return mrmsWmsConfigForProduct(mrmsProduct);
+}
+function ensureMrmsWmsLayerB(product){
+  if(!mapB) return null;
+  const cfg = mrmsWmsConfigForProduct(product);
+  if(!cfg) return null;
+  const key = cfg.url + '|' + cfg.layers + '|' + cfg.styles;
+  if(mrmsOverlayLayerB && mrmsWmsLayerKeyB && mrmsWmsLayerKeyB !== key){
+    if(mapB.hasLayer(mrmsOverlayLayerB)) mapB.removeLayer(mrmsOverlayLayerB);
+    mrmsOverlayLayerB = null;
+  }
+  mrmsWmsLayerKeyB = key;
+  if(!mrmsOverlayLayerB){
+    mrmsOverlayLayerB = L.tileLayer.wms(cfg.url, {
+      layers: cfg.layers,
+      styles: cfg.styles || '',
+      format: 'image/png',
+      transparent: true,
+      version: '1.1.1',
+      time: mrmsFrames[0] || '',
+      opacity: 0.78,
+      ...MRMS_TILE_OPTS
+    });
+    mrmsOverlayLayerB.addTo(mapB);
+  }else if(!mapB.hasLayer(mrmsOverlayLayerB)){
+    mrmsOverlayLayerB.addTo(mapB);
+  }
+  return mrmsOverlayLayerB;
+}
+function showDualPaneMrmsFrame(frameIdx, product){
+  const layer = ensureMrmsWmsLayerB(product);
+  if(!layer || !mrmsFrames.length) return;
+  const timeIso = mrmsFrames[frameIdx] ?? mrmsFrames[mrmsFrames.length - 1];
+  if(mrmsFrameIdxB === frameIdx && layer.wmsParams?.time === timeIso) return;
+  mrmsFrameIdxB = frameIdx;
+  layer.setOpacity(0.78);
+  layer.setParams({ time: timeIso }, false);
 }
 function ensureMrmsWmsLayer(slot){
   if(!map) return null;
@@ -908,6 +976,7 @@ async function loadMrmsRadar(loadId){
   setRadarAnimControls(mrmsFrames.length > 1);
   syncMrmsStrideUi();
   syncRadarVelToggle();
+  syncRadarSiteBtn();
   radarIdx = mrmsFrames.length - 1;
   $('radarScrub').max = Math.max(0, mrmsFrames.length - 1);
   $('radarScrub').value = radarIdx;
@@ -1227,7 +1296,12 @@ function showFrame(i){
     const next = (i + 1) % mrmsFrames.length;
     if(mrmsFrames[next]) preloadMrmsPingPongFrame(next, mrmsFrames[next]);
     $('radarTime').textContent = formatMrmsFrameTime(timeIso, i === mrmsFrames.length - 1);
-    if(radarDualOn) $('radarTime').textContent += ' \u00B7 velocity live';
+    if(radarDualOn){
+      const sec = dualPaneSecondaryMode();
+      if(sec === 'mrms-bvel') $('radarTime').textContent += ' \u00B7 velocity';
+      else if(sec === 'mrms-bref') $('radarTime').textContent += ' \u00B7 reflectivity pane';
+      else if(sec === 'iem-n0u') $('radarTime').textContent += ' \u00B7 velocity live';
+    }
   }
   if(basemapLayer) basemapLayer.bringToBack();
   bringStormMapLayersFront();
@@ -1349,29 +1423,14 @@ document.querySelectorAll('[data-threat]').forEach(inp => {
 const radarVelBtn = $('radarVelToggle');
 if(radarVelBtn){
   radarVelBtn.addEventListener('click', () => {
-    if(radarMode === 'mrms' && isChaseRadarMode()){
-      radarMode = 'iem-n0q';
-      saveLocRadarPrefs();
-      $('radarMode').value = radarMode;
-      radarLoadId++;
-      iemLoadGen++;
-      applyRadarZoomLimits();
-      updateRadarLegend();
-      syncRadarVelToggle();
-      syncRadarDualUi();
-      loadRadar();
-      return;
-    }
     if(radarMode === 'mrms'){
       mrmsProduct = mrmsProduct === 'bvel' ? 'bref' : 'bvel';
-      if(mrmsProduct === 'bvel' && radarDualOn){
-        radarDualOn = false;
-      }
       saveLocRadarPrefs();
       radarLoadId++;
       applyRadarZoomLimits();
       updateRadarLegend();
       syncRadarVelToggle();
+      syncRadarSiteBtn();
       syncRadarDualUi();
       loadRadar();
       return;
@@ -1384,6 +1443,24 @@ if(radarVelBtn){
     applyRadarZoomLimits();
     updateRadarLegend();
     syncRadarVelToggle();
+    syncRadarSiteBtn();
+    syncRadarDualUi();
+    loadRadar();
+  });
+}
+const radarSiteBtn = $('radarSiteBtn');
+if(radarSiteBtn){
+  radarSiteBtn.addEventListener('click', () => {
+    if(radarMode !== 'mrms' || !isChaseRadarMode()) return;
+    radarMode = 'iem-n0q';
+    saveLocRadarPrefs();
+    $('radarMode').value = radarMode;
+    radarLoadId++;
+    iemLoadGen++;
+    applyRadarZoomLimits();
+    updateRadarLegend();
+    syncRadarVelToggle();
+    syncRadarSiteBtn();
     syncRadarDualUi();
     loadRadar();
   });

@@ -10,6 +10,11 @@ let stormReportGroup = null;
 let nhcMarkerGroup = null;
 let threatGeoCache = {};
 let threatOverlayGen = 0;
+const threatLayerErrors = {};
+const THREAT_LAYER_LABELS = {
+  spcCat: 'SPC Day 1 risk', spcTorn: 'Tornado prob', spcHail: 'Hail prob', spcWind: 'Wind prob',
+  nhc: 'NHC storms', wpcEro: 'WPC excessive rain', fireWx: 'SPC fire weather', hmsSmoke: 'NOAA HMS smoke'
+};
 const THREAT_GEO_TTL = 5 * 60 * 1000;
 const WPC_ERO_URL = 'https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer/0/query?where=1%3D1&outFields=outlook,valid_time&returnGeometry=true&f=geojson';
 const HMS_SMOKE_URL = 'https://mapservices.weather.noaa.gov/vector/rest/services/hazards/smoke/MapServer/0/query?where=1%3D1&outFields=Density,Label&returnGeometry=true&f=geojson&outSR=4326';
@@ -189,9 +194,41 @@ function removeThreatOverlays(){
     nhcMarkerGroup = null;
   }
 }
+function clearThreatLayerErrors(){
+  Object.keys(threatLayerErrors).forEach(k => { delete threatLayerErrors[k]; });
+  syncThreatLayerStatus();
+}
+function syncThreatLayerStatus(){
+  const el = $('threatLayerStatus');
+  if(!el) return;
+  const keys = Object.keys(threatLayerErrors);
+  if(!keys.length){
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  const parts = keys.map(k => {
+    const lbl = THREAT_LAYER_LABELS[k] || k;
+    const code = threatLayerErrors[k];
+    const msg = PANEL_UNAVAIL_MSG[code] || PANEL_UNAVAIL_MSG.threat_layer_api;
+    return lbl + ': ' + msg;
+  });
+  el.hidden = false;
+  el.textContent = parts.join(' · ');
+}
+function markThreatLayer(key, code){
+  if(!threatLayerOpts[key]) return;
+  threatLayerErrors[key] = code;
+  syncThreatLayerStatus();
+}
+function clearThreatLayerError(key){
+  if(threatLayerErrors[key]) delete threatLayerErrors[key];
+  syncThreatLayerStatus();
+}
 function clearThreatOverlays(){
   threatOverlayGen++;
   removeThreatOverlays();
+  clearThreatLayerErrors();
 }
 function spcThreatStyle(f){
   const fill = cssColor(f.properties?.fill) || '#e8e8e8';
@@ -253,6 +290,7 @@ async function syncThreatOverlays(){
   }
   const gen = ++threatOverlayGen;
   removeThreatOverlays();
+  clearThreatLayerErrors();
   const jobs = [];
   ['spcCat', 'spcTorn', 'spcHail', 'spcWind'].forEach(key => {
     if(!threatLayerOpts[key]) return;
@@ -260,7 +298,11 @@ async function syncThreatOverlays(){
       try{
         const geo = await fetchThreatGeo(key, THREAT_LAYER_URLS[key]);
         if(!geo || !map || gen !== threatOverlayGen) return;
-        if(!geo.features || !geo.features.length) return;
+        if(!geo.features || !geo.features.length){
+          markThreatLayer(key, 'threat_layer_empty');
+          return;
+        }
+        clearThreatLayerError(key);
         const grp = L.layerGroup();
         L.geoJSON(geo, {
           style: spcThreatStyle,
@@ -272,16 +314,27 @@ async function syncThreatOverlays(){
         if(gen !== threatOverlayGen) return;
         threatOverlayGroups[key] = grp;
         grp.addTo(map);
-      }catch(e){ console.warn('threat layer', key, e); }
+      }catch(e){
+        console.warn('threat layer', key, e);
+        if(gen === threatOverlayGen) markThreatLayer(key, 'threat_layer_api');
+      }
     })());
   });
   if(threatLayerOpts.nhc){
     jobs.push((async () => {
       try{
         const r = await fetch('https://www.nhc.noaa.gov/CurrentStorms.json');
-        if(!r.ok || !map || gen !== threatOverlayGen) return;
+        if(!r.ok || !map || gen !== threatOverlayGen){
+          if(gen === threatOverlayGen) markThreatLayer('nhc', 'threat_layer_api');
+          return;
+        }
         const storms = (await r.json()).activeStorms || [];
-        if(!storms.length || gen !== threatOverlayGen) return;
+        if(!storms.length){
+          if(gen === threatOverlayGen) markThreatLayer('nhc', 'threat_layer_empty');
+          return;
+        }
+        if(gen !== threatOverlayGen) return;
+        clearThreatLayerError('nhc');
         nhcMarkerGroup = L.layerGroup();
         storms.forEach(s => {
           if(s.latitude == null || s.longitude == null) return;
@@ -292,14 +345,25 @@ async function syncThreatOverlays(){
           nhcMarkerGroup.addLayer(m);
         });
         nhcMarkerGroup.addTo(map);
-      }catch(e){ console.warn('NHC layer', e); }
+      }catch(e){
+        console.warn('NHC layer', e);
+        if(gen === threatOverlayGen) markThreatLayer('nhc', 'threat_layer_api');
+      }
     })());
   }
   if(threatLayerOpts.wpcEro){
     jobs.push((async () => {
       try{
         const geo = await fetchThreatGeo('wpcEro', WPC_ERO_URL);
-        if(!geo || !map || gen !== threatOverlayGen || !geo.features?.length) return;
+        if(!geo || !map || gen !== threatOverlayGen){
+          if(gen === threatOverlayGen) markThreatLayer('wpcEro', 'threat_layer_api');
+          return;
+        }
+        if(!geo.features?.length){
+          markThreatLayer('wpcEro', 'threat_layer_empty');
+          return;
+        }
+        clearThreatLayerError('wpcEro');
         const grp = L.layerGroup();
         L.geoJSON(geo, {
           style: wpcEroStyle,
@@ -312,14 +376,25 @@ async function syncThreatOverlays(){
         if(gen !== threatOverlayGen) return;
         threatOverlayGroups.wpcEro = grp;
         grp.addTo(map);
-      }catch(e){ console.warn('WPC ERO layer', e); }
+      }catch(e){
+        console.warn('WPC ERO layer', e);
+        if(gen === threatOverlayGen) markThreatLayer('wpcEro', 'threat_layer_api');
+      }
     })());
   }
   if(threatLayerOpts.fireWx){
     jobs.push((async () => {
       try{
         const geo = await fetchThreatGeo('fireWx', THREAT_LAYER_URLS.fireWx);
-        if(!geo || !map || gen !== threatOverlayGen || !geo.features?.length) return;
+        if(!geo || !map || gen !== threatOverlayGen){
+          if(gen === threatOverlayGen) markThreatLayer('fireWx', 'threat_layer_api');
+          return;
+        }
+        if(!geo.features?.length){
+          markThreatLayer('fireWx', 'threat_layer_empty');
+          return;
+        }
+        clearThreatLayerError('fireWx');
         const grp = L.layerGroup();
         L.geoJSON(geo, {
           style: spcThreatStyle,
@@ -331,14 +406,25 @@ async function syncThreatOverlays(){
         if(gen !== threatOverlayGen) return;
         threatOverlayGroups.fireWx = grp;
         grp.addTo(map);
-      }catch(e){ console.warn('fire wx layer', e); }
+      }catch(e){
+        console.warn('fire wx layer', e);
+        if(gen === threatOverlayGen) markThreatLayer('fireWx', 'threat_layer_api');
+      }
     })());
   }
   if(threatLayerOpts.hmsSmoke){
     jobs.push((async () => {
       try{
         const geo = await fetchThreatGeo('hmsSmoke', HMS_SMOKE_URL);
-        if(!geo || !map || gen !== threatOverlayGen || !geo.features?.length) return;
+        if(!geo || !map || gen !== threatOverlayGen){
+          if(gen === threatOverlayGen) markThreatLayer('hmsSmoke', 'threat_layer_api');
+          return;
+        }
+        if(!geo.features?.length){
+          markThreatLayer('hmsSmoke', 'threat_layer_empty');
+          return;
+        }
+        clearThreatLayerError('hmsSmoke');
         const grp = L.layerGroup();
         L.geoJSON(geo, {
           style: () => ({ color: '#8b7355', weight: 1, fillColor: '#a08060', fillOpacity: 0.28 }),
@@ -350,7 +436,10 @@ async function syncThreatOverlays(){
         if(gen !== threatOverlayGen) return;
         threatOverlayGroups.hmsSmoke = grp;
         grp.addTo(map);
-      }catch(e){ console.warn('HMS smoke layer', e); }
+      }catch(e){
+        console.warn('HMS smoke layer', e);
+        if(gen === threatOverlayGen) markThreatLayer('hmsSmoke', 'threat_layer_api');
+      }
     })());
   }
   await Promise.all(jobs);
@@ -359,6 +448,8 @@ async function syncThreatOverlays(){
 let lightningCanvas = null, lightningCtx = null, lightningStrikes = [];
 let lightningWs = null, lightningWsIdx = 0, lightningRcTimer = null, lightningRaf = 0;
 let lightningWsState = 'off', lightningRecentHits = [];
+let lightningReconnects = 0;
+const LIGHTNING_MAX_RECONNECTS = 12;
 let radarLightningOn = false;
 const LIGHTNING_WS = ['wss://ws1.blitzortung.org/', 'wss://ws7.blitzortung.org/', 'wss://ws8.blitzortung.org/'];
 const LIGHTNING_LIFE_MS = 3500;
@@ -430,6 +521,11 @@ async function loadAlerts(loc){
       stormState.alertFeatures = [];
       renderAlertsBox([]);
       syncAlertPolygons([]);
+      const box = $('alerts');
+      if(box){
+        box.style.display = 'flex';
+        box.innerHTML = panelUnavail('alerts_api');
+      }
       if(state.data) renderActivityPlanner(state.data);
       return 0;
     }
@@ -509,6 +605,9 @@ function updateLightningStatus(){
   if(lightningWsState === 'connecting'){
     el.textContent = 'Lightning · connecting…';
     el.className = 'radar-note lightning-status wait';
+  }else if(lightningWsState === 'failed'){
+    el.textContent = 'Lightning unavailable — live feed could not connect.';
+    el.className = 'radar-note lightning-status err';
   }else if(lightningWsState === 'reconnecting'){
     el.textContent = 'Lightning · reconnecting…';
     el.className = 'radar-note lightning-status err';
@@ -569,12 +668,19 @@ function disconnectLightningWs(){
   }
 }
 function scheduleLightningReconnect(){
+  if(lightningReconnects >= LIGHTNING_MAX_RECONNECTS){
+    lightningWsState = 'failed';
+    updateLightningStatus();
+    return;
+  }
   clearTimeout(lightningRcTimer);
   lightningWsIdx++;
+  lightningReconnects++;
   lightningRcTimer = setTimeout(connectLightningWs, 2500);
 }
 function connectLightningWs(){
   if(!lightningShouldRun()) return;
+  if(lightningWsState === 'failed') return;
   disconnectLightningWs();
   lightningWsState = 'connecting';
   updateLightningStatus();
@@ -584,6 +690,7 @@ function connectLightningWs(){
   lightningWs = ws;
   ws.onopen = () => {
     if(lightningWs === ws){
+      lightningReconnects = 0;
       lightningWsState = 'live';
       updateLightningStatus();
       ws.send(JSON.stringify({ a: 111 }));
@@ -657,6 +764,7 @@ function stopLightningLoop(){
   lightningStrikes = [];
   lightningRecentHits = [];
   lightningWsState = 'off';
+  lightningReconnects = 0;
   updateLightningStatus();
 }
 function syncLightningOverlay(){
@@ -682,7 +790,9 @@ function setLightningOverlay(on){
   radarLightningOn = !!on;
   const btn = $('radarLightning');
   if(btn) btn.classList.toggle('on', radarLightningOn);
+  if(radarLightningOn) lightningReconnects = 0;
   if(!map) return;
+  if(radarLightningOn && lightningWsState === 'failed') lightningWsState = 'off';
   syncLightningOverlay();
 }
 
@@ -1379,6 +1489,8 @@ function updateStormUi(loc, d){
   renderStormBanner();
   renderStormSetup(d);
   if(typeof syncRadarVelToggle === 'function') syncRadarVelToggle();
+  if(typeof syncRadarSiteBtn === 'function') syncRadarSiteBtn();
+  if(typeof syncRadarMesonet === 'function') syncRadarMesonet(loc);
   const box = $('stormLinks');
   if(!box) return;
   const show = stormState.maxDn >= 2 || stormState.mcds.length > 0 || stormState.reports.length > 0

@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v194** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=194` in `index.html`).
+**Current version: v195** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=195` in `index.html`).
 
 ---
 
@@ -19,7 +19,14 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v194 (latest)
+### v195 (latest)
+- **panelUnavail depth** — threat layer fetch/empty status; lightning feed failure after reconnect cap; alerts API failure copy
+- **app.js splits** — `forecast-extras.js` (AFD/CPC/USDM/NBM), `mesonet.js`, `tabs.js` (lazy tab loading)
+- **MRMS chase UX** — Velocity toggle always on MRMS; separate **Site radar** button during storm mode
+- **MRMS dual pane** — reflectivity + velocity side-by-side via opengeo (both MRMS products)
+- **Radar mesonet strip** — compact regional ASOS row on Radar tab during elevated storm conditions
+
+### v194
 - **Mesonet auto-refresh** — regional strip refreshes on 15‑min `loadAll` when More tab was open; also when storm mode / elevated SPC risk / MCDs load
 - **MRMS velocity** — opengeo per-site `sr_bvel` via Velocity toggle on MRMS mode (nearest NWS radar site); animated time loop like reflectivity
 
@@ -204,8 +211,8 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | **v180** | USDM drought · daily record hints | **Shipped** |
 | **v181** | MRMS dual-pane · README sync | **Shipped** |
 | **v182–v185** | Radar refresh/dual-pane fixes · NWS records · polish | **Shipped** (v185) |
-| **v186–v194** | Expand · MRMS animation · links · mesonet · panelUnavail · MRMS polish · velocity | **Shipped** (v194) |
-| **v194+** | Optional depth / maintenance | Planned |
+| **v186–v195** | Expand · MRMS · mesonet · panelUnavail · velocity · polish · splits | **Shipped** (v195) |
+| **v195+** | Optional depth / maintenance | Planned |
 
 ### v179 detail
 - **Dual-pane radar** — side-by-side reflectivity + velocity on IEM NEXRAD (Dual pane button)
@@ -240,8 +247,8 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Code maintenance** | Further `app.js` splits if desired |
-| 2 | **panelUnavail depth** | Threat layer tile failures, lightning WS, etc. |
+| 1 | **Further splits** | Obs/METAR, loc compare, or climo modules if `app.js` still feels heavy |
+| 2 | **panelUnavail edge cases** | RainViewer tile exhaustion messaging, remaining impact panels |
 
 ### Smaller follow-ons (no batch assigned)
 
@@ -380,7 +387,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v194'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v195'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |

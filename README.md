@@ -20,8 +20,8 @@ coastal · aviation TAF · installable PWA with offline cache
 
 `index.html` is the app shell — forecasts, radar, storm tracking, impacts,
 marine, alerts, and more, mostly fetched client-side from public APIs. Logic is
-split across `app.js` (core), `nav.js`, `impact.js`, `marine.js`, `air.js`,
-`aviation.js`, `storm.js`, `radar.js`, and `boot.js`.
+split across `app.js` (core), `tabs.js`, `nav.js`, `impact.js`, `marine.js`, `air.js`,
+`forecast-extras.js`, `mesonet.js`, `aviation.js`, `storm.js`, `radar.js`, and `boot.js`.
 
 `api/*.php` is a thin PHP layer that:
 
@@ -38,10 +38,13 @@ split across `app.js` (core), `nav.js`, `impact.js`, `marine.js`, `air.js`,
 | `index.html` | App shell and panel markup |
 | `app.css` | All styles |
 | `app.js` | Core: state, fetch, render, most panels |
+| `tabs.js` | Lazy tab panel loading and idle prefetch |
 | `nav.js` | Tab bar, hash deep links, chrome height |
 | `impact.js` | Impacts: activity/impact planners, aurora, section chips |
 | `marine.js` | Great Lakes, coastal/tides, buoy, stream gauges, water verdict |
 | `air.js` | Air quality, pollen, UV & exposure |
+| `forecast-extras.js` | CPC/USDM teasers, NBM grid, AFD teaser and full panel |
+| `mesonet.js` | Regional ASOS strip (More + Radar storm row) |
 | `aviation.js` | Aviation METAR + TAF |
 | `storm.js` | SPC, storm mode, threat layers |
 | `radar.js` | Leaflet radar map and animation |
@@ -544,9 +547,9 @@ panels appear in one scrollable page with a compacting sticky header.
 - **Reflectivity ↔ velocity toggle** — Quick switch between IEM base
   reflectivity and nearest NEXRAD velocity; on **MRMS**, toggle CONUS reflectivity
   vs nearest-site velocity (opengeo `sr_bvel`). **Dual pane** side-by-side compare
-  on IEM modes or **MRMS reflectivity + nearest-site velocity** (US). Dual-pane
+  on IEM modes or **MRMS reflectivity + MRMS velocity** (opengeo, US). Dual-pane
   on/off is saved per location; when primary is velocity, the reflectivity pane
-  animates over the last 50 minutes.
+  animates over the last 50 minutes (IEM) or syncs MRMS frames (opengeo).
 - **Shareable radar URLs** — Hash encodes mode, frame, and threat-layer toggles
   (`#radar?mode=mrms&layers=warnings,watches,stormReports`).
 - **Animation** — Scrubber, play/pause, storm-window marker on the timeline,
@@ -565,9 +568,9 @@ panels appear in one scrollable page with a compacting sticky header.
   **Watch polygon** (centers radar on alert geometry; enables the matching layer).
   Storm mode auto-enables **storm reports**, **SPC Day 1 categorical**, and **warnings** or
   **watches** layers (watch-only when inside a watch with no warning) when they were off.
-- **Chase-mode radar** — When storm mode is active, MRMS users see a **Site
-  radar** button to switch to animated NEXRAD; reflectivity/velocity toggle
-  promoted on IEM modes.
+- **Chase-mode radar** — When storm mode is active on MRMS, **Velocity** toggle
+  stays available; a separate **Site radar** button switches to animated IEM NEXRAD.
+  Reflectivity/velocity toggle promoted on IEM modes.
 - **Fire weather banner** — Red Flag warnings, dry/windy conditions, or SPC fire
   outlook at your location.
 - **Convective outlook panel** — SPC Day 1–3 categorical risk; Day 1 tornado/
@@ -625,6 +628,7 @@ panels appear in one scrollable page with a compacting sticky header.
 - **Regional mesonet** *(US)* — Nearest six ASOS stations within ~30 mi: ID,
   distance, temp, wind, station name, and regional spread note when temps diverge.
   Auto-refreshes on 15‑min app refresh and when storm mode or elevated SPC risk loads.
+  **Radar strip** — compact four-station row on the Radar tab during elevated storm conditions.
 - **NBM grid** — NWS grid hourly temp, wind, sky, and precip probability when
   available.
 
@@ -638,7 +642,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v194`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v195`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the
