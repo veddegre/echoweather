@@ -540,7 +540,7 @@ function toggleRadarExpand(){
   document.body.classList.toggle('radar-expanded', on);
   btn.textContent = on ? 'Close' : 'Expand';
   btn.setAttribute('aria-label', on ? 'Close expanded radar' : 'Expand radar fullscreen');
-  setTimeout(() => { if(map) map.invalidateSize(); }, 220);
+  setTimeout(() => refreshRadarMapSize(), 220);
 }
 function ensureMrmsLayer(){
   if(!map) return null;
