@@ -48,6 +48,8 @@ RSYNC_FILES=(
   sw.js
   .htaccess
   logo.svg
+  logo-mark.png
+  echo-weather-logo-exact.svg
   icon.svg
   icon-maskable.svg
   icon-192.png

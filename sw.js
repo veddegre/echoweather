@@ -1,5 +1,5 @@
-const CACHE = 'echo-weather-v196';
-const ICON_Q = '?v=86';
+const CACHE = 'echo-weather-v197';
+const ICON_Q = '?v=87';
 const ASSETS = [
   './app.css',
   './app.js',
@@ -18,13 +18,15 @@ const ASSETS = [
   './radar.js',
   './boot.js',
   './manifest.json',
-  './icon.svg',
-  './icon-maskable.svg',
+  './icon.svg' + ICON_Q,
+  './icon-maskable.svg' + ICON_Q,
   './icon-192.png' + ICON_Q,
   './icon-512.png' + ICON_Q,
   './apple-touch-icon.png' + ICON_Q,
   './apple-touch-icon.png',
-  './logo.svg'
+  './logo.svg' + ICON_Q,
+  './logo-mark.png',
+  './echo-weather-logo-exact.svg'
 ];
 
 self.addEventListener('install', e => {
