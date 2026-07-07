@@ -487,6 +487,8 @@ body.radar-expanded{overflow:hidden}
 @media (max-width:720px){#activityList{grid-template-columns:1fr}}
 footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .radar-mode{grid-column:1/-1;width:100%;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 10px;font-size:.8125rem;font-weight:500}
+.radar-mrms-stride{grid-column:1/-1;width:100%;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 10px;font-size:.8125rem;font-weight:500}
+.radar-mrms-stride[hidden]{display:none!important}
 .radar-anim-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;grid-column:1/-1;width:100%;min-width:0}
 .radar-anim-ctl.hidden{display:none}
 .radar-anim-ctl > #radarPlay{flex:0 0 auto}
@@ -545,6 +547,8 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .mesonet-hour .k{color:var(--dim);font-size:.6875rem;display:block;margin-bottom:2px}
 .mesonet-hour .v{font-weight:600;font-variant-numeric:tabular-nums;display:block}
 .mesonet-hour .mesonet-wind{color:var(--mut);font-size:.625rem;display:block;margin-top:2px}
+.mesonet-hour .mesonet-name{font-size:.625rem;color:var(--mut);display:block;margin-top:2px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:7.5rem}
+.mesonet-foot{font-size:.6875rem;color:var(--dim);margin-top:8px;line-height:1.4}
 .nbm-section{margin-bottom:14px}
 .nbm-section:last-child{margin-bottom:0}
 .day-card-meta .day-snow{color:var(--sky)}

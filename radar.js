@@ -17,8 +17,11 @@ let mapB = null, mapBMarker = null, basemapLayerB = null;
 let iemOverlayLayersB = [null, null], iemSlotFrameB = [-1, -1], iemOverlaySlotB = 0;
 let radarDualOn = false, mapSyncLock = false;
 const MRMS_WMS_URL = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows';
-const MRMS_MAX_FRAMES = 30;
-const MRMS_TARGET_STRIDE_MS = 5 * 60 * 1000;
+const MRMS_MAX_FRAMES = 60;
+const MRMS_STRIDE_OPTS = [2, 5, 10];
+const MRMS_STRIDE_DEFAULT = 5;
+let mrmsAllTimes = [];
+let mrmsRefreshBusy = false;
 let radarMode = store.get('st_radar_mode') || defaultRadarMode(state.locations[state.active]);
 const IEM_SUFFIXES = ['900913-m50m','900913-m45m','900913-m40m','900913-m35m','900913-m30m','900913-m25m','900913-m20m','900913-m15m','900913-m10m','900913-m05m','900913'];
 const IEM_MINS = [50,45,40,35,30,25,20,15,10,5,0];
@@ -654,21 +657,46 @@ function preloadMrmsPingPongFrame(frameIdx, timeIso){
   if(mrmsSlotFrame[preloadSlot] === frameIdx) return;
   loadMrmsPingPongFrame(preloadSlot, frameIdx, timeIso, false);
 }
+function mrmsStrideMin(){
+  const loc = state.locations[state.active];
+  const raw = loc?.radarPrefs?.mrmsStride ?? store.get('st_mrms_stride');
+  const v = Number(raw) || MRMS_STRIDE_DEFAULT;
+  return MRMS_STRIDE_OPTS.includes(v) ? v : MRMS_STRIDE_DEFAULT;
+}
+function mrmsMaxFrames(strideMin){
+  if(strideMin <= 2) return 60;
+  if(strideMin <= 5) return 30;
+  return 18;
+}
+function syncMrmsStrideUi(){
+  const sel = $('radarMrmsStride');
+  if(!sel) return;
+  const show = radarMode === 'mrms' && mrmsFrames.length > 1;
+  sel.hidden = !show;
+  if(show) sel.value = String(mrmsStrideMin());
+}
+function resetMrmsPingPongSlots(){
+  mrmsSlotFrame = [-1, -1];
+  mrmsOverlaySlot = 0;
+}
 function parseMrmsTimesFromCapabilities(xml){
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
   const dim = doc.querySelector('Dimension[name="time"]');
   if(!dim || !dim.textContent) return null;
   return dim.textContent.split(',').map(s => s.trim()).filter(Boolean);
 }
-function pickMrmsFrames(allTimes){
-  if(allTimes.length <= MRMS_MAX_FRAMES) return allTimes;
+function pickMrmsFrames(allTimes, strideMin){
+  if(!allTimes?.length) return [];
+  const sMin = Number(strideMin);
+  const stride = MRMS_STRIDE_OPTS.includes(sMin) ? sMin : mrmsStrideMin();
+  const strideMs = stride * 60 * 1000;
+  const maxFrames = mrmsMaxFrames(stride);
   const parsed = allTimes.map(iso => ({ iso, ms: Date.parse(iso) })).filter(p => !isNaN(p.ms));
-  if(parsed.length <= MRMS_MAX_FRAMES) return parsed.map(p => p.iso);
+  if(parsed.length < 2) return allTimes;
   const newest = parsed[parsed.length - 1].ms;
   const oldest = parsed[0].ms;
-  const stride = Math.max(MRMS_TARGET_STRIDE_MS, Math.ceil((newest - oldest) / (MRMS_MAX_FRAMES - 1)));
   const out = [];
-  for(let target = oldest; target <= newest + 1 && out.length < MRMS_MAX_FRAMES; target += stride){
+  for(let target = oldest; target <= newest + 1 && out.length < maxFrames; target += strideMs){
     let best = parsed[0], bestD = Infinity;
     for(const p of parsed){
       const d = Math.abs(p.ms - target);
@@ -677,16 +705,63 @@ function pickMrmsFrames(allTimes){
     if(!out.length || out[out.length - 1] !== best.iso) out.push(best.iso);
   }
   const last = parsed[parsed.length - 1].iso;
-  if(out[out.length - 1] !== last) out.push(last);
-  return out;
+  if(!out.length || out[out.length - 1] !== last) out.push(last);
+  return out.slice(-maxFrames);
 }
-async function fetchMrmsFrameTimes(loadId){
+async function fetchMrmsRawTimes(loadId){
   const r = await fetch(MRMS_WMS_URL + '?service=WMS&version=1.3.0&request=GetCapabilities');
   if(loadId !== radarLoadId) return null;
   if(!r.ok) throw new Error('MRMS capabilities ' + r.status);
-  const times = parseMrmsTimesFromCapabilities(await r.text());
-  if(!times || !times.length) throw new Error('no MRMS frames');
-  return pickMrmsFrames(times);
+  return parseMrmsTimesFromCapabilities(await r.text());
+}
+async function fetchMrmsFrameTimes(loadId, strideMin){
+  const times = await fetchMrmsRawTimes(loadId);
+  if(!times?.length) throw new Error('no MRMS frames');
+  mrmsAllTimes = times;
+  return pickMrmsFrames(times, strideMin ?? mrmsStrideMin());
+}
+function mrmsFrameIndexForIso(iso, preferLatest){
+  if(!mrmsFrames.length) return 0;
+  if(preferLatest) return mrmsFrames.length - 1;
+  if(!iso) return mrmsFrames.length - 1;
+  const exact = mrmsFrames.indexOf(iso);
+  if(exact >= 0) return exact;
+  const pms = Date.parse(iso);
+  if(isNaN(pms)) return mrmsFrames.length - 1;
+  let best = 0, bestD = Infinity;
+  mrmsFrames.forEach((t, i) => {
+    const d = Math.abs(Date.parse(t) - pms);
+    if(d < bestD){ bestD = d; best = i; }
+  });
+  return best;
+}
+async function refreshMrmsFrames(opts){
+  if(radarMode !== 'mrms' || mrmsRefreshBusy) return;
+  const loadId = radarLoadId;
+  mrmsRefreshBusy = true;
+  try{
+    const stride = mrmsStrideMin();
+    let times;
+    if(opts?.repickOnly && mrmsAllTimes.length){
+      times = pickMrmsFrames(mrmsAllTimes, stride);
+    }else{
+      times = await fetchMrmsFrameTimes(loadId, stride);
+    }
+    if(loadId !== radarLoadId || radarMode !== 'mrms' || !times?.length) return;
+    const prevIso = mrmsFrames[radarIdx];
+    mrmsFrames = times;
+    resetMrmsPingPongSlots();
+    $('radarScrub').max = Math.max(0, mrmsFrames.length - 1);
+    radarIdx = opts?.restart ? 0 : mrmsFrameIndexForIso(prevIso, !!opts?.toLive);
+    $('radarScrub').value = radarIdx;
+    $('radarNote').textContent = mrmsNoteText();
+    setRadarAnimControls(mrmsFrames.length > 1);
+    showFrame(radarIdx);
+  }catch(e){
+    console.warn('mrmsRefresh', e);
+  }finally{
+    mrmsRefreshBusy = false;
+  }
 }
 function mrmsLoopMinutes(){
   if(mrmsFrames.length < 2) return 0;
@@ -695,7 +770,8 @@ function mrmsLoopMinutes(){
 function mrmsNoteText(){
   const mins = mrmsLoopMinutes();
   if(mrmsFrames.length < 2) return 'NOAA MRMS composite reflectivity \u00B7 CONUS';
-  return 'NOAA MRMS composite \u00B7 last ' + mins + ' min \u00B7 CONUS';
+  return 'NOAA MRMS composite \u00B7 last ' + mins + ' min \u00B7 '
+    + mrmsStrideMin() + ' min frames \u00B7 CONUS';
 }
 function formatMrmsFrameTime(iso, isLatest){
   const t = new Date(iso);
@@ -723,10 +799,11 @@ async function loadMrmsRadar(loadId){
   if(!radarDualOn) iemVelocitySite = null;
   iemFrames = radarDualOn ? ['0'] : [];
   mrmsFrames = [];
+  mrmsAllTimes = [];
   $('radarTime').textContent = 'Loading\u2026';
   $('radarNote').textContent = 'NOAA MRMS composite \u00B7 loading frames\u2026';
   try{
-    const frames = await fetchMrmsFrameTimes(loadId);
+    const frames = await fetchMrmsFrameTimes(loadId, mrmsStrideMin());
     if(loadId !== radarLoadId) return;
     if(!frames || !frames.length) throw new Error('no MRMS frames');
     mrmsFrames = frames;
@@ -738,6 +815,7 @@ async function loadMrmsRadar(loadId){
     return;
   }
   setRadarAnimControls(mrmsFrames.length > 1);
+  syncMrmsStrideUi();
   syncRadarVelToggle();
   radarIdx = mrmsFrames.length - 1;
   $('radarScrub').max = Math.max(0, mrmsFrames.length - 1);
@@ -766,6 +844,7 @@ function setRadarAnimControls(visible){
   $('radarAnimCtl').classList.toggle('hidden', !visible || isLiveOnlyRadar());
   const satBtn = $('radarSat');
   if(satBtn) satBtn.style.display = radarMode === 'rainviewer' ? '' : 'none';
+  syncMrmsStrideUi();
   syncRadarVelToggle();
   if(!visible) stopRadarTimer();
 }
@@ -1119,12 +1198,36 @@ $('radarPlay').addEventListener('click', () => {
     stopRadarTimer();
   }else{
     radarTimer = setInterval(() => {
-      radarIdx = (radarIdx + 1) % n;
+      const count = radarFrameCount();
+      if(!count) return;
+      if(radarMode === 'mrms' && radarIdx >= count - 1){
+        refreshMrmsFrames({ restart: true });
+        return;
+      }
+      radarIdx = (radarIdx + 1) % count;
       showFrame(radarIdx);
     }, 700);
     $('radarPlay').textContent = '\u275A\u275A Pause';
   }
 });
+const radarMrmsStrideSel = $('radarMrmsStride');
+if(radarMrmsStrideSel){
+  radarMrmsStrideSel.addEventListener('change', e => {
+    if(radarMode !== 'mrms') return;
+    const v = Number(e.target.value);
+    if(!MRMS_STRIDE_OPTS.includes(v)) return;
+    const loc = state.locations[state.active];
+    if(loc){
+      if(!loc.radarPrefs) loc.radarPrefs = {};
+      loc.radarPrefs.mrmsStride = v;
+      persist();
+    }
+    store.set('st_mrms_stride', v);
+    stopRadarTimer();
+    const repick = mrmsAllTimes.length > 0;
+    refreshMrmsFrames({ repickOnly: repick, toLive: true });
+  });
+}
 $('radarSat').addEventListener('click', () => {
   if(radarMode !== 'rainviewer') return;
   radarSatOn = !radarSatOn;

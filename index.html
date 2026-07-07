@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=192">
+<link rel="stylesheet" href="app.css?v=193">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -228,6 +228,11 @@
             <option value="iem-n0q">IEM NEXRAD base (animated)</option>
             <option value="iem-n0r">IEM composite (animated)</option>
             <option value="iem-n0u">IEM NEXRAD velocity (nearest site)</option>
+          </select>
+          <select id="radarMrmsStride" class="radar-mrms-stride" hidden aria-label="MRMS frame interval">
+            <option value="2">MRMS every 2 min</option>
+            <option value="5" selected>MRMS every 5 min</option>
+            <option value="10">MRMS every 10 min</option>
           </select>
           <button type="button" id="radarVelToggle" class="radar-vel-toggle" hidden aria-label="Toggle reflectivity or velocity">Velocity</button>
           <span id="radarAnimCtl" class="radar-anim-ctl">
@@ -522,14 +527,14 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=192"></script>
-<script src="nav.js?v=192"></script>
-<script src="impact.js?v=192"></script>
-<script src="marine.js?v=192"></script>
-<script src="air.js?v=192"></script>
-<script src="aviation.js?v=192"></script>
-<script src="storm.js?v=192"></script>
-<script src="radar.js?v=192"></script>
-<script src="boot.js?v=192"></script>
+<script src="app.js?v=193"></script>
+<script src="nav.js?v=193"></script>
+<script src="impact.js?v=193"></script>
+<script src="marine.js?v=193"></script>
+<script src="air.js?v=193"></script>
+<script src="aviation.js?v=193"></script>
+<script src="storm.js?v=193"></script>
+<script src="radar.js?v=193"></script>
+<script src="boot.js?v=193"></script>
 </body>
 </html>

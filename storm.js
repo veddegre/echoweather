@@ -55,19 +55,21 @@ function getLocRadarPrefs(loc){
     });
   }
   const saved = loc?.radarPrefs;
-  if(!saved) return { mode: fallbackMode, threatLayers, dualPane: false };
+  if(!saved) return { mode: fallbackMode, threatLayers, dualPane: false, mrmsStride: 5 };
   const mode = saved.mode || fallbackMode;
   if(saved.threatLayers && typeof saved.threatLayers === 'object'){
     Object.keys(threatLayers).forEach(k => {
       if(saved.threatLayers[k] !== undefined) threatLayers[k] = !!saved.threatLayers[k];
     });
   }
-  return { mode, threatLayers, dualPane: !!saved.dualPane };
+  return { mode, threatLayers, dualPane: !!saved.dualPane, mrmsStride: saved.mrmsStride || 5 };
 }
 function saveLocRadarPrefs(){
   const loc = state.locations[state.active];
   if(!loc) return;
-  loc.radarPrefs = { mode: radarMode, threatLayers: { ...threatLayerOpts }, dualPane: !!radarDualOn };
+  const prefs = { mode: radarMode, threatLayers: { ...threatLayerOpts }, dualPane: !!radarDualOn };
+  if(typeof mrmsStrideMin === 'function') prefs.mrmsStride = mrmsStrideMin();
+  loc.radarPrefs = prefs;
   persist();
   store.set('st_radar_mode', radarMode);
   store.set('st_threat_layers', { ...threatLayerOpts });

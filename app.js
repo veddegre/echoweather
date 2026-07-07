@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '192';
+const APP_VERSION = '193';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2521,9 +2521,18 @@ async function loadMesonetStrip(loc){
       const r = await nwsFetch(stationsUrl);
       if(!r.ok) throw new Error('stations ' + r.status);
       const feats = (await r.json()).features || [];
-      const stations = feats.map(f => {
+      const stations = feats.map((f, rank) => {
         const p = f.properties || {};
-        return { id: p.stationIdentifier, name: p.name || p.stationIdentifier };
+        const coords = f.geometry?.coordinates;
+        const slon = coords?.[0], slat = coords?.[1];
+        const dist = (slat != null && slon != null && typeof haversineMi === 'function')
+          ? haversineMi(loc.lat, loc.lon, slat, slon) : null;
+        return {
+          id: p.stationIdentifier,
+          name: p.name || p.stationIdentifier,
+          dist,
+          rank
+        };
       }).filter(s => s.id).slice(0, 6);
       if(!stations.length){
         body.innerHTML = panelUnavail('no_station');
@@ -2544,16 +2553,37 @@ async function loadMesonetStrip(loc){
           return { ...s, temp, wind };
         }catch(e){ return { ...s, temp: null, wind: null }; }
       }));
-      body.innerHTML = '<div class="mesonet-hours">' + rows.map(row =>
-        '<div class="mesonet-hour"><span class="k">' + esc(row.id.replace(/^K/, '')) + '</span>'
-        + '<span class="v">' + (row.temp != null ? row.temp + degSym() : '\u2014') + '</span>'
-        + '<span class="mesonet-wind">' + esc(row.wind || '\u2014') + '</span></div>'
-      ).join('') + '</div>';
+      const spreadNote = mesonetSpreadNote(rows);
+      body.innerHTML = '<div class="mesonet-hours">' + rows.map(row => {
+        const idShort = row.id.replace(/^K/, '');
+        const distLbl = row.dist != null ? Math.round(row.dist) + ' mi' : '';
+        const title = mesonetStationLabel(row.name, row.id);
+        return '<div class="mesonet-hour"><span class="k">' + esc(idShort)
+          + (distLbl ? '<small> \u00B7 ' + esc(distLbl) + '</small>' : '') + '</span>'
+          + '<span class="v">' + (row.temp != null ? row.temp + degSym() : '\u2014') + '</span>'
+          + '<span class="mesonet-wind">' + esc(row.wind || '\u2014') + '</span>'
+          + '<span class="mesonet-name" title="' + esc(row.name || title) + '">' + esc(title) + '</span></div>';
+      }).join('') + '</div>' + spreadNote;
     }catch(e){
       setPanelUnavail(body, 'mesonet_api');
       console.warn('mesonet', e);
     }
   });
+}
+function mesonetStationLabel(name, id){
+  const short = String(name || '').replace(/,.*$/, '').replace(/\s+Airport$/i, '').replace(/\s+Air\s+Force\s+Base$/i, ' AFB').trim();
+  const idShort = String(id || '').replace(/^K/, '');
+  if(short && short.length <= 20) return short;
+  if(short) return short.slice(0, 18) + '\u2026';
+  return idShort;
+}
+function mesonetSpreadNote(rows){
+  const temps = rows.map(r => r.temp).filter(t => t != null);
+  if(temps.length < 2) return '';
+  const spread = Math.max(...temps) - Math.min(...temps);
+  const thresh = state.units === 'F' ? 5 : 3;
+  if(spread < thresh) return '';
+  return '<p class="mesonet-foot">Regional spread: ' + spread + degSym() + ' across ' + temps.length + ' stations.</p>';
 }
 async function loadAFD(loc){
   return panelTask('afdPanel', 'afdStatus', async () => {

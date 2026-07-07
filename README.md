@@ -537,7 +537,8 @@ panels appear in one scrollable page with a compacting sticky header.
 ### Radar & storm tracking
 
 - **Radar sources** — RainViewer (animated + optional GOES IR satellite),
-  **MRMS** composite (animated ~2 hr CONUS loop, or live latest frame), IEM NEXRAD
+  **MRMS** composite (animated ~2 hr CONUS loop with 2 / 5 / 10 min frame stride;
+  loop refreshes frames at wrap), IEM NEXRAD
   base/composite (50‑min animation), or **nearest-site velocity** (live US).
 - **Reflectivity ↔ velocity toggle** — Quick switch between IEM base
   reflectivity and nearest NEXRAD velocity; **dual pane** side-by-side compare
@@ -619,8 +620,8 @@ panels appear in one scrollable page with a compacting sticky header.
   collapsible raw aviation code. Proxied at `/api/taf` (AviationWeather.gov
   blocks browser CORS).
 - **NWS Forecast Discussion** — Full AFD text for your forecast office.
-- **Regional mesonet** *(US)* — Horizontal strip of nearest ASOS observations
-  (temp and wind) within ~30 mi via NWS observation stations API.
+- **Regional mesonet** *(US)* — Nearest six ASOS stations within ~30 mi: ID,
+  distance, temp, wind, station name, and regional spread note when temps diverge.
 - **NBM grid** — NWS grid hourly temp, wind, sky, and precip probability when
   available.
 
@@ -634,7 +635,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v192`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v193`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the
