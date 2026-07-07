@@ -341,13 +341,20 @@ function initMapB(){
   }
   showDualPaneFrame(radarIdx);
 }
+function dualPaneSecondarySuffix(frameIdx){
+  const secMode = dualPaneSecondaryMode();
+  if(!secMode || !IEM_TILES[secMode]) return '900913';
+  if(IEM_TILES[secMode].velocity) return '0';
+  const raw = iemFrames[frameIdx] ?? iemFrames[iemFrames.length - 1] ?? '900913';
+  return raw === '0' ? '900913' : raw;
+}
 function showDualPaneFrame(i){
   if(!mapB || !radarDualOn || !dualPaneAvailable()) return;
   const secMode = dualPaneSecondaryMode();
   if(!secMode || !IEM_TILES[secMode]) return;
   if(IEM_TILES[secMode].velocity && !iemVelocitySite) return;
   const frameIdx = radarMode === 'mrms' ? 0 : i;
-  const suffix = iemFrames[frameIdx] || iemFrames[iemFrames.length - 1] || '900913';
+  const suffix = dualPaneSecondarySuffix(frameIdx);
   const name = iemLayerName(secMode, suffix);
   if(!name) return;
   hidePingPongLayers(iemOverlayLayersB);
