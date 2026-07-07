@@ -250,14 +250,53 @@ function onRainviewerTileError(){
 function isRadarTabVisible(){
   return document.body.classList.contains('mtab-radar');
 }
+function clearExpandedRadarLayout(){
+  const stage = $('radarStage');
+  const wrap = stage?.querySelector('.radar-wrap');
+  const panes = $('radarPanes');
+  if(wrap) wrap.style.removeProperty('height');
+  if(panes) panes.style.removeProperty('height');
+  ['radar', 'radarB'].forEach(id => {
+    const el = $(id);
+    if(el) el.style.removeProperty('height');
+  });
+}
+function syncExpandedRadarLayout(){
+  const stage = $('radarStage');
+  if(!stage?.classList.contains('expanded')){
+    clearExpandedRadarLayout();
+    return;
+  }
+  const wrap = stage.querySelector('.radar-wrap');
+  const panes = $('radarPanes');
+  const ctl = stage.querySelector('.radar-ctl');
+  if(!wrap || !panes) return;
+  const gap = 10;
+  const wrapH = Math.max(200, stage.clientHeight - (ctl ? ctl.offsetHeight + gap : 0) - gap);
+  wrap.style.height = wrapH + 'px';
+  panes.style.height = wrapH + 'px';
+  panes.querySelectorAll('#radar, #radarB').forEach(el => {
+    const pane = el.closest('.radar-pane');
+    if(!pane || pane.hidden) return;
+    const lbl = pane.querySelector('.radar-pane-lbl:not([hidden])');
+    const lblH = lbl ? lbl.offsetHeight + 4 : 0;
+    el.style.height = Math.max(120, wrapH - lblH) + 'px';
+  });
+}
 function refreshRadarMapSize(){
   if(!map) return;
-  requestAnimationFrame(() => {
+  syncExpandedRadarLayout();
+  const invalidate = () => {
     if(map){
       map.invalidateSize({ animate: false });
       sizeLightningCanvas();
     }
     if(mapB) mapB.invalidateSize({ animate: false });
+  };
+  invalidate();
+  requestAnimationFrame(() => {
+    invalidate();
+    requestAnimationFrame(invalidate);
   });
 }
 function dualPaneAvailable(){
@@ -540,7 +579,10 @@ function toggleRadarExpand(){
   document.body.classList.toggle('radar-expanded', on);
   btn.textContent = on ? 'Close' : 'Expand';
   btn.setAttribute('aria-label', on ? 'Close expanded radar' : 'Expand radar fullscreen');
-  setTimeout(() => refreshRadarMapSize(), 220);
+  if(!on) clearExpandedRadarLayout();
+  refreshRadarMapSize();
+  setTimeout(refreshRadarMapSize, 80);
+  setTimeout(refreshRadarMapSize, 280);
 }
 function ensureMrmsLayer(){
   if(!map) return null;
