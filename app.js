@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '190';
+const APP_VERSION = '191';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2507,8 +2507,12 @@ async function loadMesonetStrip(loc){
     body.className = 'mesonet-strip';
     body.textContent = 'Loading regional observations\u2026';
     try{
-      const r = await nwsFetch('https://api.weather.gov/stations?latitude=' + loc.lat + '&longitude=' + loc.lon + '&radius=45');
-      if(!r.ok) throw new Error('stations');
+      const lat = Number(loc.lat).toFixed(4);
+      const lon = Number(loc.lon).toFixed(4);
+      const stationsUrl = state.data?.nwsPoints?.observationStations
+        || ('https://api.weather.gov/points/' + lat + ',' + lon + '/stations');
+      const r = await nwsFetch(stationsUrl);
+      if(!r.ok) throw new Error('stations ' + r.status);
       const feats = (await r.json()).features || [];
       const stations = feats.map(f => {
         const p = f.properties || {};
