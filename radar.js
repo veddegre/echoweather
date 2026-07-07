@@ -198,11 +198,39 @@ const IEM_TILE_OPTS = {
 function hidePingPongLayers(layers){
   layers.forEach(l => { if(l) l.setOpacity(0); });
 }
+function removePingPongLayers(layers, targetMap){
+  if(!targetMap) return;
+  hidePingPongLayers(layers);
+  layers.forEach(l => { if(l && targetMap.hasLayer(l)) targetMap.removeLayer(l); });
+}
 function resetPingPongSlots(){
   radarSlotFrame = [-1, -1];
   satSlotFrame = [-1, -1];
   iemSlotFrame = [-1, -1];
+  iemSlotFrameB = [-1, -1];
   radarOverlaySlot = satOverlaySlot = iemOverlaySlot = 0;
+  iemOverlaySlotB = 0;
+}
+function clearDualPaneOverlays(){
+  removePingPongLayers(iemOverlayLayersB, mapB);
+}
+function clearRadarLayers(){
+  removePingPongLayers(radarOverlayLayers, map);
+  removePingPongLayers(satOverlayLayers, map);
+  removePingPongLayers(iemOverlayLayers, map);
+  clearDualPaneOverlays();
+  hideGoesSatellite();
+  if(mrmsLayer && map && map.hasLayer(mrmsLayer)) map.removeLayer(mrmsLayer);
+  resetPingPongSlots();
+}
+function stopRadarTimer(){
+  if(radarTimer){ clearInterval(radarTimer); radarTimer = null; $('radarPlay').textContent = '\u25B6 Play'; }
+}
+function primeRadarLoad(){
+  clearRadarLayers();
+  stopRadarTimer();
+  const time = $('radarTime');
+  if(time) time.textContent = 'Loading\u2026';
 }
 function onRainviewerTileError(){
   rainviewerTileErrors++;
@@ -277,6 +305,7 @@ function syncMapAFromB(){
   mapSyncLock = false;
 }
 function destroyMapB(){
+  clearDualPaneOverlays();
   if(!mapB) return;
   if(map) map.off('moveend', syncMapBFromA);
   mapB.off('moveend', syncMapAFromB);
@@ -356,12 +385,11 @@ function syncRadarDualUi(){
 function activateRadarPanel(){
   const loc = state.locations[state.active];
   if(!loc) return;
-  const created = !map;
   initMap(loc);
   refreshRadarMapSize();
-  if(created || radarFrameCount() === 0) loadRadar();
+  loadRadar();
   updateRadarLegend();
-  syncRadarDualUi();
+  syncRadarVelToggle();
   if(radarLightningOn) setLightningOverlay(true);
   else syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
   syncStormReportMarkers();
@@ -500,17 +528,6 @@ function toggleRadarExpand(){
   btn.textContent = on ? 'Close' : 'Expand';
   btn.setAttribute('aria-label', on ? 'Close expanded radar' : 'Expand radar fullscreen');
   setTimeout(() => { if(map) map.invalidateSize(); }, 220);
-}
-function stopRadarTimer(){
-  if(radarTimer){ clearInterval(radarTimer); radarTimer = null; $('radarPlay').textContent = '\u25B6 Play'; }
-}
-function clearRadarLayers(){
-  [radarOverlayLayers, satOverlayLayers, iemOverlayLayers].forEach(arr => {
-    arr.forEach(l => { if(l && map && map.hasLayer(l)) map.removeLayer(l); });
-  });
-  hideGoesSatellite();
-  if(mrmsLayer && map && map.hasLayer(mrmsLayer)) map.removeLayer(mrmsLayer);
-  resetPingPongSlots();
 }
 function ensureMrmsLayer(){
   if(!map) return null;
@@ -730,14 +747,12 @@ function finishIemRadarLoad(mode){
   syncRadarDualUi();
 }
 async function loadRainViewerRadar(loadId){
-  const r = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-  if(loadId !== radarLoadId) return;
-  const j = await r.json();
-  clearRadarLayers();
-  stopRadarTimer();
   radarSatOn = false;
   rainviewerTileErrors = 0;
   $('radarSat').classList.remove('on');
+  const r = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+  if(loadId !== radarLoadId) return;
+  const j = await r.json();
   setRadarAnimControls(true);
   radarHost = j.host;
   const past = (j.radar.past || []).slice(-8);
@@ -760,6 +775,7 @@ async function loadRadar(){
   return panelTask('radarPanel', 'radarStatus', async () => {
     if(!map) return;
     const loadId = ++radarLoadId;
+    primeRadarLoad();
     try{
       if(radarMode === 'rainviewer') await loadRainViewerRadar(loadId);
       else if(radarMode === 'mrms'){
@@ -775,6 +791,8 @@ async function loadRadar(){
       $('radarTime').textContent = 'Radar unavailable';
       setPanelUnavail($('radarNote'), 'radar_load');
       console.error('radar', e);
+    }finally{
+      if(loadId === radarLoadId) syncRadarDualUi();
     }
   });
 }
@@ -832,11 +850,10 @@ $('radarMode').addEventListener('change', e => {
   saveLocRadarPrefs();
   radarLoadId++;
   iemLoadGen++;
-  stopRadarTimer();
   applyRadarZoomLimits();
   updateRadarLegend();
-  loadRadar();
   syncRadarDualUi();
+  loadRadar();
 });
 const radarDualBtn = $('radarDualBtn');
 if(radarDualBtn){
@@ -915,10 +932,10 @@ if(radarVelBtn){
     $('radarMode').value = radarMode;
     radarLoadId++;
     iemLoadGen++;
-    stopRadarTimer();
     applyRadarZoomLimits();
     updateRadarLegend();
     syncRadarVelToggle();
+    syncRadarDualUi();
     loadRadar();
   });
 }

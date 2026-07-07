@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '181';
+const APP_VERSION = '182';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -3177,10 +3177,24 @@ function onSwUpdateReady(reg){
   showSwUpdateBar(reg, 'Update ready — tap Refresh or switch away briefly');
 }
 
+function hideSwUpdateBars(){
+  document.querySelectorAll('.sw-update').forEach(bar => bar.classList.remove('show'));
+}
+
 function applySwUpdate(reg, immediate){
   if(immediate){
+    hideSwUpdateBars();
     sessionStorage.setItem(SW_RELOAD_KEY, '1');
-    if(!activateWaitingWorker(reg)) location.reload();
+    if(activateWaitingWorker(reg)){
+      setTimeout(() => {
+        if(sessionStorage.getItem(SW_RELOAD_KEY)){
+          sessionStorage.removeItem(SW_RELOAD_KEY);
+          location.reload();
+        }
+      }, 1500);
+      return;
+    }
+    location.reload();
     return;
   }
   activateWaitingWorker(reg);
