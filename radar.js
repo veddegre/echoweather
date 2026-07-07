@@ -230,10 +230,27 @@ function refreshRadarMapSize(){
 }
 function dualPaneAvailable(){
   const loc = state.locations[state.active];
-  return !!(loc && isLikelyUS(loc) && (radarMode === 'iem-n0q' || radarMode === 'iem-n0u'));
+  return !!(loc && isLikelyUS(loc) && (radarMode === 'iem-n0q' || radarMode === 'iem-n0u' || radarMode === 'mrms'));
 }
 function dualPaneSecondaryMode(){
-  return radarMode === 'iem-n0q' ? 'iem-n0u' : (radarMode === 'iem-n0u' ? 'iem-n0q' : null);
+  if(radarMode === 'iem-n0q' || radarMode === 'mrms') return 'iem-n0u';
+  if(radarMode === 'iem-n0u') return 'iem-n0q';
+  return null;
+}
+function dualPanePrimaryLabel(){
+  if(radarMode === 'mrms') return 'MRMS reflectivity';
+  if(radarMode === 'iem-n0u') return 'Velocity';
+  return 'Reflectivity';
+}
+function dualPaneSecondaryLabel(){
+  if(radarMode === 'iem-n0u') return 'Reflectivity';
+  return 'Velocity';
+}
+async function ensureDualPaneVelocitySite(){
+  if(!radarDualOn || dualPaneSecondaryMode() !== 'iem-n0u') return true;
+  if(iemVelocitySite) return true;
+  iemVelocitySite = await resolveIemVelocitySite();
+  return !!iemVelocitySite;
 }
 function syncMapBBasemap(){
   if(!mapB) return;
@@ -300,13 +317,14 @@ function showDualPaneFrame(i){
   const secMode = dualPaneSecondaryMode();
   if(!secMode || !IEM_TILES[secMode]) return;
   if(IEM_TILES[secMode].velocity && !iemVelocitySite) return;
-  const suffix = iemFrames[i] || iemFrames[iemFrames.length - 1] || '900913';
+  const frameIdx = radarMode === 'mrms' ? 0 : i;
+  const suffix = iemFrames[frameIdx] || iemFrames[iemFrames.length - 1] || '900913';
   const name = iemLayerName(secMode, suffix);
   if(!name) return;
   hidePingPongLayers(iemOverlayLayersB);
   const url = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png';
   const err = IEM_TILES[secMode].velocity ? onIemTileError : null;
-  iemOverlaySlotB = showPingPongFrame(iemOverlayLayersB, iemSlotFrameB, iemOverlaySlotB, i, url, 0.78, err, IEM_TILE_OPTS);
+  iemOverlaySlotB = showPingPongFrame(iemOverlayLayersB, iemSlotFrameB, iemOverlaySlotB, frameIdx, url, 0.78, err, IEM_TILE_OPTS);
   if(basemapLayerB) basemapLayerB.bringToBack();
   if(mapBMarker) mapBMarker.bringToFront();
 }
@@ -323,14 +341,12 @@ function syncRadarDualUi(){
   }
   if(!avail) radarDualOn = false;
   if(panes) panes.classList.toggle('dual-pane', radarDualOn && avail);
-  const aLbl = radarMode === 'iem-n0u' ? 'Velocity' : 'Reflectivity';
-  const bLbl = radarMode === 'iem-n0u' ? 'Reflectivity' : 'Velocity';
   if(lblA){
-    lblA.textContent = aLbl;
+    lblA.textContent = dualPanePrimaryLabel();
     lblA.hidden = !(radarDualOn && avail);
   }
   if(lblB){
-    lblB.textContent = bLbl;
+    lblB.textContent = dualPaneSecondaryLabel();
   }
   if(paneB) paneB.hidden = !(radarDualOn && avail);
   if(radarDualOn && avail) initMapB();
@@ -517,8 +533,8 @@ function loadMrmsRadar(){
   stopRadarTimer();
   radarSatOn = false;
   $('radarSat').classList.remove('on');
-  iemVelocitySite = null;
-  iemFrames = [];
+  if(!radarDualOn) iemVelocitySite = null;
+  iemFrames = radarDualOn ? ['0'] : [];
   setRadarAnimControls(false);
   syncRadarVelToggle();
   const layer = ensureMrmsLayer();
@@ -530,6 +546,17 @@ function loadMrmsRadar(){
   syncStormReportMarkers();
   applyPendingRadarFrame();
   updateRadarHash();
+  syncRadarDualUi();
+  if(radarDualOn){
+    ensureDualPaneVelocitySite().then(ok => {
+      if(ok) showDualPaneFrame(0);
+      else{
+        radarDualOn = false;
+        syncRadarDualUi();
+        setPanelUnavail($('radarNote'), 'radar_vel_site');
+      }
+    });
+  }
 }
 function setRadarAnimControls(visible){
   $('radarAnimCtl').classList.toggle('hidden', !visible || isLiveOnlyRadar());
@@ -816,11 +843,19 @@ if(radarDualBtn){
   radarDualBtn.addEventListener('click', async () => {
     if(!dualPaneAvailable()) return;
     radarDualOn = !radarDualOn;
-    if(radarDualOn && dualPaneSecondaryMode() === 'iem-n0u' && !iemVelocitySite){
+    if(radarDualOn){
       const note = $('radarNote');
-      if(note) note.textContent = 'Resolving velocity site\u2026';
-      iemVelocitySite = await resolveIemVelocitySite();
-      if(note) note.textContent = radarNoteForMode();
+      if(note && dualPaneSecondaryMode() === 'iem-n0u' && !iemVelocitySite){
+        note.textContent = 'Resolving velocity site\u2026';
+      }
+      const ok = await ensureDualPaneVelocitySite();
+      if(note) note.textContent = radarMode === 'mrms'
+        ? 'NOAA MRMS composite reflectivity \u00B7 CONUS'
+        : radarNoteForMode();
+      if(!ok){
+        radarDualOn = false;
+        setPanelUnavail($('radarNote'), 'radar_vel_site');
+      }
     }
     syncRadarDualUi();
   });

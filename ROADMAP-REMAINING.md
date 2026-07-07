@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v180** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=180` in `index.html`).
+**Current version: v181** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=181` in `index.html`).
 
 ---
 
@@ -19,7 +19,11 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v180 (latest)
+### v181 (latest)
+- **MRMS dual-pane** — side-by-side MRMS reflectivity + nearest-site velocity (Dual pane on MRMS mode)
+- **README sync** — v174–v180 feature list in README
+
+### v180
 - **USDM drought teaser** — U.S. Drought Monitor category at your location on Forecast
 - **Daily record hints** — 10-yr record/near-record high and low on 5-day cards
 
@@ -168,7 +172,8 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | **v175–v176** | AHPS streamgages · snow accumulation · NBM grid expansion · loc compare fix | **Shipped** (v176) |
 | **v177–v179** | Dual-pane radar · CPC teaser · mesonet · climo polish | **Shipped** (v179) |
 | **v180** | USDM drought · daily record hints | **Shipped** |
-| **v180+** | Further refinement / deploy | Planned |
+| **v181** | MRMS dual-pane · README sync | **Shipped** |
+| **v181+** | Further refinement / deploy | Planned |
 
 ### v179 (latest)
 - **Dual-pane radar** — side-by-side reflectivity + velocity on IEM NEXRAD (Dual pane button)
@@ -180,7 +185,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | # | Item | Status |
 |---|------|--------|
-| 5 | **Dual-pane radar** | Done — IEM NEXRAD reflectivity + velocity |
+| 5 | **Dual-pane radar** | Done — IEM NEXRAD + MRMS/velocity |
 | 8 | **CPC teaser** | Done — 6–10 / 8–14 on Forecast |
 | 10 | **Mesonet** | Done — regional ASOS strip on More |
 | — | **Climate polish** | Done — low + precip anomaly on day cards |
@@ -203,7 +208,14 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Deploy** | Push v180 when ready |
+| 1 | **Deploy** | Push v181 when ready |
+
+### v181 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| — | MRMS + velocity dual-pane | Done |
+| — | README sync (v174–v180) | Done |
 
 ### v180 (shipped)
 
@@ -325,7 +337,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v180'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v181'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |

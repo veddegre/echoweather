@@ -511,15 +511,20 @@ panels appear in one scrollable page with a compacting sticky header.
 ### Forecast
 
 - **5-Day Forecast** — Day cards with condition text, high/low and time-of-extrema,
-  rain/wind meta, and an **hour-by-hour sky-condition strip** (clear, partly
+  rain/wind/snow meta, **climate anomaly** (vs 10-yr normals) and **record/near-record**
+  hints, and an **hour-by-hour sky-condition strip** (clear, partly
   cloudy, cloudy, fog, rain, snow, storm) with a color legend and readable
   light/dark/mobile palettes; temperature sparkline with hourly ticks; **now**
   marker on Today (distinct from storm red).
 - **Winter weather outlook** *(conditional)* — Snowfall, ice/freezing-rain
   signals, wind chill, and lake-effect wording when the forecast supports it.
 - **NWS precip probability strip** *(conditional)* — Compact hourly POP from the
-  NWS grid when today/tomorrow has meaningful rain or storm chances (full panel
-  in More).
+  NWS grid when today/tomorrow has meaningful rain or storm chances; **temp, wind,
+  and sky** strips when the grid supports them (full NBM panel in More).
+- **CPC extended outlook** *(US)* — 6–10 and 8–14 day temperature and
+  precipitation category at your location.
+- **U.S. Drought Monitor** *(US, when in drought)* — Current drought category
+  (D0–D4) at your location with link to the full map.
 - **Detailed Forecast** — NWS zone periods (US): days 1–3 inline, days 4–7 in
   expandable blocks.
 - **Observations vs NWS Forecast** — Latest station reading compared to the NWS
@@ -535,7 +540,10 @@ panels appear in one scrollable page with a compacting sticky header.
   **MRMS** composite (live CONUS), IEM NEXRAD base/composite (50‑min animation),
   or **nearest-site velocity** (live US).
 - **Reflectivity ↔ velocity toggle** — Quick switch between IEM base
-  reflectivity and nearest NEXRAD velocity.
+  reflectivity and nearest NEXRAD velocity; **dual pane** side-by-side compare
+  on IEM modes or **MRMS reflectivity + nearest-site velocity** (US).
+- **Shareable radar URLs** — Hash encodes mode, frame, and threat-layer toggles
+  (`#radar?mode=mrms&layers=warnings,watches,stormReports`).
 - **Animation** — Scrubber, play/pause, storm-window marker on the timeline,
   fullscreen expand, center on location.
 - **Lightning** — Optional live strike overlay (Blitzortung; connects only while
@@ -544,7 +552,8 @@ panels appear in one scrollable page with a compacting sticky header.
   polygons on the map), SPC Day 1 categorical and probabilistic tornado/hail/
   wind, **storm reports** (SPC CSV markers), **WPC excessive rainfall**, **SPC
   fire weather**, and NHC tropical systems.
-- **Storm mode banner** — Active warnings/watches, elevated SPC risk, overhead
+- **Storm mode banner** — Active warnings/watches with **expiration countdown**
+  when hazards end soon; elevated SPC risk, overhead
   mesoscale discussions, severe window, and CAPE-driven threat narrative.
   Quick actions: **Open radar**, **Severe window on timeline** (scrubs animated
   radar to the best storm window), **Nearest SPC report**, **Warning polygon**, and
@@ -557,9 +566,10 @@ panels appear in one scrollable page with a compacting sticky header.
 - **Fire weather banner** — Red Flag warnings, dry/windy conditions, or SPC fire
   outlook at your location.
 - **Convective outlook panel** — SPC Day 1–3 categorical risk; Day 1 tornado/
-  hail/wind probabilities; best storm window; nearby SPC reports; lake-effect
-  hints; mesoscale discussions with expandable discussion text; flood signal
-  when NWS text mentions heavy rain.
+  hail/wind probabilities; **Day 2/3 discussion excerpts**; best storm window;
+  nearby SPC reports; lake-effect hints; **SPC mesoanalysis / surface / sounding
+  links** when risk is elevated; mesoscale discussions with expandable text;
+  flood signal when NWS text mentions heavy rain.
 
 ### Impacts
 
@@ -593,6 +603,7 @@ panels appear in one scrollable page with a compacting sticky header.
 - **On the water** *(Great Lakes or coastal)* — Unified small-craft verdict with
   source attribution; wind from buoy or lake point when inland pin is far from shore.
 - **River gauges** *(US)* — USGS streamgages within ~30 mi with stage and flow;
+  **NWPS flood category** badges and AHPS hydrograph links when available;
   clear unavailable messaging when none are nearby or the API is down.
 
 ### More
@@ -606,6 +617,10 @@ panels appear in one scrollable page with a compacting sticky header.
   collapsible raw aviation code. Proxied at `/api/taf` (AviationWeather.gov
   blocks browser CORS).
 - **NWS Forecast Discussion** — Full AFD text for your forecast office.
+- **Regional mesonet** *(US)* — Horizontal strip of nearest ASOS observations
+  (temp and wind) within ~45 km.
+- **NBM grid** — NWS grid hourly temp, wind, sky, and precip probability when
+  available.
 
 ### Alerts & global UX
 
@@ -617,7 +632,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v173`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v181`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the
