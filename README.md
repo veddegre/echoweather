@@ -12,6 +12,10 @@ activity planner with NWS advisory awareness · 5-day visual forecast · METAR
 observations · SPC convective outlook · UV & air quality · Great Lakes &
 coastal · aviation TAF · installable PWA with offline cache
 
+**Recent (v196):** Deeper `panelUnavail` copy for RainViewer tiles, pollen,
+planner forecast gaps, loc-compare weather, and obs points; `climo.js`,
+`obs.js`, and `loc-compare.js` split out of `app.js` for maintenance.
+
 ```
   browser ──────────────▶  Apache (or php -S locally)
                               ├─ index.html, sw.js, …        (static PWA)
@@ -21,7 +25,8 @@ coastal · aviation TAF · installable PWA with offline cache
 `index.html` is the app shell — forecasts, radar, storm tracking, impacts,
 marine, alerts, and more, mostly fetched client-side from public APIs. Logic is
 split across `app.js` (core), `tabs.js`, `nav.js`, `impact.js`, `marine.js`, `air.js`,
-`forecast-extras.js`, `mesonet.js`, `aviation.js`, `storm.js`, `radar.js`, and `boot.js`.
+`forecast-extras.js`, `mesonet.js`, `climo.js`, `obs.js`, `loc-compare.js`, `aviation.js`,
+`storm.js`, `radar.js`, and `boot.js`.
 
 `api/*.php` is a thin PHP layer that:
 
@@ -45,6 +50,9 @@ split across `app.js` (core), `tabs.js`, `nav.js`, `impact.js`, `marine.js`, `ai
 | `air.js` | Air quality, pollen, UV & exposure |
 | `forecast-extras.js` | CPC/USDM teasers, NBM grid, AFD teaser and full panel |
 | `mesonet.js` | Regional ASOS strip (More + Radar storm row) |
+| `climo.js` | 10-yr climate normals, NWS CLI records, day-card anomaly hints |
+| `obs.js` | Observations vs NWS forecast, METAR 7-day history |
+| `loc-compare.js` | Saved location comparison with alerts + SPC badges |
 | `aviation.js` | Aviation METAR + TAF |
 | `storm.js` | SPC, storm mode, threat layers |
 | `radar.js` | Leaflet radar map and animation |
@@ -642,7 +650,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v195`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v196`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the

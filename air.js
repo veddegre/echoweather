@@ -520,8 +520,9 @@ async function loadAir(loc){
     }catch(e){
       $('aqiVerdict').textContent = 'unavailable';
       $('aqiDetail').innerHTML = panelUnavail('air_api');
-      $('pollenNote').textContent = 'Pollen forecast could not be loaded.';
-      renderPollenForecast(null, meteoDaily);
+      const pollenBox = $('pollenForecast');
+      if(pollenBox) pollenBox.innerHTML = panelUnavail('pollen_api');
+      $('pollenNote').textContent = '';
       $('airMetrics').innerHTML = '';
       $('airnowRow').style.display = 'none';
       syncSmokeRadarHint(null, null);

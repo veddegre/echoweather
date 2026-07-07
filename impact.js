@@ -1236,11 +1236,11 @@ function renderActivityPlanner(d){
   if(!d || !d.hourly || !d.hourly.time || !d.hourly.time.length){
     if(box){
       box.classList.remove('is-loading');
-      box.textContent = 'Forecast required for activity planner.';
+      box.innerHTML = panelUnavail('planner_forecast');
     }
     if(impactBox){
       impactBox.classList.remove('is-loading');
-      impactBox.textContent = 'Forecast required for impact hours.';
+      impactBox.innerHTML = panelUnavail('planner_forecast');
     }
     if(summary) summary.hidden = true;
     if(impactSummary) impactSummary.hidden = true;

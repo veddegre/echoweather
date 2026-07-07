@@ -271,7 +271,13 @@ function primeRadarLoad(){
 }
 function onRainviewerTileError(){
   rainviewerTileErrors++;
-  if(rainviewerTileErrors < 5 || radarMode !== 'rainviewer') return;
+  if(radarMode !== 'rainviewer') return;
+  const note = $('radarNote');
+  if(rainviewerTileErrors >= 3 && rainviewerTileErrors < 5){
+    if(note) note.textContent = 'RainViewer tiles intermittent — if the map stays blank, switch radar source.';
+    return;
+  }
+  if(rainviewerTileErrors < 5) return;
   rainviewerTileErrors = 0;
   radarMode = 'iem-n0q';
   saveLocRadarPrefs();
@@ -1193,6 +1199,7 @@ async function loadRainViewerRadar(loadId){
   $('radarSat').classList.remove('on');
   const r = await fetch('https://api.rainviewer.com/public/weather-maps.json');
   if(loadId !== radarLoadId) return;
+  if(!r.ok) throw new Error('rainviewer_api');
   const j = await r.json();
   setRadarAnimControls(true);
   radarHost = j.host;
@@ -1230,7 +1237,9 @@ async function loadRadar(){
     }catch(e){
       if(loadId !== radarLoadId) return;
       $('radarTime').textContent = 'Radar unavailable';
-      setPanelUnavail($('radarNote'), 'radar_load');
+      const code = (radarMode === 'rainviewer' && String(e.message).includes('rainviewer'))
+        ? 'rainviewer_api' : 'radar_load';
+      setPanelUnavail($('radarNote'), code);
       console.error('radar', e);
     }finally{
       if(loadId === radarLoadId) syncRadarDualUi();

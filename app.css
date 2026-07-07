@@ -557,6 +557,7 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .radar-site-btn{font-size:.75rem;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);cursor:pointer}
 .radar-site-btn[hidden]{display:none}
 .threat-layer-status{margin:6px 0 0;font-size:.6875rem;line-height:1.35}
+.lc-wx-unavail{font-size:.6875rem;color:var(--dim);line-height:1.35}
 .nbm-section{margin-bottom:14px}
 .nbm-section:last-child{margin-bottom:0}
 .day-card-meta .day-snow{color:var(--sky)}
