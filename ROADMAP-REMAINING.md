@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v176** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=176` in `index.html`).
+**Current version: v180** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=180` in `index.html`).
 
 ---
 
@@ -19,7 +19,17 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ## What is shipped (v136–v163)
 
-### v176 (latest)
+### v180 (latest)
+- **USDM drought teaser** — U.S. Drought Monitor category at your location on Forecast
+- **Daily record hints** — 10-yr record/near-record high and low on 5-day cards
+
+### v179
+- **Dual-pane radar** — side-by-side reflectivity + velocity on IEM NEXRAD
+- **CPC teaser** — 6–10 / 8–14 day temp & precip outlook on Forecast
+- **Regional mesonet** — nearest ASOS strip on More tab
+- **Climo polish** — low + precip anomaly vs 10-yr normals on day cards
+
+### v176
 - **AHPS at streamgages** — NWPS flood category badges + hydrograph links per USGS gauge (`marine.js`)
 - **Snow accumulation** — hourly/daily snow on 5-day cards; 48h/72h storm totals in winter outlook
 - **NBM grid expansion** — temp, wind, sky + POP in forecast strip and More panel
@@ -156,16 +166,24 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 |-------|-------|--------|
 | **v174** | Alert expiration · shareable radar URLs · SPC meso links · Day 2/3 discussions | **Shipped** |
 | **v175–v176** | AHPS streamgages · snow accumulation · NBM grid expansion · loc compare fix | **Shipped** (v176) |
-| **v177** | Dual-pane radar · CPC teaser · mesonet · climo polish | Planned |
+| **v177–v179** | Dual-pane radar · CPC teaser · mesonet · climo polish | **Shipped** (v179) |
+| **v180** | USDM drought · daily record hints | **Shipped** |
+| **v180+** | Further refinement / deploy | Planned |
 
-#### v177 detail (next)
+### v179 (latest)
+- **Dual-pane radar** — side-by-side reflectivity + velocity on IEM NEXRAD (Dual pane button)
+- **CPC teaser** — 6–10 / 8–14 day temp & precip outlook at your location on Forecast
+- **Regional mesonet** — nearest ASOS strip on More tab
+- **Climo polish** — low + precip anomaly vs 10-yr normals on day cards
 
-| # | Item | Notes |
+### v177 detail (shipped in v179)
+
+| # | Item | Status |
 |---|------|--------|
-| 5 | **Dual-pane radar** | Side-by-side or swipe compare (e.g. reflectivity + velocity, or two sites) |
-| 8 | **CPC teaser** | CPC 6–10 / 8–14 day outlook excerpt on Forecast or More |
-| 10 | **Mesonet** | Regional mesonet strip or map layer for enthusiasts |
-| — | **Climate polish** | Low/precip anomaly vs 10-yr normals; optional USDM / daily records later |
+| 5 | **Dual-pane radar** | Done — IEM NEXRAD reflectivity + velocity |
+| 8 | **CPC teaser** | Done — 6–10 / 8–14 on Forecast |
+| 10 | **Mesonet** | Done — regional ASOS strip on More |
+| — | **Climate polish** | Done — low + precip anomaly on day cards |
 
 #### v175–v176 detail (shipped)
 
@@ -175,18 +193,33 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | 3 | **Winter snow accumulation** | Snow on 5-day cards; 48h/72h totals in winter outlook |
 | 9 | **NBM beyond POP** | Temp, wind, sky strips from NWS grid hourly (Forecast + More) |
 
-### Climate (already partial)
+### Climate
 
-**Shipped:** `fetchClimoNormals()` + `dayClimoAnomaly()` — 10-year Open-Meteo archive; “+N° vs 10-yr avg high” on 5-day cards.
+**Shipped:** `fetchClimoNormals()` + `dayClimoAnomaly()` — 10-year Open-Meteo archive; high/low/precip anomaly vs 10-yr normals on 5-day cards; CPC 6–10 / 8–14 teaser; USDM drought teaser; 10-yr record/near-record hints on day cards.
 
-**Not yet:** CPC outlooks (#8), low/precip anomaly, USDM drought, daily record highs/lows. Target **v177** with CPC + climo polish.
+**Not yet:** Official NWS daily records (would need station-specific NCEI data).
 
 ### Suggested next batch
 
 | # | Item | Notes |
 |---|------|--------|
-| 1 | **Deploy** | Push v176 when ready |
-| 2 | **v177** | Dual-pane radar, CPC teaser, mesonet (former v176 items 5, 8, 10) |
+| 1 | **Deploy** | Push v180 when ready |
+
+### v180 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| — | USDM drought teaser | Done |
+| — | Daily record / near-record hints | Done |
+
+### v179 (shipped)
+
+| # | Item | Status |
+|---|------|--------|
+| 5 | Dual-pane radar | Done |
+| 8 | CPC 6–10 / 8–14 teaser | Done |
+| 10 | Regional mesonet ASOS strip | Done |
+| — | Climo low + precip anomaly | Done |
 
 ### v176 (shipped)
 
@@ -292,7 +325,7 @@ The original phased roadmap (Phases 1–4) is **largely complete**. Remaining wo
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v176'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v180'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |

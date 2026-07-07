@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=178">
+<link rel="stylesheet" href="app.css?v=180">
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -175,6 +175,8 @@
       </div>
       <div id="winterOutlook" hidden aria-label="Winter weather outlook"></div>
       <div id="forecastAfdTeaser" hidden aria-live="polite"></div>
+      <div id="forecastCpcTeaser" class="forecast-cpc-teaser" hidden aria-live="polite"></div>
+      <div id="forecastUsdmTeaser" class="forecast-usdm-teaser" hidden aria-live="polite"></div>
       <div id="forecastNbmStrip" class="forecast-nbm-strip" hidden aria-live="polite"></div>
       <div class="daily" id="daily"></div>
     </section>
@@ -198,9 +200,19 @@
         <div class="radar-wrap">
           <div class="radar-map-tools">
             <button type="button" class="radar-map-btn" id="radarCenterBtn" aria-label="Center map on location">Center</button>
+            <button type="button" class="radar-map-btn" id="radarDualBtn" aria-label="Toggle dual-pane reflectivity and velocity" hidden>Dual pane</button>
             <button type="button" class="radar-map-btn" id="radarExpandBtn" aria-label="Expand radar fullscreen">Expand</button>
           </div>
-          <div id="radar"></div>
+          <div class="radar-panes" id="radarPanes">
+            <div class="radar-pane radar-pane-a">
+              <div class="radar-pane-lbl" id="radarPaneLblA" hidden>Reflectivity</div>
+              <div id="radar"></div>
+            </div>
+            <div class="radar-pane radar-pane-b" id="radarPaneB" hidden>
+              <div class="radar-pane-lbl" id="radarPaneLblB">Velocity</div>
+              <div id="radarB"></div>
+            </div>
+          </div>
           <div class="radar-legend" aria-hidden="true">
             <div>Reflectivity (dBZ)</div>
             <div class="bar"></div>
@@ -431,6 +443,12 @@
       <div class="loc-compare" id="locCompare"></div>
     </section>
 
+    <section class="panel full nav-target" id="mesonetPanel" data-tab="more" aria-label="Regional mesonet" hidden>
+      <h2>Regional mesonet <span class="panel-status" id="mesonetStatus"></span></h2>
+      <p class="activity-lede">Latest ASOS observations within ~30 mi — quick regional temperature and wind context.</p>
+      <div id="mesonetBody" class="mesonet-strip radar-note">Loading&hellip;</div>
+    </section>
+
     <section class="panel full nav-target" id="nbmPanel" data-tab="more" aria-label="NWS grid hourly forecast" hidden>
       <h2>NWS grid hourly <span class="panel-status" id="nbmStatus"></span></h2>
       <p class="activity-lede" id="nbmLede">Precip probability, temperature, wind, and sky from the NWS grid forecast at your location.</p>
@@ -504,14 +522,14 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=178"></script>
-<script src="nav.js?v=178"></script>
-<script src="impact.js?v=178"></script>
-<script src="marine.js?v=178"></script>
-<script src="air.js?v=178"></script>
-<script src="aviation.js?v=178"></script>
-<script src="storm.js?v=178"></script>
-<script src="radar.js?v=178"></script>
-<script src="boot.js?v=178"></script>
+<script src="app.js?v=180"></script>
+<script src="nav.js?v=180"></script>
+<script src="impact.js?v=180"></script>
+<script src="marine.js?v=180"></script>
+<script src="air.js?v=180"></script>
+<script src="aviation.js?v=180"></script>
+<script src="storm.js?v=180"></script>
+<script src="radar.js?v=180"></script>
+<script src="boot.js?v=180"></script>
 </body>
 </html>

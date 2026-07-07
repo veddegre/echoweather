@@ -369,7 +369,14 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-card-summary-only .day-cond-strip{opacity:.85}
 .day-card-note{font-size:.625rem;color:var(--dim);margin-top:6px;text-align:center}
 #radar{width:100%;height:380px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
-#radar .leaflet-container{width:100%;height:100%;border-radius:inherit}
+#radarB{width:100%;height:380px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
+#radar .leaflet-container,#radarB .leaflet-container{width:100%;height:100%;border-radius:inherit}
+.radar-panes{display:block}
+.radar-panes.dual-pane{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.radar-panes.dual-pane .radar-pane{min-width:0}
+.radar-pane-lbl{font-size:.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);margin-bottom:4px}
+.radar-panes.dual-pane #radar,.radar-panes.dual-pane #radarB{height:300px}
+.radar-map-btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
 .radar-stage{display:flex;flex-direction:column;gap:10px}
 .radar-map-tools{position:absolute;top:10px;right:10px;z-index:600;display:flex;flex-direction:column;gap:6px}
 .radar-map-btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:6px 12px;font-size:.75rem;font-weight:600;box-shadow:var(--card-shadow);white-space:nowrap}
@@ -377,6 +384,7 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 body.radar-expanded{overflow:hidden}
 .radar-stage.expanded{position:fixed;inset:0;z-index:2000;background:var(--bg);padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px}
 .radar-stage.expanded .radar-wrap{flex:1;min-height:0}
+.radar-stage.expanded .radar-panes.dual-pane #radar,.radar-stage.expanded .radar-panes.dual-pane #radarB{height:100%!important}
 .radar-stage.expanded #radar{height:100%!important}
 .radar-stage.expanded .radar-ctl{flex-shrink:0}
 .radar-ctl{display:flex;flex-direction:column;gap:10px;margin-top:12px;align-items:stretch}
@@ -516,6 +524,22 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .forecast-nbm-hour .nbm-sub{color:var(--mut);font-size:.625rem;display:block;margin-top:2px;line-height:1.25}
 .forecast-nbm-hour .nbm-pop{color:var(--sky);font-size:.6875rem;font-weight:600;display:block;margin-top:3px}
 .forecast-nbm-hour.high{border-color:color-mix(in srgb,var(--warn) 55%,var(--line));background:color-mix(in srgb,var(--warn) 8%,var(--panel))}
+.forecast-cpc-teaser{margin:12px 0 4px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.forecast-usdm-teaser{margin:8px 0 4px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.forecast-usdm-teaser.drought-warn{border-color:#c9a227;background:color-mix(in srgb,var(--panel-2) 88%,#c9a227 12%)}
+.forecast-usdm-lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.forecast-usdm-val{font-size:.8125rem;line-height:1.4}
+.forecast-cpc-lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.cpc-rows{display:flex;flex-direction:column;gap:6px}
+.cpc-row{display:flex;justify-content:space-between;gap:12px;font-size:.8125rem;line-height:1.35}
+.cpc-lbl{color:var(--mut);font-weight:500;flex-shrink:0}
+.cpc-val{color:var(--ink);font-weight:600;text-align:right}
+.mesonet-strip{margin-top:4px}
+.mesonet-hours{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.mesonet-hour{flex:0 0 auto;min-width:5rem;padding:8px 10px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-size:.75rem;line-height:1.35}
+.mesonet-hour .k{color:var(--dim);font-size:.6875rem;display:block;margin-bottom:2px}
+.mesonet-hour .v{font-weight:600;font-variant-numeric:tabular-nums;display:block}
+.mesonet-hour .mesonet-wind{color:var(--mut);font-size:.625rem;display:block;margin-top:2px}
 .nbm-section{margin-bottom:14px}
 .nbm-section:last-child{margin-bottom:0}
 .day-card-meta .day-snow{color:var(--sky)}
@@ -536,6 +560,8 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .storm-report-filters button{padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--mut);font-size:.6875rem;font-weight:600;cursor:pointer}
 .storm-report-filters button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .day-anomaly{font-size:.75rem;color:var(--dim);margin-top:4px}
+.day-record{font-size:.75rem;color:var(--mut);margin-top:2px}
+.day-record.is-record{color:#c9a227;font-weight:500}
 .day-precip-win{font-size:.75rem;color:var(--sky);margin-top:2px}
 .afd-highlight{margin:0 0 12px;padding:12px 14px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);font-size:.8125rem;line-height:1.5;color:var(--ink)}
 .afd-highlight .lbl{font-size:.6875rem;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}

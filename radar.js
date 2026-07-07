@@ -11,6 +11,9 @@ let iemVelocitySite = null;
 let iemLoadGen = 0;
 let mrmsLayer = null;
 let radarDeepFrame = null;
+let mapB = null, mapBMarker = null, basemapLayerB = null;
+let iemOverlayLayersB = [null, null], iemSlotFrameB = [-1, -1], iemOverlaySlotB = 0;
+let radarDualOn = false, mapSyncLock = false;
 const MRMS_WMS_URL = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows';
 let radarMode = store.get('st_radar_mode') || defaultRadarMode(state.locations[state.active]);
 const IEM_SUFFIXES = ['900913-m50m','900913-m45m','900913-m40m','900913-m35m','900913-m30m','900913-m25m','900913-m20m','900913-m15m','900913-m10m','900913-m05m','900913'];
@@ -222,7 +225,117 @@ function refreshRadarMapSize(){
       map.invalidateSize({ animate: false });
       sizeLightningCanvas();
     }
+    if(mapB) mapB.invalidateSize({ animate: false });
   });
+}
+function dualPaneAvailable(){
+  const loc = state.locations[state.active];
+  return !!(loc && isLikelyUS(loc) && (radarMode === 'iem-n0q' || radarMode === 'iem-n0u'));
+}
+function dualPaneSecondaryMode(){
+  return radarMode === 'iem-n0q' ? 'iem-n0u' : (radarMode === 'iem-n0u' ? 'iem-n0q' : null);
+}
+function syncMapBBasemap(){
+  if(!mapB) return;
+  const style = cssVar('--map-tiles') || (isDarkTheme() ? 'dark_all' : 'light_all');
+  const url = 'https://{s}.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}{r}.png';
+  if(basemapLayerB) mapB.removeLayer(basemapLayerB);
+  basemapLayerB = L.tileLayer(url, {
+    attribution: '\u00A9 OpenStreetMap \u00A9 CARTO', subdomains: 'abcd',
+    minZoom: RADAR_ZOOM.min, maxZoom: radarMaxZoom()
+  }).addTo(mapB);
+  basemapLayerB.bringToBack();
+  if(mapBMarker) mapBMarker.bringToFront();
+}
+function syncMapBFromA(){
+  if(mapSyncLock || !map || !mapB) return;
+  mapSyncLock = true;
+  mapB.setView(map.getCenter(), map.getZoom(), { animate: false });
+  mapSyncLock = false;
+}
+function syncMapAFromB(){
+  if(mapSyncLock || !map || !mapB) return;
+  mapSyncLock = true;
+  map.setView(mapB.getCenter(), mapB.getZoom(), { animate: false });
+  mapSyncLock = false;
+}
+function destroyMapB(){
+  if(!mapB) return;
+  if(map) map.off('moveend', syncMapBFromA);
+  mapB.off('moveend', syncMapAFromB);
+  mapB.remove();
+  mapB = null;
+  mapBMarker = null;
+  basemapLayerB = null;
+  iemOverlayLayersB = [null, null];
+  iemSlotFrameB = [-1, -1];
+  iemOverlaySlotB = 0;
+}
+function initMapB(){
+  const loc = state.locations[state.active];
+  if(!loc || !radarDualOn || !dualPaneAvailable()) return;
+  if(mapB){
+    mapB.setView([loc.lat, loc.lon], map ? map.getZoom() : RADAR_ZOOM.default);
+    if(mapBMarker) mapBMarker.setLatLng([loc.lat, loc.lon]);
+    syncMapBBasemap();
+    showDualPaneFrame(radarIdx);
+    return;
+  }
+  mapB = L.map('radarB', {
+    zoomControl: false,
+    minZoom: RADAR_ZOOM.min,
+    maxZoom: radarMaxZoom(),
+    attributionControl: false
+  }).setView([loc.lat, loc.lon], map ? map.getZoom() : RADAR_ZOOM.default);
+  syncMapBBasemap();
+  mapBMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(mapB);
+  if(map){
+    map.on('moveend', syncMapBFromA);
+    mapB.on('moveend', syncMapAFromB);
+  }
+  showDualPaneFrame(radarIdx);
+}
+function showDualPaneFrame(i){
+  if(!mapB || !radarDualOn || !dualPaneAvailable()) return;
+  const secMode = dualPaneSecondaryMode();
+  if(!secMode || !IEM_TILES[secMode]) return;
+  if(IEM_TILES[secMode].velocity && !iemVelocitySite) return;
+  const suffix = iemFrames[i] || iemFrames[iemFrames.length - 1] || '900913';
+  const name = iemLayerName(secMode, suffix);
+  if(!name) return;
+  hidePingPongLayers(iemOverlayLayersB);
+  const url = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + name + '/{z}/{x}/{y}.png';
+  const err = IEM_TILES[secMode].velocity ? onIemTileError : null;
+  iemOverlaySlotB = showPingPongFrame(iemOverlayLayersB, iemSlotFrameB, iemOverlaySlotB, i, url, 0.78, err, IEM_TILE_OPTS);
+  if(basemapLayerB) basemapLayerB.bringToBack();
+  if(mapBMarker) mapBMarker.bringToFront();
+}
+function syncRadarDualUi(){
+  const btn = $('radarDualBtn');
+  const paneB = $('radarPaneB');
+  const panes = $('radarPanes');
+  const lblA = $('radarPaneLblA');
+  const lblB = $('radarPaneLblB');
+  const avail = dualPaneAvailable();
+  if(btn){
+    btn.hidden = !avail;
+    btn.classList.toggle('on', radarDualOn && avail);
+  }
+  if(!avail) radarDualOn = false;
+  if(panes) panes.classList.toggle('dual-pane', radarDualOn && avail);
+  const aLbl = radarMode === 'iem-n0u' ? 'Velocity' : 'Reflectivity';
+  const bLbl = radarMode === 'iem-n0u' ? 'Reflectivity' : 'Velocity';
+  if(lblA){
+    lblA.textContent = aLbl;
+    lblA.hidden = !(radarDualOn && avail);
+  }
+  if(lblB){
+    lblB.textContent = bLbl;
+  }
+  if(paneB) paneB.hidden = !(radarDualOn && avail);
+  if(radarDualOn && avail) initMapB();
+  else destroyMapB();
+  refreshRadarMapSize();
 }
 function activateRadarPanel(){
   const loc = state.locations[state.active];
@@ -232,6 +345,7 @@ function activateRadarPanel(){
   refreshRadarMapSize();
   if(created || radarFrameCount() === 0) loadRadar();
   updateRadarLegend();
+  syncRadarDualUi();
   if(radarLightningOn) setLightningOverlay(true);
   else syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
   syncStormReportMarkers();
@@ -586,6 +700,7 @@ function finishIemRadarLoad(mode){
   syncStormReportMarkers();
   applyPendingRadarFrame();
   updateRadarHash();
+  syncRadarDualUi();
 }
 async function loadRainViewerRadar(loadId){
   const r = await fetch('https://api.rainviewer.com/public/weather-maps.json');
@@ -682,6 +797,7 @@ function showFrame(i){
   $('radarScrub').value = i;
   updateRadarStormMark();
   updateRadarHash();
+  if(radarDualOn) showDualPaneFrame(i);
 }
 $('radarMode').value = radarMode;
 $('radarMode').addEventListener('change', e => {
@@ -693,7 +809,22 @@ $('radarMode').addEventListener('change', e => {
   applyRadarZoomLimits();
   updateRadarLegend();
   loadRadar();
+  syncRadarDualUi();
 });
+const radarDualBtn = $('radarDualBtn');
+if(radarDualBtn){
+  radarDualBtn.addEventListener('click', async () => {
+    if(!dualPaneAvailable()) return;
+    radarDualOn = !radarDualOn;
+    if(radarDualOn && dualPaneSecondaryMode() === 'iem-n0u' && !iemVelocitySite){
+      const note = $('radarNote');
+      if(note) note.textContent = 'Resolving velocity site\u2026';
+      iemVelocitySite = await resolveIemVelocitySite();
+      if(note) note.textContent = radarNoteForMode();
+    }
+    syncRadarDualUi();
+  });
+}
 $('radarScrub').addEventListener('input', e => {
   stopRadarTimer();
   showFrame(Number(e.target.value));

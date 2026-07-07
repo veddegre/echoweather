@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '178';
+const APP_VERSION = '180';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -73,6 +73,7 @@ function applyTheme(mode){
   $('themeSystem').classList.toggle('on', mode === 'system');
   updateThemeColorMeta();
   syncMapBasemap();
+  if(typeof syncMapBBasemap === 'function') syncMapBBasemap();
   if(mapMarker){
     const c = cssVar('--accent') || '#3c91e6';
     mapMarker.setStyle({ color: c, fillColor: c });
@@ -83,6 +84,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
   if(state.theme === 'system'){
     updateThemeColorMeta();
     syncMapBasemap();
+    if(typeof syncMapBBasemap === 'function') syncMapBBasemap();
     if(state.data) renderLight(state.data);
   }
 });
@@ -1616,18 +1618,55 @@ function dayPrecipWindow(indices, hh){
   if(blocks.length === 1) return a === b ? 'Rain possible ~' + fmt(a) : 'Rain likely ' + fmt(a) + '\u2013' + fmt(b);
   return 'Rain possible at times';
 }
-function dayClimoAnomaly(dateStr, hi, lo){
+function dayClimoAnomaly(dateStr, hi, lo, precipMm){
   if(!climoNormals) return '';
   const key = dateStr.slice(5);
   const n = climoNormals[key];
-  if(!n || n.hi == null) return '';
+  if(!n) return '';
   const toDisp = c => state.units === 'F' ? Math.round(c * 9 / 5 + 32) : Math.round(c);
-  const dHi = toDisp(hi) - toDisp(n.hi);
-  if(Math.abs(dHi) < 3) return 'Near normal high';
-  return (dHi > 0 ? '+' : '') + dHi + '\u00B0 vs 10-yr avg high';
+  const parts = [];
+  if(n.hi != null){
+    const dHi = toDisp(hi) - toDisp(n.hi);
+    if(Math.abs(dHi) >= 3) parts.push((dHi > 0 ? '+' : '') + dHi + '\u00B0 vs 10-yr avg high');
+    else parts.push('Near normal high');
+  }
+  if(n.lo != null){
+    const dLo = toDisp(lo) - toDisp(n.lo);
+    if(Math.abs(dLo) >= 3) parts.push((dLo > 0 ? '+' : '') + dLo + '\u00B0 vs 10-yr avg low');
+  }
+  if(n.precip != null && precipMm != null && precipMm > 1){
+    const pNorm = state.units === 'F' ? n.precip / 25.4 : n.precip;
+    const pAct = state.units === 'F' ? precipMm / 25.4 : precipMm;
+    const dP = pAct - pNorm;
+    if(dP >= 0.15) parts.push('+' + dP.toFixed(2) + (state.units === 'F' ? ' in' : ' mm') + ' precip vs normal');
+    else if(dP <= -0.15) parts.push(dP.toFixed(2) + (state.units === 'F' ? ' in' : ' mm') + ' precip vs normal');
+  }
+  return parts.join(' \u00B7 ');
+}
+function dayClimoRecord(dateStr, hi, lo){
+  if(!climoNormals) return '';
+  const n = climoNormals[dateStr.slice(5)];
+  if(!n) return '';
+  const toDisp = c => state.units === 'F' ? Math.round(c * 9 / 5 + 32) : Math.round(c);
+  const hDisp = toDisp(hi);
+  const lDisp = toDisp(lo);
+  const parts = [];
+  if(n.recHi){
+    const rec = toDisp(n.recHi.v);
+    if(hDisp >= rec) parts.push({ text: 'Record high for date (' + rec + '\u00B0 in ' + n.recHi.year + ')', record: true });
+    else if(hDisp >= rec - 2) parts.push({ text: 'Near 10-yr high (' + rec + '\u00B0 in ' + n.recHi.year + ')', record: false });
+  }
+  if(n.recLo){
+    const rec = toDisp(n.recLo.v);
+    if(lDisp <= rec) parts.push({ text: 'Record low for date (' + rec + '\u00B0 in ' + n.recLo.year + ')', record: true });
+    else if(lDisp <= rec + 2) parts.push({ text: 'Near 10-yr low (' + rec + '\u00B0 in ' + n.recLo.year + ')', record: false });
+  }
+  if(!parts.length) return '';
+  const anyRec = parts.some(p => p.record);
+  return '<div class="day-record' + (anyRec ? ' is-record' : '') + '">' + esc(parts.map(p => p.text).join(' \u00B7 ')) + '</div>';
 }
 async function fetchClimoNormals(loc){
-  const cacheKey = 'st_climo_' + loc.lat.toFixed(1) + '_' + loc.lon.toFixed(1);
+  const cacheKey = 'st_climo3_' + loc.lat.toFixed(1) + '_' + loc.lon.toFixed(1);
   const hit = store.get(cacheKey);
   if(hit && Date.now() - hit.t < 30 * 24 * 3600 * 1000) return hit.data;
   const endYear = new Date().getFullYear() - 1;
@@ -1635,7 +1674,7 @@ async function fetchClimoNormals(loc){
   const url = 'https://archive-api.open-meteo.com/v1/archive'
     + '?latitude=' + Number(loc.lat).toFixed(4) + '&longitude=' + Number(loc.lon).toFixed(4)
     + '&start_date=' + startYear + '-01-01&end_date=' + endYear + '-12-31'
-    + '&daily=temperature_2m_max,temperature_2m_min&timezone=auto';
+    + '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto';
   try{
     const r = await fetch(url);
     if(!r.ok) return null;
@@ -1643,16 +1682,28 @@ async function fetchClimoNormals(loc){
     const byDoy = {};
     (j.daily?.time || []).forEach((t, i) => {
       const doy = t.slice(5);
-      if(!byDoy[doy]) byDoy[doy] = { hi: [], lo: [] };
+      if(!byDoy[doy]) byDoy[doy] = { hi: [], lo: [], precip: [] };
       const hi = j.daily.temperature_2m_max[i], lo = j.daily.temperature_2m_min[i];
-      if(hi != null) byDoy[doy].hi.push(hi);
-      if(lo != null) byDoy[doy].lo.push(lo);
+      const pr = j.daily.precipitation_sum?.[i];
+      const yr = t.slice(0, 4);
+      if(hi != null){
+        byDoy[doy].hi.push(hi);
+        if(!byDoy[doy].recHi || hi > byDoy[doy].recHi.v) byDoy[doy].recHi = { v: hi, year: yr };
+      }
+      if(lo != null){
+        byDoy[doy].lo.push(lo);
+        if(!byDoy[doy].recLo || lo < byDoy[doy].recLo.v) byDoy[doy].recLo = { v: lo, year: yr };
+      }
+      if(pr != null && pr > 0) byDoy[doy].precip.push(pr);
     });
     const normals = {};
     Object.keys(byDoy).forEach(doy => {
       const b = byDoy[doy];
       const avg = arr => arr.length ? arr.reduce((a, v) => a + v, 0) / arr.length : null;
-      normals[doy] = { hi: avg(b.hi), lo: avg(b.lo) };
+      normals[doy] = {
+        hi: avg(b.hi), lo: avg(b.lo), precip: avg(b.precip),
+        recHi: b.recHi || null, recLo: b.recLo || null
+      };
     });
     store.set(cacheKey, { t: Date.now(), data: normals });
     return normals;
@@ -1723,7 +1774,8 @@ function renderDaily(d){
     const gust = Math.round(dd.wind_gusts_10m_max[i]);
     const uv = (dd.uv_index_max[i] ?? 0).toFixed(0);
     const precipWin = dayPrecipWindow(indices, hh);
-    const anomaly = dayClimoAnomaly(t, hi, lo);
+    const anomaly = dayClimoAnomaly(t, hi, lo, dd.precipitation_sum?.[i]);
+    const record = dayClimoRecord(t, hi, lo);
     return '<article class="day-card' + (timeline.hourly ? '' : ' day-card-summary-only') + '" title="' + esc(cond) + ' · gusts ' + gust + ' ' + windUnit() + ' · UV ' + uv + '">'
       + '<div class="day-card-head">'
       + '<div class="day-card-title"><span class="day-ic" aria-hidden="true">' + icon + '</span>' + title
@@ -1735,6 +1787,7 @@ function renderDaily(d){
       + '</div>'
       + '<div class="day-summary">' + summary
       + (anomaly ? '<div class="day-anomaly">' + esc(anomaly) + '</div>' : '')
+      + (record || '')
       + (precipWin ? '<div class="day-precip-win">' + esc(precipWin) + '</div>' : '')
       + '</div>'
       + '<div class="day-timeline-wrap">'
@@ -2255,6 +2308,165 @@ async function loadForecastAfdTeaser(loc){
     box.innerHTML = '';
   }
 }
+const CPC_OUTLOOK_BASE = {
+  d610: 'https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/cpc_6_10_day_outlk/MapServer',
+  d814: 'https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/cpc_8_14_day_outlk/MapServer'
+};
+async function cpcOutlookAtPoint(loc, baseUrl){
+  const geom = loc.lon + ',' + loc.lat;
+  const q = baseUrl + '/{layer}/query?geometry=' + geom
+    + '&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects'
+    + '&outFields=cat,prob&returnGeometry=false&f=json';
+  const [tR, pR] = await Promise.all([fetch(q.replace('{layer}', '0')), fetch(q.replace('{layer}', '1'))]);
+  const pick = async r => {
+    if(!r.ok) return null;
+    const j = await r.json();
+    const a = j.features?.[0]?.attributes;
+    if(!a?.cat) return null;
+    return { cat: a.cat, prob: a.prob };
+  };
+  return { temp: await pick(tR), precip: await pick(pR) };
+}
+function cpcOutlookLine(label, temp, precip){
+  const parts = [];
+  if(temp?.cat) parts.push('temp ' + String(temp.cat).toLowerCase() + (temp.prob != null ? ' ' + Math.round(temp.prob) + '%' : ''));
+  if(precip?.cat) parts.push('precip ' + String(precip.cat).toLowerCase() + (precip.prob != null ? ' ' + Math.round(precip.prob) + '%' : ''));
+  if(!parts.length) return '';
+  return '<div class="cpc-row"><span class="cpc-lbl">' + esc(label) + '</span><span class="cpc-val">' + esc(parts.join(' \u00B7 ')) + '</span></div>';
+}
+let forecastCpcGen = 0;
+async function loadForecastCpcTeaser(loc){
+  const box = $('forecastCpcTeaser');
+  if(!box) return;
+  if(!isLikelyUS(loc)){ box.hidden = true; box.innerHTML = ''; return; }
+  const gen = ++forecastCpcGen;
+  box.hidden = false;
+  box.innerHTML = '<div class="forecast-cpc-lbl">CPC extended outlook</div><div class="radar-note">Loading\u2026</div>';
+  try{
+    const [d610, d814] = await Promise.all([
+      cpcOutlookAtPoint(loc, CPC_OUTLOOK_BASE.d610),
+      cpcOutlookAtPoint(loc, CPC_OUTLOOK_BASE.d814)
+    ]);
+    if(gen !== forecastCpcGen) return;
+    const rows = cpcOutlookLine('Days 6\u201310', d610.temp, d610.precip)
+      + cpcOutlookLine('Days 8\u201314', d814.temp, d814.precip);
+    if(!rows){
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    box.innerHTML = '<div class="forecast-cpc-lbl">CPC extended outlook at your location</div>'
+      + '<div class="cpc-rows">' + rows + '</div>'
+      + '<p class="radar-note" style="margin-top:8px"><a href="https://www.cpc.ncep.noaa.gov/products/predictions/long_range/" target="_blank" rel="noopener">Full CPC outlook maps \u2192</a></p>';
+  }catch(e){
+    if(gen !== forecastCpcGen) return;
+    box.hidden = true;
+    box.innerHTML = '';
+    console.warn('cpcTeaser', e);
+  }
+}
+const USDM_QUERY = 'https://services5.arcgis.com/0OTVzJS4K09zlixn/arcgis/rest/services/USDM_current/FeatureServer/0/query';
+const USDM_LABELS = ['', 'Abnormally dry (D0)', 'Moderate drought (D1)', 'Severe drought (D2)', 'Extreme drought (D3)', 'Exceptional drought (D4)'];
+async function usdmAtPoint(loc){
+  const cacheKey = 'st_usdm_' + loc.lat.toFixed(1) + '_' + loc.lon.toFixed(1);
+  const hit = store.get(cacheKey);
+  if(hit && Date.now() - hit.t < 7 * 24 * 3600 * 1000) return hit.data;
+  const geom = loc.lon + ',' + loc.lat;
+  const url = USDM_QUERY + '?geometry=' + geom
+    + '&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects'
+    + '&outFields=DM,MapDate&returnGeometry=false&f=json';
+  const r = await fetch(url);
+  if(!r.ok) return null;
+  const j = await r.json();
+  const a = j.features?.[0]?.attributes;
+  if(!a || a.DM == null || a.DM < 1){
+    store.set(cacheKey, { t: Date.now(), data: null });
+    return null;
+  }
+  const data = {
+    dm: a.DM,
+    label: USDM_LABELS[a.DM] || ('Drought level D' + (a.DM - 1)),
+    mapDate: a.MapDate ? new Date(a.MapDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+  };
+  store.set(cacheKey, { t: Date.now(), data });
+  return data;
+}
+let forecastUsdmGen = 0;
+async function loadForecastUsdmTeaser(loc){
+  const box = $('forecastUsdmTeaser');
+  if(!box) return;
+  if(!isLikelyUS(loc)){ box.hidden = true; box.innerHTML = ''; return; }
+  const gen = ++forecastUsdmGen;
+  box.hidden = false;
+  box.innerHTML = '<div class="forecast-usdm-lbl">U.S. Drought Monitor</div><div class="radar-note">Loading\u2026</div>';
+  try{
+    const usdm = await usdmAtPoint(loc);
+    if(gen !== forecastUsdmGen) return;
+    if(!usdm){
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    const warn = usdm.dm >= 3;
+    box.className = 'forecast-usdm-teaser' + (warn ? ' drought-warn' : '');
+    box.innerHTML = '<div class="forecast-usdm-lbl">U.S. Drought Monitor at your location</div>'
+      + '<div class="forecast-usdm-val">' + esc(usdm.label)
+      + (usdm.mapDate ? ' <span class="radar-note">(map ' + esc(usdm.mapDate) + ')</span>' : '')
+      + '</div>'
+      + '<p class="radar-note" style="margin-top:6px"><a href="https://droughtmonitor.unl.edu/" target="_blank" rel="noopener">Full drought map \u2192</a></p>';
+  }catch(e){
+    if(gen !== forecastUsdmGen) return;
+    box.hidden = true;
+    box.innerHTML = '';
+    console.warn('usdmTeaser', e);
+  }
+}
+async function loadMesonetStrip(loc){
+  const panel = $('mesonetPanel'), body = $('mesonetBody');
+  if(!panel || !body) return;
+  if(!isLikelyUS(loc)){ panel.hidden = true; return; }
+  return panelTask('mesonetPanel', 'mesonetStatus', async () => {
+    panel.hidden = false;
+    body.className = 'mesonet-strip';
+    body.textContent = 'Loading regional observations\u2026';
+    try{
+      const r = await nwsFetch('https://api.weather.gov/stations?latitude=' + loc.lat + '&longitude=' + loc.lon + '&radius=45');
+      if(!r.ok) throw new Error('stations');
+      const feats = (await r.json()).features || [];
+      const stations = feats.map(f => {
+        const p = f.properties || {};
+        return { id: p.stationIdentifier, name: p.name || p.stationIdentifier };
+      }).filter(s => s.id).slice(0, 6);
+      if(!stations.length){
+        body.innerHTML = panelUnavail('no_station');
+        return;
+      }
+      const rows = await Promise.all(stations.map(async s => {
+        try{
+          const or = await nwsFetch('https://api.weather.gov/stations/' + encodeURIComponent(s.id) + '/observations/latest');
+          if(!or.ok) return { ...s, temp: null, wind: null };
+          const o = (await or.json()).properties || {};
+          const tc = nwsVal(o.temperature);
+          const temp = tc != null
+            ? (state.units === 'F' ? Math.round(tc * 9 / 5 + 32) : Math.round(tc))
+            : null;
+          const wspd = msToDisp(nwsVal(o.windSpeed));
+          const wdir = o.windDirection?.value != null ? compass(o.windDirection.value) : '';
+          const wind = wspd != null ? (wdir ? wdir + ' ' : '') + wspd + ' ' + windUnit() : null;
+          return { ...s, temp, wind };
+        }catch(e){ return { ...s, temp: null, wind: null }; }
+      }));
+      body.innerHTML = '<div class="mesonet-hours">' + rows.map(row =>
+        '<div class="mesonet-hour"><span class="k">' + esc(row.id.replace(/^K/, '')) + '</span>'
+        + '<span class="v">' + (row.temp != null ? row.temp + degSym() : '\u2014') + '</span>'
+        + '<span class="mesonet-wind">' + esc(row.wind || '\u2014') + '</span></div>'
+      ).join('') + '</div>';
+    }catch(e){
+      setPanelUnavail(body, 'api_error');
+      console.warn('mesonet', e);
+    }
+  });
+}
 async function loadAFD(loc){
   return panelTask('afdPanel', 'afdStatus', async () => {
     const a = $('afdLink');
@@ -2658,6 +2870,8 @@ function ensureTabPanels(tab){
     loadObs(loc);
     loadClimoNormals(loc);
     loadForecastAfdTeaser(loc);
+    loadForecastCpcTeaser(loc);
+    loadForecastUsdmTeaser(loc);
     loadForecastNbmStrip(loc, d);
   }
   if((all || tab === 'radar') && !tabPanelsLoaded.radar){
@@ -2675,6 +2889,7 @@ function ensureTabPanels(tab){
     renderMoon(loc);
     renderLocCompare();
     loadNbm(loc);
+    loadMesonetStrip(loc);
     loadTaf(loc);
     loadAFD(loc);
   }
