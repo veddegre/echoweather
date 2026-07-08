@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '205';
+const APP_VERSION = '206';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2331,6 +2331,24 @@ const SW_BG_READY = 'sw-bg-ready';
 function isStandalonePwa(){
   return window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
+}
+
+function initPullToRefreshGuard(){
+  if(isStandalonePwa() || !isMobileTabLayout()) return;
+  const scrollParents = '.hourly-strip,.impact-section-nav,.mesonet-hours,.forecast-nbm-hours,.pollen-days-row,.leaflet-container,.activity-bar-wrap';
+  let startY = 0;
+  document.addEventListener('touchstart', e => {
+    if(e.touches.length !== 1) return;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if(e.touches.length !== 1) return;
+    const t = e.target;
+    if(t && t.closest && t.closest(scrollParents)) return;
+    const y = e.touches[0].clientY;
+    const scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
+    if(scrollTop <= 0 && y > startY + 6) e.preventDefault();
+  }, { passive: false });
 }
 
 function isIosDevice(){

@@ -19,6 +19,7 @@ $('unitC').classList.toggle('on', state.units === 'C');
 applyTheme(state.theme);
 initPageNav();
 setupInstallHint();
+initPullToRefreshGuard();
 migrateAppVersion().then(() => initServiceWorker());
 probeServerIntegrations().then(async () => {
   await initFirstLocation();
