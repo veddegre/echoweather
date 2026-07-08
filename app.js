@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '213';
+const APP_VERSION = '218';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -366,6 +366,41 @@ function nowMinsInTz(tz){
     if(p.type === 'minute') m = +p.value;
   }
   return h * 60 + m;
+}
+function todayKeyInTz(tz){
+  return new Date().toLocaleDateString('en-CA', {
+    timeZone: tz || Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+}
+function forecastDayKey(iso){
+  return iso ? String(iso).slice(0, 10) : '';
+}
+function forecastWallMins(iso){
+  if(!iso || iso.length < 13) return 0;
+  return (+iso.slice(11, 13)) * 60 + (+(iso.slice(14, 16) || 0));
+}
+function forecastHour(iso){
+  if(!iso || iso.length < 13) return 0;
+  return +iso.slice(11, 13);
+}
+function dayDiffKeys(fromKey, toKey){
+  if(!fromKey || !toKey || fromKey === toKey) return 0;
+  const [y1, m1, d1] = fromKey.split('-').map(Number);
+  const [y2, m2, d2] = toKey.split('-').map(Number);
+  return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000);
+}
+function dateKeyAddDays(key, delta){
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10);
+}
+function isForecastToday(dateStr, tz){
+  return forecastDayKey(dateStr) === todayKeyInTz(tz);
+}
+function dayLabelFromDate(dateStr, tz){
+  const diff = dayDiffKeys(todayKeyInTz(tz), forecastDayKey(dateStr));
+  if(diff === 0) return 'Today';
+  if(diff === 1) return 'Tomorrow';
+  return fmtDayWeekday(dateStr);
 }
 function fmtSunDuration(mins){
   const m = Math.max(0, Math.round(mins));
@@ -762,33 +797,130 @@ $('searchInput').addEventListener('keydown', e => {
 
 // ---------- geolocation (auto on first visit, on open, or via geo button) ----------
 const GEO_MAX_AUTO_ACCURACY_MI = 20;
+const GEO_MAX_MANUAL_ACCURACY_MI = 50;
 const GEO_TELEPORT_REJECT_MI = 350;
+const GEO_MANUAL_TRUST_MI = 5;
+let lastGeoRejectReason = '';
 function geoAccuracyMi(pos){
   const m = pos?.accuracy;
   return m != null && !isNaN(m) ? m / 1609.344 : null;
 }
-function geoConflictsTimezone(lat, lon){
+function isCentralAmericaIpBand(lat, lon){
+  return lat < 17 && lon > -125 && lon < -65;
+}
+function userContextSuggestsUS(prevLoc){
   try{
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    if(!/^America\//.test(tz)) return false;
-    // US/Canada tz with Central America / northern SA coords → bad IP geolocation
-    return lat < 17 && lon > -125 && lon < -65;
-  }catch(e){ return false; }
+    if(/^America\//.test(tz)) return true;
+    const lang = (navigator.language || '').toLowerCase();
+    if(/^en(-us)?$/.test(lang)) return true;
+  }catch(e){}
+  if(prevLoc){
+    const cc = (prevLoc.country || '').toUpperCase();
+    if(cc === 'US' || cc === 'CA') return true;
+    if(isLikelyUS(prevLoc)) return true;
+  }
+  return false;
+}
+function geoNameSuggestsCentralAmerica(geo){
+  const n = String(geo?.name || '').toLowerCase();
+  return /san salvador|guatemala city|guatemala|tegucigalpa|managua|belize|san pedro sula|el salvador/.test(n);
+}
+function geoLikelySpuriousDesktopFix(lat, lon, prevLoc){
+  if(!isCentralAmericaIpBand(lat, lon)) return false;
+  return userContextSuggestsUS(prevLoc);
+}
+function geoBrowserNote(){
+  if(!/Firefox\//i.test(navigator.userAgent)) return '';
+  return ' Firefox often reports wrong desktop locations (WiFi/IP database) — search is most reliable.';
+}
+function geoRejectReason(pos, prevLoc, newGeo, opts){
+  const accMi = geoAccuracyMi(pos);
+  const spurious = geoLikelySpuriousDesktopFix(pos.lat, pos.lon, prevLoc)
+    || (geoNameSuggestsCentralAmerica(newGeo) && userContextSuggestsUS(prevLoc));
+  if(spurious){
+    if(opts?.manual){
+      return 'Browser placed you in Central America (likely wrong IP location on desktop). Search for your city instead.'
+        + geoBrowserNote();
+    }
+    return 'Ignored coarse location fix in Central America';
+  }
+  if(accMi != null && accMi > (opts?.manual ? GEO_MAX_MANUAL_ACCURACY_MI : GEO_MAX_AUTO_ACCURACY_MI)){
+    return 'Location fix too coarse (' + Math.round(accMi) + ' mi) — use search on desktop';
+  }
+  if(prevLoc){
+    const dist = haversineMi(prevLoc.lat, prevLoc.lon, pos.lat, pos.lon);
+    const prevUS = prevLoc.country === 'US' || (isLikelyUS(prevLoc) && !prevLoc.country);
+    const newCC = (newGeo?.country || '').toUpperCase();
+    if(dist > GEO_TELEPORT_REJECT_MI && (accMi == null || accMi > 12)){
+      return 'Ignored implausible jump (' + Math.round(dist) + ' mi away)';
+    }
+    if(prevUS && newCC && newCC !== 'US' && newCC !== 'CA' && (accMi == null || accMi > GEO_MANUAL_TRUST_MI)){
+      return 'Ignored overseas fix while your saved location is in the US — use search if you traveled';
+    }
+  }
+  return 'Location unavailable — use search or "lat, lon"';
 }
 function acceptGeoUpdate(pos, prevLoc, newGeo, opts){
+  lastGeoRejectReason = '';
   if(!pos || !Number.isFinite(pos.lat) || !Number.isFinite(pos.lon)) return false;
-  if(opts?.manual) return true;
   const accMi = geoAccuracyMi(pos);
+  const spurious = geoLikelySpuriousDesktopFix(pos.lat, pos.lon, prevLoc)
+    || (geoNameSuggestsCentralAmerica(newGeo) && userContextSuggestsUS(prevLoc));
+  const prevUS = prevLoc && (prevLoc.country === 'US' || (isLikelyUS(prevLoc) && !prevLoc.country));
+  const newCC = (newGeo?.country || '').toUpperCase();
+  const nonUS = newCC && newCC !== 'US' && newCC !== 'CA';
+  const highTrust = accMi != null && accMi <= GEO_MANUAL_TRUST_MI;
+
+  if(spurious){
+    if(opts?.manual){
+      if(!highTrust){
+        lastGeoRejectReason = geoRejectReason(pos, prevLoc, newGeo, opts);
+        return false;
+      }
+    }else{
+      lastGeoRejectReason = geoRejectReason(pos, prevLoc, newGeo, opts);
+      return false;
+    }
+  }
+  if(opts?.manual){
+    if(accMi != null && accMi > GEO_MAX_MANUAL_ACCURACY_MI){
+      lastGeoRejectReason = geoRejectReason(pos, prevLoc, newGeo, opts);
+      return false;
+    }
+    if(prevLoc && prevUS && nonUS){
+      const dist = haversineMi(prevLoc.lat, prevLoc.lon, pos.lat, pos.lon);
+      if(dist > 200 && !highTrust){
+        lastGeoRejectReason = geoRejectReason(pos, prevLoc, newGeo, opts);
+        return false;
+      }
+    }
+    return true;
+  }
   if(accMi != null && accMi > GEO_MAX_AUTO_ACCURACY_MI) return false;
-  if(geoConflictsTimezone(pos.lat, pos.lon)) return false;
   if(prevLoc){
     const dist = haversineMi(prevLoc.lat, prevLoc.lon, pos.lat, pos.lon);
     if(dist > GEO_TELEPORT_REJECT_MI && (accMi == null || accMi > 12)) return false;
-    const prevUS = prevLoc.country === 'US' || (isLikelyUS(prevLoc) && !prevLoc.country);
-    const newCC = (newGeo?.country || '').toUpperCase();
-    if(prevUS && newCC && newCC !== 'US' && newCC !== 'CA' && (accMi == null || accMi > 8)) return false;
+    if(prevUS && nonUS && (accMi == null || accMi > GEO_MANUAL_TRUST_MI)) return false;
   }
   return true;
+}
+function migrateBadGeoLocations(){
+  if(store.get('st_geo_ca_purge')) return;
+  store.set('st_geo_ca_purge', true);
+  if(!state.locations?.length) return;
+  const anchor = state.locations[state.active] || state.locations[0];
+  if(!userContextSuggestsUS(anchor) && !userContextSuggestsUS(DEFAULT_LOC)) return;
+  const filtered = state.locations.filter(loc => {
+    if(geoNameSuggestsCentralAmerica(loc)) return false;
+    if(!isCentralAmericaIpBand(loc.lat, loc.lon)) return true;
+    const cc = (loc.country || '').toUpperCase();
+    return cc === 'US' || cc === 'CA';
+  });
+  if(filtered.length === state.locations.length) return;
+  state.locations = filtered.length ? filtered : [DEFAULT_LOC];
+  if(state.active >= state.locations.length) state.active = 0;
+  persist();
 }
 async function reverseGeocodeLoc(lat, lon){
   let name = lat.toFixed(2) + ', ' + lon.toFixed(2), admin1 = '', country = '';
@@ -863,14 +995,16 @@ async function syncLocationOnOpen(opts){
 }
 function detectUserLocation(opts){
   return new Promise(resolve => {
-    if(!navigator.geolocation) return resolve(null);
+    if(!navigator.geolocation) return resolve({ geo: null, reason: 'Geolocation not supported' });
     navigator.geolocation.getCurrentPosition(async pos => {
       const posObj = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy };
       const prev = state.locations[state.active];
       const geo = await reverseGeocodeLoc(posObj.lat, posObj.lon);
-      if(!acceptGeoUpdate(posObj, prev, geo, opts)) return resolve(null);
-      resolve(geo);
-    }, () => resolve(null), {
+      if(!acceptGeoUpdate(posObj, prev, geo, opts)){
+        return resolve({ geo: null, reason: lastGeoRejectReason || geoRejectReason(posObj, prev, geo, opts) });
+      }
+      resolve({ geo, reason: '' });
+    }, () => resolve({ geo: null, reason: 'Location permission denied or timed out' }), {
       enableHighAccuracy: !!opts?.manual,
       timeout: opts?.manual ? 15000 : 10000,
       maximumAge: opts?.manual ? 0 : 300000
@@ -880,9 +1014,9 @@ function detectUserLocation(opts){
 async function initFirstLocation(){
   if(savedLocs || parseUrlLoc()) return;
   $('nowCond').textContent = 'Detecting your location\u2026';
-  const loc = await detectUserLocation({ manual: false });
-  if(loc){
-    state.locations = [loc];
+  const result = await detectUserLocation({ manual: false });
+  if(result?.geo){
+    state.locations = [result.geo];
     state.active = 0;
     persist();
     renderChips();
@@ -895,10 +1029,14 @@ $('geoBtn').addEventListener('click', async () => {
     return;
   }
   btn.textContent = '\u22EF';
-  const loc = await detectUserLocation({ manual: true });
+  const result = await detectUserLocation({ manual: true });
   btn.textContent = '\uD83D\uDCCD';
-  if(loc) addLocation(loc);
-  else searchNote('LOCATION UNAVAILABLE \u2014 USE SEARCH OR "LAT, LON"');
+  if(result?.geo) addLocation(result.geo);
+  else{
+    const msg = result?.reason || 'LOCATION UNAVAILABLE \u2014 USE SEARCH OR "LAT, LON"';
+    showLocToast(msg);
+    searchNote(msg.toUpperCase());
+  }
 });
 
 // ---------- NWS + METAR + Open-Meteo merge ----------
@@ -1280,10 +1418,16 @@ async function enrichWeatherBackground(loc){
   }
 }
 function nowIndex(d){
-  const now = Date.now();
+  const hourly = d.hourly;
+  if(!hourly?.time?.length) return 0;
+  if(hourly.anchoredNow) return 0;
+  const tz = d.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const today = todayKeyInTz(tz);
+  const nowM = nowMinsInTz(tz);
   let best = 0, bestDiff = Infinity;
-  for(let i = 0; i < d.hourly.time.length; i++){
-    const diff = Math.abs(new Date(d.hourly.time[i]).getTime() - now);
+  for(let i = 0; i < hourly.time.length; i++){
+    const slotM = dayDiffKeys(today, forecastDayKey(hourly.time[i])) * 1440 + forecastWallMins(hourly.time[i]);
+    const diff = Math.abs(slotM - nowM);
     if(diff < bestDiff){ bestDiff = diff; best = i; }
   }
   return best;
@@ -1433,7 +1577,7 @@ function renderFireTimeline(d){
     if(rh != null && rh <= 25 && (gust >= 25 || wind >= 20)) cls = 'critical';
     else if(rh != null && (rh <= 35 || wind >= 18 || gust >= 22)) cls = 'elevated';
     segments.push('<span class="' + cls + '" title="'
-      + esc(new Date(d.hourly.time[j]).toLocaleString([], { hour:'numeric', minute:'2-digit' }))
+      + esc(hourLabel(d.hourly.time[j]))
       + ' · RH ' + (rh != null ? Math.round(rh) : '—') + '% · wind '
       + Math.round(state.units === 'F' ? wind * 2.237 : wind * 3.6) + ' ' + windUnit()
       + '"></span>');
@@ -1740,7 +1884,7 @@ function renderDaily(d){
     $('dailySource').textContent = '';
     return;
   }
-  const nowI = nowIndex({ hourly: hh });
+  const nowI = nowIndex({ hourly: hh, timezone: d.timezone });
   const nowHour = hh.time[nowI] ? hh.time[nowI].slice(0, 13) : '';
   const dayCount = Math.min(DAILY_DAYS, dd.time.length);
   try{
@@ -1763,15 +1907,14 @@ function renderDaily(d){
       || Math.round(dd.wind_speed_10m_max?.[i] ?? dd.wind_gusts_10m_max?.[i] ?? 0);
     const windMeta = windSpd ? 'Wind ~' + windSpd + ' ' + windUnit() : '';
     const metaParts = [snowMeta, rainMeta, windMeta].filter(Boolean);
-    const title = i === 0
-      ? '<span class="day-dn">Today</span> <span class="day-date">' + fmtDayDate(t) + '</span>'
-      : '<span class="day-dn">' + fmtDayWeekday(t) + '</span> <span class="day-date">' + fmtDayDate(t) + '</span>';
+    const dayDn = dayLabelFromDate(t, d.timezone);
+    const title = '<span class="day-dn">' + esc(dayDn) + '</span> <span class="day-date">' + fmtDayDate(t) + '</span>';
     const summary = 'Low <strong>' + lo + '°</strong>'
       + (loAt ? ' at ' + loAt : '')
       + ' · High <strong>' + hi + '°</strong>'
       + (hiAt ? ' at ' + hiAt : '');
     const compactTicks = window.matchMedia('(max-width:860px)').matches;
-    const nowPct = i === 0 ? (nowMinsInTz(d.timezone) / 1440) * 100 : null;
+    const nowPct = isForecastToday(t, d.timezone) ? (nowMinsInTz(d.timezone) / 1440) * 100 : null;
     const timeline = buildDayTimeline(indices, hh, dd, i, { compactTicks, nowHour, nowPct });
     const gust = Math.round(dd.wind_gusts_10m_max[i]);
     const uv = (dd.uv_index_max[i] ?? 0).toFixed(0);
@@ -1926,7 +2069,7 @@ function renderForecastText(d){
   const extTeaser = [];
   for(let i = 0; i < Math.min(7, dd.time.length); i++){
     const [cond] = wmo(dd.weather_code[i]);
-    const label = i === 0 ? 'Today' : dayName(dd.time[i]);
+    const label = dayLabelFromDate(dd.time[i], d.timezone);
     const hi = Math.round(dd.temperature_2m_max[i]);
     const lo = Math.round(dd.temperature_2m_min[i]);
     const pp = dd.precipitation_probability_max[i];

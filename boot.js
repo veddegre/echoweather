@@ -20,6 +20,7 @@ applyTheme(state.theme);
 initPageNav();
 setupInstallHint();
 migrateAppVersion().then(() => initServiceWorker());
+migrateBadGeoLocations();
 probeServerIntegrations().then(async () => {
   await initFirstLocation();
   renderChips();

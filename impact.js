@@ -525,7 +525,7 @@ function activityAlertCap(def, timezone, hours){
 function penalizeAfternoonHeat(ctx, reasons, opts){
   opts = opts || {};
   if(!ctx.isDay) return 0;
-  const hr = new Date(ctx.time).getHours();
+  const hr = forecastHour(ctx.time);
   const start = opts.start ?? 13, end = opts.end ?? 18;
   if(hr < start || hr >= end) return 0;
   const hot = opts.hot ?? (state.units === 'F' ? 84 : 29);
@@ -685,7 +685,7 @@ const ACTIVITY_SCORERS = {
     let s = 100;
     const reasons = [];
     s -= penalizeRain(ctx, reasons, 40, 20);
-    const hr = new Date(ctx.time).getHours();
+    const hr = forecastHour(ctx.time);
     const warmAfternoon = ctx.isDay && hr >= 12 && hr < 19;
     if(ctx.temp >= 90 || (ctx.temp >= 88 && warmAfternoon)){
       s -= 32;
@@ -884,7 +884,7 @@ function activityHourEligible(def, ctx){
   if(def.dayOnly) return !!ctx.isDay;
   if(def.daylight && !ctx.isDay) return false;
   if(def.hourMin != null || def.hourMax != null){
-    const hr = new Date(ctx.time).getHours();
+    const hr = forecastHour(ctx.time);
     const min = def.hourMin ?? 0, max = def.hourMax ?? 24;
     if(hr < min || hr >= max) return false;
   }
@@ -936,8 +936,7 @@ function scoreActivityFromContext(d, def, extra, ctx, scorer, tz){
 function scoreActivityHour(d, def, extra, j, scorer, tz){
   return scoreActivityFromContext(d, def, extra, activityHourContext(d, j), scorer, tz);
 }
-function buildActivityHoursForDate(d, def, extra, dayIndex){
-  const dateStr = d.daily?.time?.[dayIndex];
+function buildActivityHoursForDate(d, def, extra, dateStr, dayIndex){
   if(!dateStr || !d?.hourly?.time?.length) return { dateStr: null, dayIndex, hours: [] };
   const ph = plannerHourly(d);
   if(!ph?.time?.length) return { dateStr, dayIndex, hours: [] };
@@ -966,21 +965,19 @@ function buildActivityHoursForDate(d, def, extra, dayIndex){
   });
   return { dateStr, dayIndex, hours };
 }
-function plannerDayTitle(dayIndex, dateStr){
-  if(dayIndex === 0) return 'Today';
-  if(dayIndex === 1) return 'Tomorrow';
-  return fmtDayWeekday(dateStr);
+function plannerDayTitle(dayIndex, dateStr, tz){
+  return dayLabelFromDate(dateStr, tz);
 }
 function activityBarDayTimeLabels(hours, dateStr, d){
   if(!hours.length) return { html: '', nowPct: null };
-  const nowIso = d.hourly.time[nowIndex(d)];
-  const isToday = dateStr && nowIso.slice(0, 10) === String(dateStr).slice(0, 10);
+  const isToday = isForecastToday(dateStr, d.timezone);
   const nowPct = isToday ? (nowMinsInTz(d.timezone) / 1440) * 100 : null;
   const anchors = [
     { pct: 0, lbl: '12a', edge: 'edge-start' },
     { pct: 25, lbl: '6a' },
     { pct: 50, lbl: '12p' },
-    { pct: 75, lbl: '6p', edge: 'edge-end' }
+    { pct: 75, lbl: '6p' },
+    { lbl: '12a', edge: 'edge-end' }
   ];
   let html = anchors.map(a => {
     const edge = a.edge ? ' ' + a.edge : '';
@@ -995,8 +992,7 @@ function activityBarDayTimeLabels(hours, dateStr, d){
 function renderPlannerDayBar(day, d, def){
   const { dateStr, dayIndex, hours } = day;
   if(!hours.length) return '';
-  const nowIso = d.hourly.time[nowIndex(d)];
-  const isToday = dateStr && nowIso.slice(0, 10) === String(dateStr).slice(0, 10);
+  const isToday = isForecastToday(dateStr, d.timezone);
   const nowMins = isToday ? nowMinsInTz(d.timezone) : null;
   const bar = hours.map((h, hr) => {
     const cls = h.ineligible ? 'na' : (h.grade === 'good' ? 'g' : h.grade === 'fair' ? 'f' : 'p');
@@ -1012,16 +1008,19 @@ function renderPlannerDayBar(day, d, def){
       + '<span class="activity-now-mark" aria-hidden="true"></span></div>'
     : '';
   return '<div class="activity-day-block">'
-    + '<div class="activity-day-lbl">' + esc(plannerDayTitle(dayIndex, dateStr)) + '</div>'
+    + '<div class="activity-day-lbl">' + esc(plannerDayTitle(dayIndex, dateStr, d.timezone)) + '</div>'
     + '<div class="activity-bar-wrap">' + nowMark
-    + '<div class="activity-bar" role="img" aria-label="Hourly levels for ' + esc(plannerDayTitle(dayIndex, dateStr)) + '">'
+    + '<div class="activity-bar" role="img" aria-label="Hourly levels for ' + esc(plannerDayTitle(dayIndex, dateStr, d.timezone)) + '">'
     + bar + '</div></div>'
     + '<div class="activity-bar-times">' + timeLbl + '</div></div>';
 }
 function buildPlannerDayBars(d, def, extra){
+  const tz = d.timezone;
+  const today = todayKeyInTz(tz);
   const days = [];
-  for(let i = 0; i < PLANNER_DAY_COUNT; i++){
-    const day = buildActivityHoursForDate(d, def, extra, i);
+  for(let off = 0; off < PLANNER_DAY_COUNT; off++){
+    const dateStr = dateKeyAddDays(today, off);
+    const day = buildActivityHoursForDate(d, def, extra, dateStr, off);
     if(day.hours.length) days.push(day);
   }
   return days;
@@ -1279,7 +1278,7 @@ function buildActivityWhyList(def, hours, windows, d, extra, dayBars){
       const dayEligible = day.hours.filter(h => !h.ineligible);
       if(!dayEligible.length) continue;
       const dayWindows = mergeActivityWindows(day.hours);
-      const isToday = day.dateStr && nowIso.slice(0, 10) === String(day.dateStr).slice(0, 10);
+      const isToday = isForecastToday(day.dateStr, d.timezone);
       let items = buildWhyItemsForWindows(def, dayWindows, day.hours, d, extra, isToday ? nowIso : null);
       if(!items.length){
         items = [{
@@ -1289,7 +1288,7 @@ function buildActivityWhyList(def, hours, windows, d, extra, dayBars){
           text: 'No notable stretches for this day.'
         }];
       }
-      sections.push({ title: plannerDayTitle(day.dayIndex, day.dateStr), items });
+      sections.push({ title: plannerDayTitle(day.dayIndex, day.dateStr, d.timezone), items });
     }
     if(!sections.length){
       sections.push({
@@ -1708,7 +1707,7 @@ async function renderAuroraHint(loc, d){
     const i0 = nowIndex(d);
     let nightCloud = 100;
     for(let j = i0; j < Math.min(i0 + 12, d.hourly.time.length); j++){
-      const h = new Date(d.hourly.time[j]).getHours();
+      const h = forecastHour(d.hourly.time[j]);
       if(h >= 20 || h <= 5) nightCloud = Math.min(nightCloud, activityCloudCover(d.hourly, j));
     }
     if(nightCloud > 65){ hide(); return; }

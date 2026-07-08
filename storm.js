@@ -1156,7 +1156,7 @@ function hourStormScore(d, j){
 function computeSevereWindow(d){
   if(!d || !d.hourly || !d.hourly.time) return null;
   const i0 = nowIndex(d);
-  const todayKey = d.hourly.time[i0].slice(0, 10);
+  const todayKey = todayKeyInTz(d.timezone);
   let bestStart = -1, bestEnd = -1, bestSum = 0;
   let curStart = -1, curSum = 0;
   for(let j = i0; j < d.hourly.time.length && d.hourly.time[j].slice(0, 10) === todayKey; j++){
