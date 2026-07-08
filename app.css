@@ -358,11 +358,9 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-seg.dc-snow{background:var(--dc-snow-bg);color:var(--dc-snow-fg)}
 .day-seg.dc-ice{background:var(--dc-ice-bg);color:var(--dc-ice-fg)}
 .day-seg.dc-storm{background:var(--dc-storm-bg);color:var(--dc-storm-fg)}
-.day-legend{display:flex;flex-wrap:wrap;gap:6px 10px;margin:0 0 12px;font-size:.625rem}
-.day-legend span{display:inline-flex;align-items:center;gap:5px;color:var(--mut);font-weight:600}
-.day-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;flex-shrink:0;border:1px solid color-mix(in srgb,var(--ink) 12%,transparent)}
-.day-legend .dc-fog i,
-.day-legend .dc-rain i{width:14px;height:14px}
+.day-legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin:0 0 12px;font-size:.625rem;line-height:1}
+.day-legend span{display:inline-flex;align-items:center;gap:6px;color:var(--mut);font-weight:600;min-height:14px}
+.day-legend i{display:block;width:14px;height:14px;border-radius:3px;flex-shrink:0;border:1px solid color-mix(in srgb,var(--ink) 12%,transparent)}
 .day-legend .dc-clear i{background:var(--dc-clear-bg)}
 .day-legend .dc-partly i{background:var(--dc-partly-bg)}
 .day-legend .dc-cloudy i{background:var(--dc-cloudy-bg)}
