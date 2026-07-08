@@ -925,15 +925,31 @@ function plannerDayTitle(dayIndex, dateStr){
   if(dayIndex === 1) return 'Tomorrow';
   return fmtDayWeekday(dateStr);
 }
+function plannerNowIndex(hours, nowIso){
+  if(!hours.length || !nowIso) return -1;
+  let idx = hours.findIndex(h => h.time.slice(0, 13) === nowIso.slice(0, 13));
+  if(idx >= 0) return idx;
+  const nowMs = new Date(nowIso).getTime();
+  if(isNaN(nowMs)) return -1;
+  let best = 0, bestDist = Infinity;
+  hours.forEach((h, hi) => {
+    const t = new Date(h.time).getTime();
+    if(isNaN(t)) return;
+    const dist = Math.abs(t - nowMs);
+    if(dist < bestDist){ bestDist = dist; best = hi; }
+  });
+  return best;
+}
 function activityBarDayTimeLabels(hours, dateStr, d){
   const n = hours.length;
   if(!n) return { html: '', nowPct: null };
   const nowIso = d.hourly.time[nowIndex(d)];
   const isToday = dateStr && nowIso.slice(0, 10) === String(dateStr).slice(0, 10);
   let nowPct = null;
+  let nowI = -1;
   if(isToday){
-    const idx = hours.findIndex(h => h.time.slice(0, 13) === nowIso.slice(0, 13));
-    if(idx >= 0) nowPct = n < 2 ? 0 : (idx / (n - 1)) * 100;
+    nowI = plannerNowIndex(hours, nowIso);
+    if(nowI >= 0) nowPct = n < 2 ? 0 : (nowI / (n - 1)) * 100;
   }
   const hourOf = iso => new Date(iso).getHours();
   const anchors = [
@@ -949,8 +965,7 @@ function activityBarDayTimeLabels(hours, dateStr, d){
     });
     if(best >= 0 && !picks.some(p => p.i === best)) picks.push({ i: best, lbl: a.lbl });
   });
-  if(isToday && nowPct != null){
-    const nowI = Math.round(nowPct / 100 * Math.max(0, n - 1));
+  if(isToday && nowI >= 0){
     if(!picks.some(p => p.i === nowI)) picks.push({ i: nowI, lbl: 'Now', isNow: true });
   }
   picks.sort((a, b) => a.i - b.i);
@@ -976,7 +991,9 @@ function renderPlannerDayBar(day, d, def){
   }).join('');
   const { html: timeLbl, nowPct } = activityBarDayTimeLabels(hours, dateStr, d);
   const nowMark = nowPct != null
-    ? '<div class="activity-now-mark" style="left:' + nowPct.toFixed(1) + '%" title="Current time"></div>'
+    ? '<div class="activity-now" style="left:' + nowPct.toFixed(1) + '%" title="Current time">'
+      + '<span class="activity-now-lbl">Now</span>'
+      + '<span class="activity-now-mark" aria-hidden="true"></span></div>'
     : '';
   return '<div class="activity-day-block">'
     + '<div class="activity-day-lbl">' + esc(plannerDayTitle(dayIndex, dateStr)) + '</div>'
