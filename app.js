@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '226';
+const APP_VERSION = '227';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1812,15 +1812,100 @@ function daySeriesSparkline(values, w, h, opts){
     + '<polygon points="' + area + '" fill="currentColor" opacity="' + fillOpacity + '"/>'
     + '<polyline points="' + line + '" fill="none" stroke="currentColor" stroke-width="1.75" vector-effect="non-scaling-stroke"/></svg>';
 }
-function dayTempSparkline(temps, w, h){
-  return daySeriesSparkline(temps, w, h, { ariaLabel: 'Hourly temperature' });
-}
-function dayPopSparkline(pops, w, h){
-  return daySeriesSparkline(pops, w, h, {
-    domain: { min: 0, max: 100 },
-    fillOpacity: 0.1,
-    ariaLabel: 'Hourly chance of precipitation'
+function dayHourlyWetData(indices, hh){
+  const items = indices.map(j => ({
+    pop: hh.precipitation_probability?.[j] ?? 0,
+    amt: Math.max(hh.precipitation?.[j] ?? 0, 0),
+    snow: Math.max(hh.snowfall?.[j] ?? 0, 0)
+  }));
+  const wetAmt = items.map(it => it.amt + it.snow * 0.08);
+  const maxAmt = Math.max(...wetAmt, 0);
+  const scores = items.map((it, i) => {
+    const popScore = it.pop / 100;
+    const amtScore = maxAmt > 0 ? wetAmt[i] / maxAmt : 0;
+    if(amtScore > 0.06) return amtScore;
+    if(popScore >= 0.2) return popScore * 0.75;
+    if(popScore > 0) return popScore * 0.45;
+    return 0;
   });
+  return { scores, maxAmt, peakPop: Math.max(...items.map(it => it.pop), 0) };
+}
+function fmtChartPrecipAmt(amt){
+  if(amt == null || amt <= 0) return '0';
+  if(state.units === 'F'){
+    if(amt < 0.1) return amt.toFixed(2) + '"';
+    return amt.toFixed(2) + '"';
+  }
+  if(amt < 1) return amt.toFixed(1) + ' mm';
+  return amt.toFixed(1) + ' mm';
+}
+function dayForecastChartSvg(temps, wetScores, w, h, opts){
+  opts = opts || {};
+  const n = temps.length;
+  if(!n) return '';
+  const tempVals = temps.map(v => Number(v));
+  const tMin = Math.min(...tempVals);
+  const tMax = Math.max(...tempVals);
+  const tSpan = Math.max(tMax - tMin, state.units === 'F' ? 8 : 5);
+  const padT = 6;
+  const padB = 6;
+  const precipSplit = 0.36;
+  const precipTop = h * (1 - precipSplit);
+  const tempPlotH = precipTop - padT;
+  const precipPlotH = h - padB - precipTop;
+  const xAt = i => n < 2 ? w / 2 : (i / (n - 1)) * w;
+  const yTemp = v => padT + (1 - (v - tMin) / tSpan) * Math.max(tempPlotH - 4, 1);
+  const yPrecipBase = h - padB;
+  const yPrecip = score => precipTop + (1 - Math.min(1, Math.max(0, score))) * Math.max(precipPlotH - 2, 1);
+  const wet = wetScores.map(s => Math.max(0, Math.min(1, s)));
+  let body = '';
+  if(wet.some(v => v > 0.04)){
+    const topPts = wet.map((s, i) => xAt(i).toFixed(1) + ',' + yPrecip(s).toFixed(1));
+    const area = xAt(0).toFixed(1) + ',' + yPrecipBase + ' '
+      + topPts.join(' ') + ' '
+      + xAt(n - 1).toFixed(1) + ',' + yPrecipBase;
+    body += '<polygon class="day-chart-precip" points="' + area + '"/>';
+  }
+  const tPts = tempVals.map((v, i) => xAt(i).toFixed(1) + ',' + yTemp(v).toFixed(1));
+  const tempArea = xAt(0).toFixed(1) + ',' + precipTop + ' ' + tPts.join(' ') + ' ' + xAt(n - 1).toFixed(1) + ',' + precipTop;
+  body += '<polygon class="day-chart-temp-fill" points="' + tempArea + '"/>'
+    + '<polyline class="day-chart-temp" points="' + tPts.join(' ') + '"/>'
+    + '<line class="day-chart-split" x1="0" y1="' + precipTop.toFixed(1) + '" x2="' + w + '" y2="' + precipTop.toFixed(1) + '"/>';
+  if(opts.nowPct != null){
+    const nx = ((opts.nowPct / 100) * w).toFixed(1);
+    body += '<line class="day-chart-now" x1="' + nx + '" y1="' + padT + '" x2="' + nx + '" y2="' + (h - padB) + '"/>';
+  }
+  const aria = 'Hourly temperature and precipitation for the day';
+  return '<svg class="day-chart-svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-label="' + esc(aria) + '">' + body + '</svg>';
+}
+function dayForecastChartHtml(temps, wet, opts){
+  opts = opts || {};
+  const w = 320;
+  const h = 72;
+  const tempVals = temps.map(v => Number(v));
+  const tMin = Math.min(...tempVals);
+  const tMax = Math.max(...tempVals);
+  const rainLbl = wet.maxAmt > (state.units === 'F' ? 0.005 : 0.05)
+    ? fmtChartPrecipAmt(wet.maxAmt)
+    : (wet.peakPop > 0 ? wet.peakPop + '%' : '0');
+  const rainAxis = wet.maxAmt > (state.units === 'F' ? 0.005 : 0.05)
+    ? (state.units === 'F' ? 'Precip (in)' : 'Precip (mm)')
+    : 'Rain chance';
+  return '<div class="day-chart-wrap">'
+    + '<div class="day-chart-yaxis" aria-hidden="true">'
+    + '<span>' + Math.round(tMax) + '°</span>'
+    + '<span>' + Math.round(tMin) + '°</span>'
+    + '</div>'
+    + '<div class="day-chart-plot">' + dayForecastChartSvg(temps, wet.scores, w, h, opts) + '</div>'
+    + '<div class="day-chart-yaxis day-chart-yaxis-r" aria-hidden="true">'
+    + '<span class="day-chart-rain-lbl">' + esc(rainAxis) + '</span>'
+    + '<span>' + esc(rainLbl) + '</span>'
+    + '</div>'
+    + '</div>'
+    + '<div class="day-chart-key" aria-hidden="true">'
+    + '<span class="day-chart-key-temp">Temperature</span>'
+    + '<span class="day-chart-key-rain">Rain</span>'
+    + '</div>';
 }
 function buildDayTimeline(indices, hh, dd, i, opts){
   const compactTicks = opts.compactTicks;
@@ -1838,7 +1923,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
         + '<span class="day-now-lbl">Now</span></div>'
       : '';
     const temps = indices.map(j => hh.temperature_2m[j]);
-    const pops = indices.map(j => hh.precipitation_probability?.[j] ?? 0);
+    const wet = dayHourlyWetData(indices, hh);
     const maxTicks = compactTicks ? 6 : 12;
     const tickStep = Math.max(1, Math.ceil(indices.length / maxTicks));
     const tickParts = [];
@@ -1847,11 +1932,9 @@ function buildDayTimeline(indices, hh, dd, i, opts){
       const hrKey = hh.time[idx].slice(0, 13);
       const isNow = hrKey === nowHour;
       const tickLbl = compactTicks ? hourLabelCompact(hh.time[idx]) : hourLabel(hh.time[idx]);
-      const tickPop = Math.round(hh.precipitation_probability?.[idx] ?? 0);
       tickParts.push('<div class="day-tick' + (isNow ? ' now' : '') + '">'
         + '<div class="day-tick-t">' + tickLbl + '</div>'
         + '<div class="day-tick-v">' + Math.round(hh.temperature_2m[idx]) + '°</div>'
-        + '<div class="day-tick-pop">' + tickPop + '%</div>'
         + '</div>');
     }
     return {
@@ -1859,7 +1942,8 @@ function buildDayTimeline(indices, hh, dd, i, opts){
       segHtml: segHtml,
       nowMark,
       temps,
-      pops,
+      wet,
+      chartHtml: dayForecastChartHtml(temps, wet, { nowPct }),
       ticksHtml: tickParts.length ? '<div class="day-ticks">' + tickParts.join('') + '</div>' : '',
       note: ''
     };
@@ -1870,15 +1954,22 @@ function buildDayTimeline(indices, hh, dd, i, opts){
   const segHtml = '<div class="day-seg dc-' + bucket + '" style="width:100%" title="' + esc(COND_BUCKETS[bucket]) + '">'
     + '<span>' + esc(COND_BUCKETS[bucket]) + '</span></div>';
   const ticksHtml = '<div class="day-ticks">'
-    + '<div class="day-tick"><div class="day-tick-t">Low</div><div class="day-tick-v">' + Math.round(lo) + '°</div><div class="day-tick-pop">—</div></div>'
-    + '<div class="day-tick"><div class="day-tick-t">High</div><div class="day-tick-v">' + Math.round(hi) + '°</div><div class="day-tick-pop">' + Math.round(dd.precipitation_probability_max?.[i] ?? 0) + '%</div></div>'
+    + '<div class="day-tick"><div class="day-tick-t">Low</div><div class="day-tick-v">' + Math.round(lo) + '°</div></div>'
+    + '<div class="day-tick"><div class="day-tick-t">High</div><div class="day-tick-v">' + Math.round(hi) + '°</div></div>'
     + '</div>';
+  const dayPop = dd.precipitation_probability_max?.[i] ?? 0;
+  const wet = {
+    scores: [dayPop / 100, dayPop / 100],
+    maxAmt: 0,
+    peakPop: dayPop
+  };
   return {
     hourly: false,
     segHtml,
     nowMark: '',
     temps: [lo, hi],
-    pops: [dd.precipitation_probability_max?.[i] ?? 0, dd.precipitation_probability_max?.[i] ?? 0],
+    wet,
+    chartHtml: dayForecastChartHtml([lo, hi], wet, {}),
     ticksHtml,
     note: '<div class="day-card-note">Hourly detail not available for this day</div>'
   };
@@ -1994,10 +2085,7 @@ function renderDaily(d){
       + '<div class="day-cond-strip" role="img" aria-label="Hour-by-hour sky conditions for this day">' + timeline.segHtml + '</div>'
       + '</div>'
       + '<div class="day-temp-chart">'
-      + '<div class="day-chart-lbl day-chart-lbl-temp">Temperature</div>'
-      + '<div class="day-temp-line">' + dayTempSparkline(timeline.temps, 320, 36) + '</div>'
-      + '<div class="day-chart-lbl day-chart-lbl-pop">Rain chance</div>'
-      + '<div class="day-pop-line">' + dayPopSparkline(timeline.pops, 320, 28) + '</div>'
+      + timeline.chartHtml
       + timeline.ticksHtml
       + timeline.note
       + '</div>'
