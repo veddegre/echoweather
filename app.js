@@ -3,12 +3,13 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '199';
+const APP_VERSION = '200';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
 let urlLocPinned = false;
 let lastHiddenAt = 0;
+let loadAllBusy = false;
 let stormReportFilter = 'all';
 
 // ---------- safe persistent storage (localStorage w/ in-memory fallback) ----------
@@ -857,7 +858,7 @@ async function syncLocationOnOpen(opts){
   renderChips();
   syncUrl();
   showLocToast('Location updated to ' + updated.name);
-  loadAll();
+  refreshWeatherSoft();
   return true;
 }
 function detectUserLocation(opts){
@@ -2216,7 +2217,35 @@ function renderWeatherUi(d){
     + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})
     + (d.timezone_abbreviation ? ' \u00B7 TZ ' + d.timezone_abbreviation : '');
 }
+async function refreshWeatherSoft(){
+  const loc = state.locations[state.active];
+  if(!loc || loadAllBusy) return false;
+  loadAllBusy = true;
+  try{
+    const fetched = await fetchWeather(loc, { fastPath: true });
+    if(!fetched || state.locations[state.active] !== loc) return false;
+    state.data = fetched;
+    try{ cacheWeatherSnapshot(loc, fetched); }catch(e){}
+    try{ renderWeatherUi(fetched); }catch(e){ console.error('renderWeatherUi', e); }
+    prefetchImpactPanels(loc, fetched);
+    loadForecastNbmStrip(loc, fetched);
+    if(isLikelyUS(loc) && state.data){
+      refreshStormTracking(loc, state.data);
+      refreshFireWeather(loc, state.data);
+    }
+    ensureTabPanels(getAppTab());
+    return true;
+  }catch(e){
+    console.error('refreshWeatherSoft', e);
+    return false;
+  }finally{
+    loadAllBusy = false;
+  }
+}
 async function loadAll(){
+  if(loadAllBusy) return;
+  loadAllBusy = true;
+  try{
   const loc = state.locations[state.active];
   applyLocRadarPrefs(loc, { reloadRadar: getAppTab() === 'radar' });
   const reloadBuoy = tabPanelsLoaded.impact;
@@ -2285,6 +2314,9 @@ async function loadAll(){
     $('lastUpdate').textContent = 'LOAD FAILED';
   }
   $('content').classList.remove('loading');
+  }finally{
+    loadAllBusy = false;
+  }
 }
 
 // auto-refresh every 15 min

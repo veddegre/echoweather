@@ -213,7 +213,11 @@ function activityGrade(score){
 function activityOverallGrade(def, eligible, d){
   if(!eligible.length) return 'poor';
   const tz = d.timezone;
-  const nowH = eligible[0];
+  const nowIso = d.hourly.time[nowIndex(d)];
+  const nowH = eligible.find(h => h.time.slice(0, 13) === nowIso.slice(0, 13))
+    || eligible.find(h => h.time >= nowIso && !h.ineligible)
+    || eligible.find(h => !h.ineligible)
+    || eligible[0];
   const nowAlert = activityAlertImpact(def, nowH.time, tz);
   if(nowAlert.notes.length){
     return activityGrade(nowH.score);
@@ -881,24 +885,113 @@ function buildActivityHours(d, def, extra){
   const i0 = nowIndex(d);
   const hours = [];
   for(let j = i0; j < d.hourly.time.length && hours.length < HOURLY_HOURS; j++){
-    const ctx = activityHourContext(d, j);
-    if(!activityHourEligible(def, ctx)){
-      hours.push({
-        time: ctx.time, score: 0, grade: 'na', ineligible: true,
-        reasons: [activityIneligibleNote(def)]
-      });
-      continue;
-    }
-    let { score, reasons } = scorer(ctx, extra);
-    const alert = activityAlertImpact(def, ctx.time, tz);
-    score = Math.min(score, alert.cap);
-    if(alert.notes.length && score <= alert.cap){
-      const note = alert.notes[0];
-      if(!reasons.includes(note)) reasons.unshift(note);
-    }
-    hours.push({ time: ctx.time, score, grade: activityGrade(score), reasons: reasons.slice(0, 5), ineligible: false });
+    hours.push(scoreActivityHour(d, def, extra, j, scorer, tz));
   }
   return hours;
+}
+const PLANNER_DAY_COUNT = 2;
+function scoreActivityHour(d, def, extra, j, scorer, tz){
+  scorer = scorer || ACTIVITY_SCORERS[def.id];
+  tz = tz ?? d.timezone;
+  const ctx = activityHourContext(d, j);
+  if(!activityHourEligible(def, ctx)){
+    return {
+      time: ctx.time, score: 0, grade: 'na', ineligible: true,
+      reasons: [activityIneligibleNote(def)]
+    };
+  }
+  let { score, reasons } = scorer(ctx, extra);
+  const alert = activityAlertImpact(def, ctx.time, tz);
+  score = Math.min(score, alert.cap);
+  if(alert.notes.length && score <= alert.cap){
+    const note = alert.notes[0];
+    if(!reasons.includes(note)) reasons.unshift(note);
+  }
+  return { time: ctx.time, score, grade: activityGrade(score), reasons: reasons.slice(0, 5), ineligible: false };
+}
+function buildActivityHoursForDate(d, def, extra, dayIndex){
+  const dateStr = d.daily?.time?.[dayIndex];
+  if(!dateStr || !d?.hourly?.time?.length) return { dateStr: null, dayIndex, hours: [] };
+  const indices = dayHourlyIndices(d.hourly, dateStr);
+  if(!indices.length) return { dateStr, dayIndex, hours: [] };
+  const scorer = ACTIVITY_SCORERS[def.id];
+  if(!scorer) return { dateStr, dayIndex, hours: [] };
+  const tz = d.timezone;
+  const hours = indices.map(j => scoreActivityHour(d, def, extra, j, scorer, tz));
+  return { dateStr, dayIndex, hours };
+}
+function plannerDayTitle(dayIndex, dateStr){
+  if(dayIndex === 0) return 'Today';
+  if(dayIndex === 1) return 'Tomorrow';
+  return fmtDayWeekday(dateStr);
+}
+function activityBarDayTimeLabels(hours, dateStr, d){
+  const n = hours.length;
+  if(!n) return { html: '', nowPct: null };
+  const nowIso = d.hourly.time[nowIndex(d)];
+  const isToday = dateStr && nowIso.slice(0, 10) === String(dateStr).slice(0, 10);
+  let nowPct = null;
+  if(isToday){
+    const idx = hours.findIndex(h => h.time.slice(0, 13) === nowIso.slice(0, 13));
+    if(idx >= 0) nowPct = n < 2 ? 0 : (idx / (n - 1)) * 100;
+  }
+  const hourOf = iso => new Date(iso).getHours();
+  const anchors = [
+    { hr: 0, lbl: '12a' }, { hr: 6, lbl: '6a' }, { hr: 12, lbl: '12p' }, { hr: 18, lbl: '6p' }
+  ];
+  const picks = [];
+  anchors.forEach(a => {
+    let best = -1, bestDist = 99;
+    hours.forEach((h, hi) => {
+      const hHr = hourOf(h.time);
+      const dist = Math.min(Math.abs(hHr - a.hr), 24 - Math.abs(hHr - a.hr));
+      if(dist < bestDist){ bestDist = dist; best = hi; }
+    });
+    if(best >= 0 && !picks.some(p => p.i === best)) picks.push({ i: best, lbl: a.lbl });
+  });
+  if(isToday && nowPct != null){
+    const nowI = Math.round(nowPct / 100 * Math.max(0, n - 1));
+    if(!picks.some(p => p.i === nowI)) picks.push({ i: nowI, lbl: 'Now', isNow: true });
+  }
+  picks.sort((a, b) => a.i - b.i);
+  const html = picks.map((p, idx) => {
+    const pct = n < 2 ? 0 : (p.i / (n - 1)) * 100;
+    const edge = idx === 0 ? ' edge-start' : idx === picks.length - 1 ? ' edge-end' : '';
+    const style = edge ? '' : ' style="left:' + pct.toFixed(1) + '%"';
+    return '<span class="' + edge.trim() + (p.isNow ? ' is-now' : '') + '"' + style + '>' + esc(p.lbl) + '</span>';
+  }).join('');
+  return { html, nowPct };
+}
+function renderPlannerDayBar(day, d, def){
+  const { dateStr, dayIndex, hours } = day;
+  if(!hours.length) return '';
+  const nowIso = d.hourly.time[nowIndex(d)];
+  const isToday = dateStr && nowIso.slice(0, 10) === String(dateStr).slice(0, 10);
+  const bar = hours.map(h => {
+    const cls = h.ineligible ? 'na' : (h.grade === 'good' ? 'g' : h.grade === 'fair' ? 'f' : 'p');
+    const past = isToday && h.time < nowIso ? ' past' : '';
+    let tip = hourLabelCompact(h.time) + ': ' + (h.ineligible ? activityIneligibleNote(def) : activityGradeLabel(h.grade, def));
+    if(!h.ineligible && h.reasons[0]) tip += ' \u2014 ' + h.reasons[0];
+    return '<span class="' + cls + past + '" title="' + esc(tip) + '"></span>';
+  }).join('');
+  const { html: timeLbl, nowPct } = activityBarDayTimeLabels(hours, dateStr, d);
+  const nowMark = nowPct != null
+    ? '<div class="activity-now-mark" style="left:' + nowPct.toFixed(1) + '%" title="Current time"></div>'
+    : '';
+  return '<div class="activity-day-block">'
+    + '<div class="activity-day-lbl">' + esc(plannerDayTitle(dayIndex, dateStr)) + '</div>'
+    + '<div class="activity-bar-wrap">' + nowMark
+    + '<div class="activity-bar" role="img" aria-label="Hourly levels for ' + esc(plannerDayTitle(dayIndex, dateStr)) + '">'
+    + bar + '</div></div>'
+    + '<div class="activity-bar-times">' + timeLbl + '</div></div>';
+}
+function buildPlannerDayBars(d, def, extra){
+  const days = [];
+  for(let i = 0; i < PLANNER_DAY_COUNT; i++){
+    const day = buildActivityHoursForDate(d, def, extra, i);
+    if(day.hours.length) days.push(day);
+  }
+  return days;
 }
 function activityBarTimeLabels(hours){
   if(!hours.length) return '';
@@ -1147,24 +1240,19 @@ function plannerCompactUnpinned(pins){
 }
 function renderActivityCard(def, hours, d, extra, pins){
   pins = pins || activityPins;
-  if(!hours.length){
+  const dayBars = buildPlannerDayBars(d, def, extra);
+  const todayHours = dayBars[0]?.hours || hours;
+  if(!todayHours.length && !dayBars.length){
     return '<article class="activity-card"><div class="activity-head"><span class="activity-ico" aria-hidden="true">' + def.icon
       + '</span><span class="activity-name">' + esc(def.name) + '</span><span class="activity-grade poor">'
       + esc(activityGradeLabel('poor', def)) + '</span></div>'
       + '<div class="activity-window">No forecast hours available.</div></article>';
   }
-  const eligible = hours.filter(h => !h.ineligible);
+  const eligible = todayHours.filter(h => !h.ineligible);
   const overall = activityOverallGrade(def, eligible, d);
-  const windows = mergeActivityWindows(hours);
-  const barAria = isImpactDef(def) ? 'Hourly impact level' : 'Hourly suitability';
-  const bar = hours.map(h => {
-    const cls = h.ineligible ? 'na' : (h.grade === 'good' ? 'g' : h.grade === 'fair' ? 'f' : 'p');
-    let tip = hourLabelCompact(h.time) + ': ' + (h.ineligible ? activityIneligibleNote(def) : activityGradeLabel(h.grade, def));
-    if(!h.ineligible && h.reasons[0]) tip += ' — ' + h.reasons[0];
-    return '<span class="' + cls + '" title="' + esc(tip) + '"></span>';
-  }).join('');
-  const timeLbl = activityBarTimeLabels(hours);
-  const why = buildActivityWhyList(def, hours, windows, d, extra);
+  const windows = mergeActivityWindows(buildActivityHours(d, def, extra));
+  const barHtml = dayBars.map(day => renderPlannerDayBar(day, d, def)).join('');
+  const why = buildActivityWhyList(def, buildActivityHours(d, def, extra), windows, d, extra);
   const whyIntro = why.intro ? '<p class="activity-why-lede">' + esc(why.intro) + '</p>' : '';
   const whyList = why.items.map(item => {
     const cls = item.grade === 'good' ? 'why-good' : item.grade === 'fair' ? 'why-fair' : item.grade === 'poor' ? 'why-poor' : '';
@@ -1179,10 +1267,8 @@ function renderActivityCard(def, hours, d, extra, pins){
     + isPinned + '">\u2605</button><span class="activity-ico" aria-hidden="true">' + def.icon + '</span>'
     + '<span class="activity-name">' + esc(def.name) + '</span>'
     + '<span class="activity-grade ' + overall + '">' + activityGradeLabel(overall, def) + '</span></div>';
-  const windowLine = '<div class="activity-window">' + esc(summarizeActivityWindows(windows, hours, def)) + '</div>';
-  const detailBody = '<div class="activity-bar" role="img" aria-label="' + barAria + ' for ' + esc(def.name) + ' over the next 24 hours">'
-    + bar + '</div>'
-    + '<div class="activity-bar-times">' + timeLbl + '</div>'
+  const windowLine = '<div class="activity-window">' + esc(summarizeActivityWindows(windows, buildActivityHours(d, def, extra), def)) + '</div>';
+  const detailBody = barHtml
     + '<details class="activity-why"><summary>Why</summary>' + whyIntro
     + '<ul style="margin:6px 0 0;padding-left:1.1em">' + whyList + '</ul></details>';
   if(plannerCompactUnpinned(pins) && !isPinned){

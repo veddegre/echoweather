@@ -25,7 +25,8 @@ probeServerIntegrations().then(async () => {
   renderChips();
   syncUrl();
   loadAll();
-  setTimeout(() => syncLocationOnOpen({ silent: true }), 1200);
+  const geoDelay = window.matchMedia('(max-width:860px)').matches ? 10000 : 4000;
+  setTimeout(() => syncLocationOnOpen({ silent: true }), geoDelay);
 });
 window.addEventListener('pageshow', e => {
   if(e.persisted) syncLocationOnOpen({ silent: true });
