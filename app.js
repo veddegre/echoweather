@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '197';
+const APP_VERSION = '198';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -760,6 +760,35 @@ $('searchInput').addEventListener('keydown', e => {
 });
 
 // ---------- geolocation (auto on first visit, on open, or via geo button) ----------
+const GEO_MAX_AUTO_ACCURACY_MI = 20;
+const GEO_TELEPORT_REJECT_MI = 350;
+function geoAccuracyMi(pos){
+  const m = pos?.accuracy;
+  return m != null && !isNaN(m) ? m / 1609.344 : null;
+}
+function geoConflictsTimezone(lat, lon){
+  try{
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if(!/^America\//.test(tz)) return false;
+    // US/Canada tz with Central America / northern SA coords → bad IP geolocation
+    return lat < 17 && lon > -125 && lon < -65;
+  }catch(e){ return false; }
+}
+function acceptGeoUpdate(pos, prevLoc, newGeo, opts){
+  if(!pos || !Number.isFinite(pos.lat) || !Number.isFinite(pos.lon)) return false;
+  if(opts?.manual) return true;
+  const accMi = geoAccuracyMi(pos);
+  if(accMi != null && accMi > GEO_MAX_AUTO_ACCURACY_MI) return false;
+  if(geoConflictsTimezone(pos.lat, pos.lon)) return false;
+  if(prevLoc){
+    const dist = haversineMi(prevLoc.lat, prevLoc.lon, pos.lat, pos.lon);
+    if(dist > GEO_TELEPORT_REJECT_MI && (accMi == null || accMi > 12)) return false;
+    const prevUS = prevLoc.country === 'US' || (isLikelyUS(prevLoc) && !prevLoc.country);
+    const newCC = (newGeo?.country || '').toUpperCase();
+    if(prevUS && newCC && newCC !== 'US' && newCC !== 'CA' && (accMi == null || accMi > 8)) return false;
+  }
+  return true;
+}
 async function reverseGeocodeLoc(lat, lon){
   let name = lat.toFixed(2) + ', ' + lon.toFixed(2), admin1 = '', country = '';
   try{
@@ -772,13 +801,18 @@ async function reverseGeocodeLoc(lat, lon){
   }catch(e){ /* coords as name */ }
   return { name, admin1, country, lat, lon };
 }
-function getCurrentPositionFast(maxAge){
+function getCurrentPositionFast(opts){
+  const o = typeof opts === 'number' ? { maximumAge: opts } : (opts || {});
   return new Promise(resolve => {
     if(!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
       pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy }),
       () => resolve(null),
-      { enableHighAccuracy: false, timeout: 9000, maximumAge: maxAge ?? 120000 }
+      {
+        enableHighAccuracy: !!o.highAccuracy,
+        timeout: o.timeout ?? 9000,
+        maximumAge: o.maximumAge ?? 120000
+      }
     );
   });
 }
@@ -806,11 +840,17 @@ async function syncLocationOnOpen(opts){
       if(st.state === 'denied') return false;
     }
   }catch(e){}
-  const pos = await getCurrentPositionFast(opts?.maximumAge ?? 180000);
+  const desktop = !window.matchMedia('(max-width:860px)').matches;
+  const pos = await getCurrentPositionFast({
+    maximumAge: desktop ? 90000 : (opts?.maximumAge ?? 180000),
+    highAccuracy: false,
+    timeout: desktop ? 7000 : 9000
+  });
   if(!pos) return false;
   const dist = haversineMi(loc.lat, loc.lon, pos.lat, pos.lon);
   if(dist < LOC_SYNC_MIN_MI) return false;
   const updated = await reverseGeocodeLoc(pos.lat, pos.lon);
+  if(!acceptGeoUpdate(pos, loc, updated, opts)) return false;
   const idx = state.active;
   state.locations[idx] = Object.assign({}, loc, updated);
   persist();
@@ -820,19 +860,26 @@ async function syncLocationOnOpen(opts){
   loadAll();
   return true;
 }
-function detectUserLocation(){
+function detectUserLocation(opts){
   return new Promise(resolve => {
     if(!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(async pos => {
-      const lat = pos.coords.latitude, lon = pos.coords.longitude;
-      resolve(await reverseGeocodeLoc(lat, lon));
-    }, () => resolve(null), { timeout: 10000, maximumAge: 300000 });
+      const posObj = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy };
+      const prev = state.locations[state.active];
+      const geo = await reverseGeocodeLoc(posObj.lat, posObj.lon);
+      if(!acceptGeoUpdate(posObj, prev, geo, opts)) return resolve(null);
+      resolve(geo);
+    }, () => resolve(null), {
+      enableHighAccuracy: !!opts?.manual,
+      timeout: opts?.manual ? 15000 : 10000,
+      maximumAge: opts?.manual ? 0 : 300000
+    });
   });
 }
 async function initFirstLocation(){
   if(savedLocs || parseUrlLoc()) return;
   $('nowCond').textContent = 'Detecting your location\u2026';
-  const loc = await detectUserLocation();
+  const loc = await detectUserLocation({ manual: false });
   if(loc){
     state.locations = [loc];
     state.active = 0;
@@ -847,7 +894,7 @@ $('geoBtn').addEventListener('click', async () => {
     return;
   }
   btn.textContent = '\u22EF';
-  const loc = await detectUserLocation();
+  const loc = await detectUserLocation({ manual: true });
   btn.textContent = '\uD83D\uDCCD';
   if(loc) addLocation(loc);
   else searchNote('LOCATION UNAVAILABLE \u2014 USE SEARCH OR "LAT, LON"');
@@ -866,6 +913,7 @@ function nwsToWmo(text){
   const s = String(text || '').toLowerCase();
   if(/tornado|severe thunder/.test(s)) return 95;
   if(/thunder/.test(s)) return 95;
+  if(/wintry mix|rain\/snow|snow\/rain|ice pellet/.test(s)) return 67;
   if(/freezing rain|sleet|wintry/.test(s)) return 67;
   if(/snow|blizzard|flurr/.test(s)) return s.includes('light') ? 71 : 73;
   if(/rain|shower|drizzle/.test(s)) return s.includes('light') || s.includes('chance') ? 61 : 63;
@@ -1472,13 +1520,19 @@ function renderHourly(d){
 
 // ---------- render: daily ----------
 const COND_BUCKETS = {
-  clear:'Clear', partly:'Partly', cloudy:'Cloudy', fog:'Fog', rain:'Rain', snow:'Snow', storm:'Storm'
+  clear:'Clear', partly:'Partly', cloudy:'Cloudy', fog:'Fog', rain:'Rain', snow:'Snow', ice:'Ice/mix', storm:'Storm'
 };
-function conditionBucket(code){
+function conditionBucket(code, hourly, idx){
   const c = code ?? 2;
+  if(hourly != null && idx != null){
+    const rain = hourly.precipitation?.[idx] ?? 0;
+    const snow = hourly.snowfall?.[idx] ?? 0;
+    if(rain > 0.05 && snow > 0.05) return 'ice';
+  }
   if(c >= 95) return 'storm';
   if(c >= 85 || (c >= 71 && c <= 77)) return 'snow';
-  if((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) return 'rain';
+  if(c >= 56 && c <= 67) return 'ice';
+  if((c >= 51 && c <= 55) || (c >= 80 && c <= 82)) return 'rain';
   if(c >= 45 && c <= 48) return 'fog';
   if(c === 3) return 'cloudy';
   if(c === 2) return 'partly';
@@ -1496,9 +1550,9 @@ function buildConditionSegments(indices, hourly){
   if(!indices.length) return [];
   const segs = [];
   let start = 0;
-  let bucket = conditionBucket(hourly.weather_code[indices[0]]);
+  let bucket = conditionBucket(hourly.weather_code[indices[0]], hourly, indices[0]);
   for(let j = 1; j <= indices.length; j++){
-    const next = j < indices.length ? conditionBucket(hourly.weather_code[indices[j]]) : null;
+    const next = j < indices.length ? conditionBucket(hourly.weather_code[indices[j]], hourly, indices[j]) : null;
     if(next !== bucket){
       segs.push({
         bucket,
@@ -1640,7 +1694,10 @@ function dayPrecipWindow(indices, hh){
     const pop = hh.precipitation_probability?.[j] ?? 0;
     const precip = hh.precipitation?.[j] ?? 0;
     const code = hh.weather_code?.[j] ?? 0;
-    if(pop >= 35 || precip > 0.1 || code >= 51){
+    const snow = hh.snowfall?.[j] ?? 0;
+    const icy = code >= 56 && code <= 67;
+    const wet = pop >= 35 || precip > 0.1 || code >= 51;
+    if(wet || icy){
       if(start < 0) start = k;
     }else if(start >= 0){
       blocks.push([indices[start], indices[k - 1]]);
@@ -1651,8 +1708,11 @@ function dayPrecipWindow(indices, hh){
   if(!blocks.length) return '';
   const fmt = j => hourLabelCompact(hh.time[j]);
   const [a, b] = blocks[0];
-  if(blocks.length === 1) return a === b ? 'Rain possible ~' + fmt(a) : 'Rain likely ' + fmt(a) + '\u2013' + fmt(b);
-  return 'Rain possible at times';
+  const codeA = hh.weather_code?.[a] ?? 0;
+  const icy = codeA >= 56 && codeA <= 67;
+  const label = icy ? 'Freezing precip' : 'Rain';
+  if(blocks.length === 1) return a === b ? label + ' possible ~' + fmt(a) : label + ' likely ' + fmt(a) + '\u2013' + fmt(b);
+  return label + ' possible at times';
 }
 function afdHighlightText(text){
   if(!text) return '';

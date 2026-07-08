@@ -17,11 +17,12 @@
   --on-accent:#FFFFFF;
   --now-mark:#001845;--now-mark-halo:#FFFFFF;
   --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
-  --dc-partly-bg:#5AB0FF;--dc-partly-fg:#042E58;
-  --dc-cloudy-bg:#7A8490;--dc-cloudy-fg:#141C24;
+  --dc-partly-bg:#D4DEE8;--dc-partly-fg:#2A4058;
+  --dc-cloudy-bg:#8E98A4;--dc-cloudy-fg:#141C24;
   --dc-fog-bg:#C9A8E0;--dc-fog-fg:#3A1848;
   --dc-rain-bg:#0D5A8C;--dc-rain-fg:#E8F6FF;
   --dc-snow-bg:#DCE8E2;--dc-snow-fg:#1E4034;
+  --dc-ice-bg:#C9A0DC;--dc-ice-fg:#3D1848;
   --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
 }
 html[data-theme="dark"] {
@@ -37,11 +38,12 @@ html[data-theme="dark"] {
   --on-accent:#001845;
   --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
   --dc-clear-bg:#6B5520;--dc-clear-fg:#FFE9A8;
-  --dc-partly-bg:#3D9AE6;--dc-partly-fg:#E8F4FF;
+  --dc-partly-bg:#4A5A6A;--dc-partly-fg:#E4ECF4;
   --dc-cloudy-bg:#5A626C;--dc-cloudy-fg:#E8EAED;
   --dc-fog-bg:#7A5A98;--dc-fog-fg:#F2E8FA;
   --dc-rain-bg:#051E38;--dc-rain-fg:#B8DCFF;
   --dc-snow-bg:#8AAC9C;--dc-snow-fg:#0A2018;
+  --dc-ice-bg:#7A4A98;--dc-ice-fg:#F4E8FA;
   --dc-storm-bg:#8B3838;--dc-storm-fg:#FFE8E8;
 }
 @media (prefers-color-scheme: dark) {
@@ -58,11 +60,12 @@ html[data-theme="dark"] {
     --on-accent:#001845;
     --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
     --dc-clear-bg:#6B5520;--dc-clear-fg:#FFE9A8;
-    --dc-partly-bg:#3D9AE6;--dc-partly-fg:#E8F4FF;
+    --dc-partly-bg:#4A5A6A;--dc-partly-fg:#E4ECF4;
     --dc-cloudy-bg:#5A626C;--dc-cloudy-fg:#E8EAED;
     --dc-fog-bg:#7A5A98;--dc-fog-fg:#F2E8FA;
     --dc-rain-bg:#051E38;--dc-rain-fg:#B8DCFF;
     --dc-snow-bg:#8AAC9C;--dc-snow-fg:#0A2018;
+    --dc-ice-bg:#7A4A98;--dc-ice-fg:#F4E8FA;
     --dc-storm-bg:#8B3838;--dc-storm-fg:#FFE8E8;
   }
 }
@@ -79,11 +82,12 @@ html[data-theme="dark"] {
     --on-accent:#FFFFFF;
     --now-mark:#001845;--now-mark-halo:#FFFFFF;
     --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
-    --dc-partly-bg:#5AB0FF;--dc-partly-fg:#042E58;
-    --dc-cloudy-bg:#7A8490;--dc-cloudy-fg:#141C24;
+    --dc-partly-bg:#D4DEE8;--dc-partly-fg:#2A4058;
+    --dc-cloudy-bg:#8E98A4;--dc-cloudy-fg:#141C24;
     --dc-fog-bg:#C9A8E0;--dc-fog-fg:#3A1848;
     --dc-rain-bg:#0D5A8C;--dc-rain-fg:#E8F6FF;
     --dc-snow-bg:#DCE8E2;--dc-snow-fg:#1E4034;
+    --dc-ice-bg:#C9A0DC;--dc-ice-fg:#3D1848;
     --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
   }
 }
@@ -343,6 +347,7 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-seg.dc-fog{background:var(--dc-fog-bg);color:var(--dc-fog-fg)}
 .day-seg.dc-rain{background:var(--dc-rain-bg);color:var(--dc-rain-fg)}
 .day-seg.dc-snow{background:var(--dc-snow-bg);color:var(--dc-snow-fg)}
+.day-seg.dc-ice{background:var(--dc-ice-bg);color:var(--dc-ice-fg)}
 .day-seg.dc-storm{background:var(--dc-storm-bg);color:var(--dc-storm-fg)}
 .day-legend{display:flex;flex-wrap:wrap;gap:6px 10px;margin:0 0 12px;font-size:.625rem}
 .day-legend span{display:inline-flex;align-items:center;gap:5px;color:var(--mut);font-weight:600}
@@ -353,6 +358,7 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-legend .dc-fog i{background:var(--dc-fog-bg)}
 .day-legend .dc-rain i{background:var(--dc-rain-bg)}
 .day-legend .dc-snow i{background:var(--dc-snow-bg)}
+.day-legend .dc-ice i{background:var(--dc-ice-bg)}
 .day-legend .dc-storm i{background:var(--dc-storm-bg)}
 .day-legend-lede{font-size:.72rem;color:var(--dim);margin:0 0 8px;line-height:1.4}
 .day-timeline-wrap{position:relative;padding-top:22px;margin-bottom:4px}
@@ -398,18 +404,47 @@ body.radar-expanded{overflow:hidden}
 .radar-time{font-size:.8125rem;color:var(--accent);font-weight:500;white-space:nowrap}
 .pollen-block{margin-top:14px;min-width:0;max-width:100%;overflow:hidden}
 .pollen-lbl{font-size:.6875rem;color:var(--dim);font-weight:500;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px}
+.pollen-msn{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 18%,var(--panel-2)),var(--panel-2));border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px;overflow:hidden}
+.pollen-msn-hero{display:grid;grid-template-columns:auto 1fr;gap:12px 16px;align-items:center}
+.pollen-gauge{position:relative;width:108px;height:62px;flex-shrink:0}
+.pollen-gauge svg{display:block;width:100%;height:100%}
+.pollen-gauge-val{position:absolute;left:50%;bottom:2px;transform:translateX(-50%);font-size:1.375rem;font-weight:700;line-height:1;color:var(--good);font-variant-numeric:tabular-nums}
+.pollen-gauge-lbl{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);font-size:.8125rem;font-weight:700;color:var(--good);white-space:nowrap}
+.pollen-gauge-lbl.pl-mid{color:var(--warm)}.pollen-gauge-lbl.pl-high,.pollen-gauge-lbl.pl-very-high{color:var(--warn)}
+.pollen-gauge-val.pl-mid{color:var(--warm)}.pollen-gauge-val.pl-high,.pollen-gauge-val.pl-very-high{color:var(--warn)}
+.pollen-hero-copy{min-width:0}
+.pollen-risk-msg{font-size:.875rem;line-height:1.4;color:var(--ink);margin:0 0 4px}
+.pollen-main-type{font-size:.75rem;color:var(--mut)}
+.pollen-type-rings{display:flex;gap:14px;grid-column:1/-1;justify-content:center;padding-top:4px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);margin-top:4px}
+.pollen-ring{text-align:center;min-width:0;flex:1;max-width:88px}
+.pollen-ring-arc{position:relative;width:52px;height:52px;margin:0 auto 4px}
+.pollen-ring-arc svg{display:block;width:100%;height:100%}
+.pollen-ring-ico{font-size:1.125rem;line-height:1;opacity:.9}
+.pollen-ring-name{font-size:.6875rem;font-weight:600;color:var(--mut)}
+.pollen-ring-cat{font-size:.625rem;font-weight:700;color:var(--good)}
+.pollen-ring-cat.pl-mid{color:var(--warm)}.pollen-ring-cat.pl-high,.pollen-ring-cat.pl-very-high{color:var(--warn)}
+.pollen-tips{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:12px;padding-top:12px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.pollen-tip{display:flex;align-items:flex-start;gap:8px;font-size:.6875rem;line-height:1.35;color:var(--mut)}
+.pollen-tip-ico{flex-shrink:0;width:1.25rem;text-align:center;opacity:.85}
+.pollen-days-row{display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.pollen-day-pill{flex:1;min-width:0;text-align:center;padding:8px 6px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.pollen-day-pill.pd-today{border-color:var(--accent);background:var(--accent-soft)}
+.pollen-day-pill .pdp-dn{font-size:.6875rem;font-weight:600;color:var(--ink)}
+.pollen-day-pill .pdp-cat{font-size:.75rem;font-weight:700;margin-top:2px;color:var(--good)}
+.pollen-day-pill .pdp-cat.pl-mid{color:var(--warm)}.pollen-day-pill .pdp-cat.pl-high,.pollen-day-pill .pdp-cat.pl-very-high{color:var(--warn)}
 .pollen-today-detail{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .pollen-today-detail .pd-row{font-size:.6875rem}
 .pollen-today-detail .pd-row span:first-child{color:var(--dim)}
-.pollen-forecast{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:100%}
+.pollen-forecast{display:block;max-width:100%}
 .pollen-day{min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 9px}
 .pollen-day.pd-today{border-color:var(--accent);background:var(--accent-soft)}
 .pollen-day .pd-label{font-size:.8125rem;font-weight:600;color:var(--ink);margin-bottom:8px;text-align:center}
 .pd-row{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:.75rem;margin-top:5px}
 .pd-row span:first-child{color:var(--mut)}
 .pd-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:normal;text-align:right;overflow-wrap:anywhere}
-.pd-val.pd-low{color:var(--good)}.pd-val.pd-mid{color:var(--warm)}.pd-val.pd-high{color:var(--warn)}.pd-val.pd-none{color:var(--dim)}
+.pd-val.pd-low,.pd-val.pl-low{color:var(--good)}.pd-val.pd-mid,.pd-val.pl-mid{color:var(--warm)}.pd-val.pd-high,.pd-val.pl-high,.pd-val.pl-very-high{color:var(--warn)}.pd-val.pd-none{color:var(--dim)}
 .pollen-empty-msg{font-size:.75rem;color:var(--mut);line-height:1.45;text-align:center;padding:6px 2px}
+@media (max-width:520px){.pollen-msn-hero{grid-template-columns:1fr;justify-items:center;text-align:center}.pollen-hero-copy{text-align:center}.pollen-tips{grid-template-columns:1fr}}
 .exposure-hour{min-width:92px;padding:10px 8px}
 .exposure-hour .ex-row{display:flex;justify-content:space-between;align-items:baseline;gap:4px;font-size:.6875rem;margin-top:5px;line-height:1.2}
 .exposure-hour .ex-k{color:var(--dim);font-weight:500;letter-spacing:.02em}
