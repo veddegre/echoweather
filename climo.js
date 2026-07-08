@@ -1,20 +1,23 @@
 // ---------- climate normals & record hints ----------
 let climoNormals = null;
 let nwsCliByDoy = null;
+function climoNormToDisp(c){
+  if(c == null || isNaN(c)) return null;
+  return state.units === 'F' ? Math.round(c * 9 / 5 + 32) : Math.round(c);
+}
 function dayClimoAnomaly(dateStr, hi, lo, precipMm){
   if(!climoNormals) return '';
   const key = dateStr.slice(5);
   const n = climoNormals[key];
   if(!n) return '';
-  const toDisp = c => state.units === 'F' ? Math.round(c * 9 / 5 + 32) : Math.round(c);
   const parts = [];
   if(n.hi != null){
-    const dHi = toDisp(hi) - toDisp(n.hi);
+    const dHi = hi - climoNormToDisp(n.hi);
     if(Math.abs(dHi) >= 3) parts.push((dHi > 0 ? '+' : '') + dHi + '\u00B0 vs 10-yr avg high');
     else parts.push('Near normal high');
   }
   if(n.lo != null){
-    const dLo = toDisp(lo) - toDisp(n.lo);
+    const dLo = lo - climoNormToDisp(n.lo);
     if(Math.abs(dLo) >= 3) parts.push((dLo > 0 ? '+' : '') + dLo + '\u00B0 vs 10-yr avg low');
   }
   if(n.precip != null && precipMm != null && precipMm > 1){
@@ -33,10 +36,9 @@ function formatRecYears(years){
 }
 function dayClimoRecord(dateStr, hi, lo){
   const doy = dateStr.slice(5);
-  const toDisp = c => state.units === 'F' ? Math.round(c * 9 / 5 + 32) : Math.round(c);
   const cliToDisp = v => v == null ? null : (state.units === 'F' ? Math.round(v) : Math.round((v - 32) * 5 / 9));
-  const hDisp = toDisp(hi);
-  const lDisp = toDisp(lo);
+  const hDisp = hi;
+  const lDisp = lo;
   const parts = [];
   const nws = nwsCliByDoy?.[doy];
   if(nws?.recHi != null){
@@ -55,12 +57,12 @@ function dayClimoRecord(dateStr, hi, lo){
     const n = climoNormals[doy];
     if(n){
       if(n.recHi){
-        const rec = toDisp(n.recHi.v);
+        const rec = climoNormToDisp(n.recHi.v);
         if(hDisp >= rec) parts.push({ text: '10-yr high for date (' + rec + '\u00B0 in ' + n.recHi.year + ')', record: true });
         else if(hDisp >= rec - 2) parts.push({ text: 'Near 10-yr high (' + rec + '\u00B0 in ' + n.recHi.year + ')', record: false });
       }
       if(n.recLo){
-        const rec = toDisp(n.recLo.v);
+        const rec = climoNormToDisp(n.recLo.v);
         if(lDisp <= rec) parts.push({ text: '10-yr low for date (' + rec + '\u00B0 in ' + n.recLo.year + ')', record: true });
         else if(lDisp <= rec + 2) parts.push({ text: 'Near 10-yr low (' + rec + '\u00B0 in ' + n.recLo.year + ')', record: false });
       }
