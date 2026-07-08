@@ -17,12 +17,12 @@
   --on-accent:#FFFFFF;
   --now-mark:#001845;--now-mark-halo:#FFFFFF;
   --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
-  --dc-partly-bg:#D4DEE8;--dc-partly-fg:#2A4058;
-  --dc-cloudy-bg:#8E98A4;--dc-cloudy-fg:#141C24;
+  --dc-partly-bg:#B0C0D4;--dc-partly-fg:#1E3450;
+  --dc-cloudy-bg:#7A8490;--dc-cloudy-fg:#141C24;
   --dc-fog-bg:#C9A8E0;--dc-fog-fg:#3A1848;
   --dc-rain-bg:#0D5A8C;--dc-rain-fg:#E8F6FF;
-  --dc-snow-bg:#DCE8E2;--dc-snow-fg:#1E4034;
-  --dc-ice-bg:#C9A0DC;--dc-ice-fg:#3D1848;
+  --dc-snow-bg:#6EC4E8;--dc-snow-fg:#0A2840;
+  --dc-ice-bg:#C060B0;--dc-ice-fg:#3A0838;
   --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
 }
 html[data-theme="dark"] {
@@ -37,14 +37,14 @@ html[data-theme="dark"] {
   --map-tiles:dark_all;
   --on-accent:#001845;
   --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
-  --dc-clear-bg:#6B5520;--dc-clear-fg:#FFE9A8;
-  --dc-partly-bg:#4A5A6A;--dc-partly-fg:#E4ECF4;
-  --dc-cloudy-bg:#5A626C;--dc-cloudy-fg:#E8EAED;
-  --dc-fog-bg:#7A5A98;--dc-fog-fg:#F2E8FA;
-  --dc-rain-bg:#051E38;--dc-rain-fg:#B8DCFF;
-  --dc-snow-bg:#8AAC9C;--dc-snow-fg:#0A2018;
-  --dc-ice-bg:#7A4A98;--dc-ice-fg:#F4E8FA;
-  --dc-storm-bg:#8B3838;--dc-storm-fg:#FFE8E8;
+  --dc-clear-bg:#9A7828;--dc-clear-fg:#FFF0C0;
+  --dc-partly-bg:#3D7AAA;--dc-partly-fg:#E8F4FF;
+  --dc-cloudy-bg:#8A929C;--dc-cloudy-fg:#0E1014;
+  --dc-fog-bg:#A888C8;--dc-fog-fg:#F8F0FF;
+  --dc-rain-bg:#2A7AC0;--dc-rain-fg:#E8F4FF;
+  --dc-snow-bg:#88D4F0;--dc-snow-fg:#082838;
+  --dc-ice-bg:#D868C0;--dc-ice-fg:#FFF0FA;
+  --dc-storm-bg:#D04848;--dc-storm-fg:#FFF0F0;
 }
 @media (prefers-color-scheme: dark) {
   html[data-theme="system"] {
@@ -59,14 +59,14 @@ html[data-theme="dark"] {
     --map-tiles:dark_all;
     --on-accent:#001845;
     --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
-    --dc-clear-bg:#6B5520;--dc-clear-fg:#FFE9A8;
-    --dc-partly-bg:#4A5A6A;--dc-partly-fg:#E4ECF4;
-    --dc-cloudy-bg:#5A626C;--dc-cloudy-fg:#E8EAED;
-    --dc-fog-bg:#7A5A98;--dc-fog-fg:#F2E8FA;
-    --dc-rain-bg:#051E38;--dc-rain-fg:#B8DCFF;
-    --dc-snow-bg:#8AAC9C;--dc-snow-fg:#0A2018;
-    --dc-ice-bg:#7A4A98;--dc-ice-fg:#F4E8FA;
-    --dc-storm-bg:#8B3838;--dc-storm-fg:#FFE8E8;
+    --dc-clear-bg:#9A7828;--dc-clear-fg:#FFF0C0;
+    --dc-partly-bg:#3D7AAA;--dc-partly-fg:#E8F4FF;
+    --dc-cloudy-bg:#8A929C;--dc-cloudy-fg:#0E1014;
+    --dc-fog-bg:#A888C8;--dc-fog-fg:#F8F0FF;
+    --dc-rain-bg:#2A7AC0;--dc-rain-fg:#E8F4FF;
+    --dc-snow-bg:#88D4F0;--dc-snow-fg:#082838;
+    --dc-ice-bg:#D868C0;--dc-ice-fg:#FFF0FA;
+    --dc-storm-bg:#D04848;--dc-storm-fg:#FFF0F0;
   }
 }
 @media (prefers-color-scheme: light) {
@@ -82,12 +82,12 @@ html[data-theme="dark"] {
     --on-accent:#FFFFFF;
     --now-mark:#001845;--now-mark-halo:#FFFFFF;
     --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
-    --dc-partly-bg:#D4DEE8;--dc-partly-fg:#2A4058;
-    --dc-cloudy-bg:#8E98A4;--dc-cloudy-fg:#141C24;
+    --dc-partly-bg:#B0C0D4;--dc-partly-fg:#1E3450;
+    --dc-cloudy-bg:#7A8490;--dc-cloudy-fg:#141C24;
     --dc-fog-bg:#C9A8E0;--dc-fog-fg:#3A1848;
     --dc-rain-bg:#0D5A8C;--dc-rain-fg:#E8F6FF;
-    --dc-snow-bg:#DCE8E2;--dc-snow-fg:#1E4034;
-    --dc-ice-bg:#C9A0DC;--dc-ice-fg:#3D1848;
+    --dc-snow-bg:#6EC4E8;--dc-snow-fg:#0A2840;
+    --dc-ice-bg:#C060B0;--dc-ice-fg:#3A0838;
     --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
   }
 }
