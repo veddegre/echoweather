@@ -17,9 +17,9 @@
   --on-accent:#FFFFFF;
   --now-mark:#001845;--now-mark-halo:#FFFFFF;
   --dc-clear-bg:#F4C430;--dc-clear-fg:#3D2E00;
-  --dc-partly-bg:#C7CCD1;--dc-partly-fg:#2A3038;
+  --dc-partly-bg:#C4C8CC;--dc-partly-fg:#2A3038;
   --dc-cloudy-bg:#6C757D;--dc-cloudy-fg:#F5F7F8;
-  --dc-fog-bg:#90A4AE;--dc-fog-fg:#1A2830;
+  --dc-fog-bg:#6B8FA0;--dc-fog-fg:#F0F8FC;
   --dc-rain-bg:#2196F3;--dc-rain-fg:#FFFFFF;
   --dc-snow-bg:#80DEEA;--dc-snow-fg:#0A3840;
   --dc-ice-bg:#7E57C2;--dc-ice-fg:#FFFFFF;
@@ -38,9 +38,9 @@ html[data-theme="dark"] {
   --on-accent:#001845;
   --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
   --dc-clear-bg:#B8941A;--dc-clear-fg:#FFF4C8;
-  --dc-partly-bg:#8A9199;--dc-partly-fg:#F0F2F4;
+  --dc-partly-bg:#949AA0;--dc-partly-fg:#F2F3F5;
   --dc-cloudy-bg:#5A6268;--dc-cloudy-fg:#ECEEF0;
-  --dc-fog-bg:#6E8490;--dc-fog-fg:#E8F0F4;
+  --dc-fog-bg:#4A7080;--dc-fog-fg:#E0EEF4;
   --dc-rain-bg:#1976D2;--dc-rain-fg:#E3F2FD;
   --dc-snow-bg:#4DD0E1;--dc-snow-fg:#082830;
   --dc-ice-bg:#9575CD;--dc-ice-fg:#F3E8FF;
@@ -60,9 +60,9 @@ html[data-theme="dark"] {
     --on-accent:#001845;
     --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
     --dc-clear-bg:#B8941A;--dc-clear-fg:#FFF4C8;
-    --dc-partly-bg:#8A9199;--dc-partly-fg:#F0F2F4;
+    --dc-partly-bg:#949AA0;--dc-partly-fg:#F2F3F5;
     --dc-cloudy-bg:#5A6268;--dc-cloudy-fg:#ECEEF0;
-    --dc-fog-bg:#6E8490;--dc-fog-fg:#E8F0F4;
+    --dc-fog-bg:#4A7080;--dc-fog-fg:#E0EEF4;
     --dc-rain-bg:#1976D2;--dc-rain-fg:#E3F2FD;
     --dc-snow-bg:#4DD0E1;--dc-snow-fg:#082830;
     --dc-ice-bg:#9575CD;--dc-ice-fg:#F3E8FF;
@@ -82,9 +82,9 @@ html[data-theme="dark"] {
     --on-accent:#FFFFFF;
     --now-mark:#001845;--now-mark-halo:#FFFFFF;
     --dc-clear-bg:#F4C430;--dc-clear-fg:#3D2E00;
-    --dc-partly-bg:#C7CCD1;--dc-partly-fg:#2A3038;
+    --dc-partly-bg:#C4C8CC;--dc-partly-fg:#2A3038;
     --dc-cloudy-bg:#6C757D;--dc-cloudy-fg:#F5F7F8;
-    --dc-fog-bg:#90A4AE;--dc-fog-fg:#1A2830;
+    --dc-fog-bg:#6B8FA0;--dc-fog-fg:#F0F8FC;
     --dc-rain-bg:#2196F3;--dc-rain-fg:#FFFFFF;
     --dc-snow-bg:#80DEEA;--dc-snow-fg:#0A3840;
     --dc-ice-bg:#7E57C2;--dc-ice-fg:#FFFFFF;
