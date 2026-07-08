@@ -398,7 +398,7 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-chart-svg{display:block;width:100%;height:100%}
 .day-chart-temp-fill{fill:var(--accent);opacity:.12}
 .day-chart-temp{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
-.day-chart-precip{fill:var(--sky);opacity:.55}
+.day-chart-precip{color:var(--sky)}
 .day-chart-split{stroke:var(--line);stroke-width:1;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
 .day-chart-now{stroke:var(--now-mark);stroke-width:2;vector-effect:non-scaling-stroke;opacity:.9}
 .day-chart-key{display:flex;gap:12px;margin-top:6px;font-size:.5625rem;color:var(--dim)}
