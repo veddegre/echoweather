@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '225';
+const APP_VERSION = '226';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1847,9 +1847,11 @@ function buildDayTimeline(indices, hh, dd, i, opts){
       const hrKey = hh.time[idx].slice(0, 13);
       const isNow = hrKey === nowHour;
       const tickLbl = compactTicks ? hourLabelCompact(hh.time[idx]) : hourLabel(hh.time[idx]);
+      const tickPop = Math.round(hh.precipitation_probability?.[idx] ?? 0);
       tickParts.push('<div class="day-tick' + (isNow ? ' now' : '') + '">'
         + '<div class="day-tick-t">' + tickLbl + '</div>'
         + '<div class="day-tick-v">' + Math.round(hh.temperature_2m[idx]) + '°</div>'
+        + '<div class="day-tick-pop">' + tickPop + '%</div>'
         + '</div>');
     }
     return {
@@ -1868,8 +1870,8 @@ function buildDayTimeline(indices, hh, dd, i, opts){
   const segHtml = '<div class="day-seg dc-' + bucket + '" style="width:100%" title="' + esc(COND_BUCKETS[bucket]) + '">'
     + '<span>' + esc(COND_BUCKETS[bucket]) + '</span></div>';
   const ticksHtml = '<div class="day-ticks">'
-    + '<div class="day-tick"><div class="day-tick-t">Low</div><div class="day-tick-v">' + Math.round(lo) + '°</div></div>'
-    + '<div class="day-tick"><div class="day-tick-t">High</div><div class="day-tick-v">' + Math.round(hi) + '°</div></div>'
+    + '<div class="day-tick"><div class="day-tick-t">Low</div><div class="day-tick-v">' + Math.round(lo) + '°</div><div class="day-tick-pop">—</div></div>'
+    + '<div class="day-tick"><div class="day-tick-t">High</div><div class="day-tick-v">' + Math.round(hi) + '°</div><div class="day-tick-pop">' + Math.round(dd.precipitation_probability_max?.[i] ?? 0) + '%</div></div>'
     + '</div>';
   return {
     hourly: false,
