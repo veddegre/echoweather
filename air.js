@@ -730,11 +730,8 @@ function renderPollenForecast(pollen, meteoDaily, tz){
   renderPollenPlaceholder();
 }
 function renderPollenMeta(pollen){
-  if(!pollen) return '';
-  if(pollen.quotaPaused){
-    return 'Showing last available Google forecast \u2014 daily pollen data limit reached.';
-  }
-  return 'Pollen forecast from Google.';
+  if(!pollen || !pollen.quotaPaused) return '';
+  return 'Showing last available Google forecast \u2014 daily pollen data limit reached.';
 }
 let airLoadGen = 0;
 function renderAirnowKey(){
