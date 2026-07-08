@@ -89,8 +89,8 @@ function applyNavHash(){
   syncChromeHeight();
   applyRadarDeepLinkFromHash();
   const { path } = parseNavHash();
-  const isTab = APP_TABS.includes(path);
-  setAppTab(tabForNavPath(path), { skipScroll: !isTab, skipHash: true });
+  const tab = tabForNavPath(path);
+  setAppTab(tab, { skipScroll: getAppTab() === tab, skipHash: true });
   scrollToNavTarget(path);
 }
 
@@ -249,13 +249,18 @@ function initPageNav(){
 
   window.addEventListener('hashchange', syncLayout);
   window.addEventListener('pageshow', e => { if(e.persisted) syncLayout(); });
+  let layoutResizeW = window.innerWidth;
   window.addEventListener('resize', () => {
-    syncChromeHeight();
+    const w = window.innerWidth;
+    const widthChanged = Math.abs(w - layoutResizeW) >= 48;
+    if(widthChanged) layoutResizeW = w;
+    scheduleSyncChromeHeight();
+    positionSearchResults();
+    if(isRadarTabVisible() && map) refreshRadarMapSize();
+    if(!widthChanged) return;
     syncLayout();
     syncImpactTabChrome();
     if(state.data) renderActivityPlanner(state.data);
-    positionSearchResults();
-    if(isRadarTabVisible() && map) refreshRadarMapSize();
   });
   window.addEventListener('scroll', () => positionSearchResults(), {passive:true});
   syncLayout();
