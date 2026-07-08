@@ -496,41 +496,51 @@ function pollenPlantRowHtml(row){
   const meta = row.detail
     ? '<span class="pollen-plant-meta">' + esc(row.detail) + '</span>'
     : (row.score > 0 ? '<span class="pollen-plant-score">' + row.score + '</span>' : '');
-  return '<div class="pollen-plant-row">'
+  const rowCls = 'pollen-plant-row' + (row.isType ? ' pollen-plant-row-type' : row.isPlant ? ' pollen-plant-row-species' : '');
+  return '<div class="' + rowCls + '">'
     + '<span class="pollen-plant-name">' + esc(row.name) + '</span>'
     + '<span class="pollen-plant-cat ' + esc(row.cls) + '">' + esc(row.category) + '</span>'
     + meta
     + '</div>';
 }
+function googlePollenTypeRow(types, code){
+  const t = Array.isArray(types) ? types.find(x => (x.code || '').toUpperCase() === code) : null;
+  if(!t || (!t.inSeason && !(t.index || 0))) return null;
+  return {
+    name: (t.name || POLLEN_TYPE_META[code].label) + ' pollen',
+    category: pollenCatLabel(t.category),
+    cls: pollenCatCls(t.category),
+    score: googleUpiToDisplay(t.index || 0),
+    isType: true
+  };
+}
 function buildGooglePlantGroups(day){
   const byType = { TREE: [], GRASS: [], WEED: [] };
   (day.plants || []).forEach(p => {
-    const key = pollenPlantTypeKey(p.type);
+    const key = pollenPlantTypeKey(p.type) || pollenPlantTypeKey(p.code);
     if(!byType[key]) return;
     if((p.index || 0) < 1 && (!p.category || isPollenNoneCategory(p.category))) return;
     byType[key].push({
       name: p.name || p.code || POLLEN_TYPE_META[key].label,
       category: pollenCatLabel(p.category),
       cls: pollenCatCls(p.category),
-      score: googleUpiToDisplay(p.index || 0)
-    });
-  });
-  (day.types || []).forEach(t => {
-    const key = (t.code || '').toUpperCase();
-    if(!byType[key] || byType[key].length) return;
-    if(!t.inSeason && !(t.index || 0)) return;
-    byType[key].push({
-      name: t.name || POLLEN_TYPE_META[key]?.label || key,
-      category: pollenCatLabel(t.category),
-      cls: pollenCatCls(t.category),
-      score: googleUpiToDisplay(t.index || 0)
+      score: googleUpiToDisplay(p.index || 0),
+      isPlant: true
     });
   });
   return POLLEN_TYPE_ORDER.map(key => {
-    const rows = byType[key].sort((a, b) => b.score - a.score);
+    const plants = byType[key].sort((a, b) => b.score - a.score);
+    const rows = [];
+    const typeRow = googlePollenTypeRow(day.types, key);
+    if(typeRow) rows.push(typeRow);
+    rows.push(...plants);
     if(!rows.length) return null;
     const meta = POLLEN_TYPE_META[key];
-    return { key, icon: meta.icon, label: meta.label, rows };
+    const species = plants.map(p => p.name).filter(Boolean);
+    const summary = species.length
+      ? species.slice(0, 6).join(', ') + (species.length > 6 ? ', \u2026' : '')
+      : '';
+    return { key, icon: meta.icon, label: meta.label, rows, summary };
   }).filter(Boolean);
 }
 function buildMeteoPlantGroups(daily, dayIndex){
@@ -551,14 +561,16 @@ function buildMeteoPlantGroups(daily, dayIndex){
       category: lvl.text,
       cls: lvl.cls.replace('pd-', 'pl-'),
       score: meteoPollenIndex(v),
-      detail: v.toFixed(1) + ' gr/m\u00B3'
+      detail: v.toFixed(1) + ' gr/m\u00B3',
+      isPlant: true
     });
   });
   return POLLEN_TYPE_ORDER.map(key => {
     const rows = byType[key].sort((a, b) => parseFloat(b.detail) - parseFloat(a.detail));
     if(!rows.length) return null;
     const meta = POLLEN_TYPE_META[key];
-    return { key, icon: meta.icon, label: meta.label, rows };
+    const summary = rows.map(r => r.name).join(', ');
+    return { key, icon: meta.icon, label: meta.label, rows, summary };
   }).filter(Boolean);
 }
 function pollenPlantExpandHtml(opts){
@@ -567,17 +579,21 @@ function pollenPlantExpandHtml(opts){
   if(opts.googleDay) groups = buildGooglePlantGroups(opts.googleDay);
   else if(opts.meteoDaily) groups = buildMeteoPlantGroups(opts.meteoDaily, opts.meteoIndex ?? 0);
   if(!groups.length) return '';
-  const body = groups.map(g =>
-    '<div class="pollen-plant-group">'
-    + '<div class="pollen-plant-grp-lbl">' + g.icon + ' ' + esc(g.label) + '</div>'
-    + g.rows.map(pollenPlantRowHtml).join('')
-    + '</div>'
-  ).join('');
+  const body = groups.map(g => {
+    const summary = g.summary
+      ? '<div class="pollen-plant-grp-species">' + esc(g.summary) + '</div>'
+      : '';
+    return '<div class="pollen-plant-group">'
+      + '<div class="pollen-plant-grp-lbl">' + g.icon + ' ' + esc(g.label) + '</div>'
+      + summary
+      + g.rows.map(pollenPlantRowHtml).join('')
+      + '</div>';
+  }).join('');
   const note = opts.googleDay
-    ? 'Species-level forecast from Google for today.'
-    : 'Modeled species concentrations from Open-Meteo (gr/m\u00B3).';
+    ? 'Pollen types and in-season plant species from Google for today.'
+    : 'Modeled plant types from Open-Meteo (gr/m\u00B3).';
   return '<details class="pollen-plant-expand">'
-    + '<summary>Plant breakdown</summary>'
+    + '<summary>Pollen types &amp; plants</summary>'
     + '<p class="pollen-plant-expand-note">' + esc(note) + '</p>'
     + '<div class="pollen-plant-groups">' + body + '</div>'
     + '</details>';

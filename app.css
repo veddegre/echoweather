@@ -455,8 +455,12 @@ body.radar-expanded{overflow:hidden}
 .pollen-plant-expand-note{margin:6px 0 8px;font-size:.6875rem;color:var(--dim);line-height:1.4}
 .pollen-plant-groups{display:flex;flex-direction:column;gap:10px}
 .pollen-plant-group{background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid color-mix(in srgb,var(--line) 75%,transparent);border-radius:10px;padding:8px 10px}
-.pollen-plant-grp-lbl{font-size:.625rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.pollen-plant-grp-lbl{font-size:.625rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.pollen-plant-grp-species{font-size:.6875rem;color:var(--mut);line-height:1.35;margin-bottom:6px}
 .pollen-plant-row{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center;padding:4px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.pollen-plant-row-type .pollen-plant-name{font-weight:700}
+.pollen-plant-row-species .pollen-plant-name{padding-left:10px;font-weight:500;color:var(--mut)}
+.pollen-plant-row-species .pollen-plant-name::before{content:'\u2022';margin-right:6px;color:var(--dim)}
 .pollen-plant-group .pollen-plant-row:first-of-type{border-top:none;padding-top:0}
 .pollen-plant-name{font-size:.75rem;font-weight:600;color:var(--ink);min-width:0}
 .pollen-plant-cat{font-size:.625rem;font-weight:700;white-space:nowrap}

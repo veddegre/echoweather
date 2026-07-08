@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '222';
+const APP_VERSION = '223';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1117,14 +1117,27 @@ function closestOmIndex(iso, omTimes){
   }
   return best;
 }
+function backfillNwsObsFields(latest, older){
+  if(!latest) return null;
+  const out = Object.assign({}, latest);
+  ['windSpeed', 'windDirection', 'windGust'].forEach(field => {
+    if(nwsVal(out[field]) != null) return;
+    for(let i = 0; i < older.length; i++){
+      const v = nwsVal(older[i][field]);
+      if(v != null){ out[field] = older[i][field]; break; }
+    }
+  });
+  return out;
+}
 async function fetchStationLatestObs(stationId){
-  const or = await nwsFetch('https://api.weather.gov/stations/' + encodeURIComponent(stationId) + '/observations?limit=1');
+  const or = await nwsFetch('https://api.weather.gov/stations/' + encodeURIComponent(stationId) + '/observations?limit=12');
   if(!or.ok) return null;
   const data = await or.json();
-  const feat = (data.features || [])[0];
-  if(!feat) return null;
-  const p = feat.properties || {};
-  return p.timestamp ? p : null;
+  const props = (data.features || [])
+    .map(f => f.properties)
+    .filter(p => p && p.timestamp);
+  if(!props.length) return null;
+  return backfillNwsObsFields(props[0], props.slice(1));
 }
 async function fetchMetarObs(pointsProps){
   const stationsUrl = pointsProps && pointsProps.observationStations;
