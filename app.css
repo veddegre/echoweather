@@ -390,8 +390,11 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .day-now{position:absolute;top:0;bottom:0;width:2px;background:var(--now-mark);transform:translateX(-50%);z-index:4;pointer-events:none;box-shadow:0 0 0 1px var(--now-mark-halo),0 0 0 2px color-mix(in srgb,var(--now-mark) 28%,transparent)}
 .day-now-lbl{position:absolute;top:0;left:50%;transform:translateX(-50%);font-size:.5625rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent);border-radius:4px;padding:2px 6px;line-height:1.2;white-space:nowrap;box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 10%,transparent)}
 .day-temp-chart{margin-top:10px;overflow:hidden;min-width:0}
+.day-chart-lbl{font-size:.5625rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.day-chart-lbl-pop{margin-top:8px}
 .day-temp-line{height:36px;color:var(--accent)}
-.day-temp-line svg{display:block;width:100%;height:100%}
+.day-pop-line{height:28px;color:var(--sky)}
+.day-temp-line svg,.day-pop-line svg{display:block;width:100%;height:100%}
 .day-ticks{display:flex;justify-content:space-between;align-items:flex-end;gap:2px;margin-top:6px;overflow:hidden;min-width:0}
 .day-tick{flex:1 1 0;min-width:0;text-align:center}
 .day-tick .day-tick-t{font-size:.5625rem;color:var(--dim);line-height:1.2;white-space:nowrap}
@@ -696,7 +699,7 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .radar-wrap .leaflet-top.leaflet-left .leaflet-control-zoom{margin-top:10px;margin-left:10px}
 .radar-legend{position:absolute;bottom:10px;left:10px;z-index:500;background:var(--legend-bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.625rem;color:var(--dim);pointer-events:none;box-shadow:var(--card-shadow)}
 .radar-legend .bar{display:flex;height:8px;width:120px;border-radius:2px;overflow:hidden;margin-top:4px;background:linear-gradient(90deg,#00ffc8,#00e800,#ffff00,#ff8000,#ff0000,#ff00ff)}
-.trends{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.trends{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-bottom:14px}
 .trend{background:var(--panel-2);border-radius:8px;padding:10px 12px;min-width:0}
 .trend .lbl{font-size:.625rem;color:var(--dim);font-weight:500}
 .trend-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px}
@@ -706,7 +709,7 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .trend-cat{font-size:.5625rem;font-weight:600;text-transform:capitalize;margin-left:5px;letter-spacing:0}
 .trend-cat.stable{color:var(--dim)}.trend-cat.marginal{color:var(--sky)}.trend-cat.unstable{color:var(--warn)}.trend-cat.very-unstable{color:var(--warm)}
 .trend svg{display:block;margin-top:4px;color:var(--sky);width:100%;height:28px}
-.trend.temp svg{color:var(--sun)}.trend.dew svg{color:var(--accent)}.trend.cape svg{color:var(--warn)}.trend.wind svg{color:var(--sky)}.trend.pres svg{color:var(--dim)}
+.trend.temp svg{color:var(--sun)}.trend.dew svg{color:var(--accent)}.trend.pop svg{color:var(--sky)}.trend.cape svg{color:var(--warn)}.trend.wind svg{color:var(--sky)}.trend.pres svg{color:var(--dim)}
 .obs-lede{font-size:.75rem;color:var(--mut);margin:4px 0 0;line-height:1.45}
 .hourly-lede{font-size:.75rem;color:var(--mut);margin:4px 0 10px;line-height:1.45}
 .metar-trace-note{font-size:.72rem;color:var(--dim);margin:4px 0 8px;line-height:1.4}

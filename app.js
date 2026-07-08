@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '224';
+const APP_VERSION = '225';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1643,6 +1643,7 @@ function renderHourly(d){
   const temps = slice(d.hourly.temperature_2m, v => v);
   const dews = slice(d.hourly.dew_point_2m, v => v);
   const capes = slice(d.hourly.cape, v => v ?? 0);
+  const pops = slice(d.hourly.precipitation_probability, v => v ?? 0, 0);
   const foot = { left: 'Now', rightPrefix: 'Later' };
   const dU = degSym();
   const capePeak = capes.length ? Math.max(...capes) : 0;
@@ -1650,6 +1651,14 @@ function renderHourly(d){
     sparklineCard('Pressure', pres, 'pres', ' hPa', { ...foot, minSpan: 6 }),
     sparklineCard('Temperature', temps, 'temp', dU, { ...foot, minSpan: state.units === 'F' ? 8 : 5 }),
     sparklineCard('Dew point', dews, 'dew', dU, { ...foot, minSpan: state.units === 'F' ? 8 : 5 }),
+    sparklineCard('Precip chance', pops, 'pop', '%', {
+      ...foot,
+      domain: { min: 0, max: 100 },
+      fmt: v => String(Math.round(v)),
+      rangeFmt: (min, max, latest, fmt) => (min === max ? fmt(min) + '%' : fmt(min) + '% \u2013 ' + fmt(max) + '%'),
+      rightTail: Math.round(pops[pops.length - 1] ?? 0) + '%',
+      hint: 'Hourly probability of measurable precipitation (0\u2013100%)'
+    }),
     sparklineCard('CAPE', capes, 'cape', ' J/kg', {
       ...foot,
       domain: { min: 0, max: CAPE_SCALE_MAX },
@@ -1783,10 +1792,12 @@ function fmtPrecipSum(sum){
   if(state.units === 'F') return (sum < 0.1 ? sum.toFixed(2) : sum.toFixed(1)) + ' in';
   return sum.toFixed(1) + ' mm';
 }
-function dayTempSparkline(temps, w, h){
-  const vals = temps.filter(v => v != null && !isNaN(v));
+function daySeriesSparkline(values, w, h, opts){
+  opts = opts || {};
+  const vals = values.filter(v => v != null && !isNaN(v)).map(Number);
   if(!vals.length) return '';
-  const min = Math.min(...vals), max = Math.max(...vals);
+  const min = opts.domain ? opts.domain.min : Math.min(...vals);
+  const max = opts.domain ? opts.domain.max : Math.max(...vals);
   const span = max - min || 1;
   const pts = vals.map((v, i) => {
     const x = vals.length < 2 ? w / 2 : (i / (vals.length - 1)) * w;
@@ -1794,10 +1805,22 @@ function dayTempSparkline(temps, w, h){
     return x.toFixed(1) + ',' + y.toFixed(1);
   });
   const line = pts.join(' ');
+  const fillOpacity = opts.fillOpacity ?? 0.14;
+  const aria = opts.ariaLabel ? ' aria-label="' + esc(opts.ariaLabel) + '"' : ' aria-hidden="true"';
   const area = '0,' + h + ' ' + line + ' ' + w + ',' + h;
-  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true">'
-    + '<polygon points="' + area + '" fill="currentColor" opacity=".14"/>'
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none"' + aria + '>'
+    + '<polygon points="' + area + '" fill="currentColor" opacity="' + fillOpacity + '"/>'
     + '<polyline points="' + line + '" fill="none" stroke="currentColor" stroke-width="1.75" vector-effect="non-scaling-stroke"/></svg>';
+}
+function dayTempSparkline(temps, w, h){
+  return daySeriesSparkline(temps, w, h, { ariaLabel: 'Hourly temperature' });
+}
+function dayPopSparkline(pops, w, h){
+  return daySeriesSparkline(pops, w, h, {
+    domain: { min: 0, max: 100 },
+    fillOpacity: 0.1,
+    ariaLabel: 'Hourly chance of precipitation'
+  });
 }
 function buildDayTimeline(indices, hh, dd, i, opts){
   const compactTicks = opts.compactTicks;
@@ -1815,6 +1838,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
         + '<span class="day-now-lbl">Now</span></div>'
       : '';
     const temps = indices.map(j => hh.temperature_2m[j]);
+    const pops = indices.map(j => hh.precipitation_probability?.[j] ?? 0);
     const maxTicks = compactTicks ? 6 : 12;
     const tickStep = Math.max(1, Math.ceil(indices.length / maxTicks));
     const tickParts = [];
@@ -1833,6 +1857,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
       segHtml: segHtml,
       nowMark,
       temps,
+      pops,
       ticksHtml: tickParts.length ? '<div class="day-ticks">' + tickParts.join('') + '</div>' : '',
       note: ''
     };
@@ -1851,6 +1876,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
     segHtml,
     nowMark: '',
     temps: [lo, hi],
+    pops: [dd.precipitation_probability_max?.[i] ?? 0, dd.precipitation_probability_max?.[i] ?? 0],
     ticksHtml,
     note: '<div class="day-card-note">Hourly detail not available for this day</div>'
   };
@@ -1966,7 +1992,10 @@ function renderDaily(d){
       + '<div class="day-cond-strip" role="img" aria-label="Hour-by-hour sky conditions for this day">' + timeline.segHtml + '</div>'
       + '</div>'
       + '<div class="day-temp-chart">'
+      + '<div class="day-chart-lbl day-chart-lbl-temp">Temperature</div>'
       + '<div class="day-temp-line">' + dayTempSparkline(timeline.temps, 320, 36) + '</div>'
+      + '<div class="day-chart-lbl day-chart-lbl-pop">Rain chance</div>'
+      + '<div class="day-pop-line">' + dayPopSparkline(timeline.pops, 320, 28) + '</div>'
       + timeline.ticksHtml
       + timeline.note
       + '</div>'
