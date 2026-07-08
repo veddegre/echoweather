@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '231';
+const APP_VERSION = '232';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1895,7 +1895,7 @@ function dayHourlyWetData(indices, hh, opts){
     const amtScore = maxAmt > 0 ? wetAmt[i] / maxAmt : 0;
     if(popScore > 0) return Math.max(popScore, amtScore);
     if(amtScore > 0.04) return amtScore;
-    return wetScoreFromCode(it.code, hh.shortForecast?.[j]);
+    return wetScoreFromCode(it.code, hh.shortForecast?.[indices[i]]);
   });
   const dayMaxPop = opts.dayMaxPop ?? 0;
   const dayShort = opts.dayShort || '';
