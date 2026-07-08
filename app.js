@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '218';
+const APP_VERSION = '222';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1085,6 +1085,18 @@ function nwsVal(obj){
   if(typeof obj === 'object' && 'value' in obj) return obj.value;
   return obj;
 }
+function nwsWindToMs(obj){
+  const v = nwsVal(obj);
+  if(v === null || v === undefined) return null;
+  const uc = (obj && obj.unitCode) || '';
+  if(uc.includes('km_h')) return v / 3.6;
+  if(uc.includes('kn')) return v * 0.514444;
+  return v;
+}
+function nwsWindToDisp(obj){
+  const ms = nwsWindToMs(obj);
+  return ms === null ? null : msToDisp(ms);
+}
 function fmtRh(rh){
   if(rh == null) return null;
   return Math.round(rh);
@@ -1259,8 +1271,8 @@ function buildCurrentFromMetar(metar, om, nwsHourly){
   const p = metar.props;
   const tempC = nwsVal(p.temperature);
   const dewC = nwsVal(p.dewpoint);
-  const windMs = nwsVal(p.windSpeed);
-  const gustMs = nwsVal(p.windGust);
+  const windMs = nwsWindToMs(p.windSpeed);
+  const gustMs = nwsWindToMs(p.windGust);
   const presPa = nwsVal(p.barometricPressure);
   const visM = nwsVal(p.visibility);
   const heatC = nwsVal(p.heatIndex);

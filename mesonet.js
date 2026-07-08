@@ -32,7 +32,7 @@ async function fetchMesonetRows(loc, limit){
       const temp = tc != null
         ? (state.units === 'F' ? Math.round(tc * 9 / 5 + 32) : Math.round(tc))
         : null;
-      const wspd = msToDisp(nwsVal(o.windSpeed));
+      const wspd = nwsWindToDisp(o.windSpeed);
       const wdir = o.windDirection?.value != null ? compass(o.windDirection.value) : '';
       const wind = wspd != null ? (wdir ? wdir + ' ' : '') + wspd + ' ' + windUnit() : null;
       return { ...s, temp, wind };

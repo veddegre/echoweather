@@ -145,12 +145,12 @@ function renderAviationMetarCard(icao, obs){
   }
   const p = obs.props;
   const tempC = nwsVal(p.temperature);
-  const windMs = nwsVal(p.windSpeed);
-  const gustMs = nwsVal(p.windGust);
+  const wind = nwsWindToDisp(p.windSpeed);
+  const gust = nwsWindToDisp(p.windGust);
   const visM = nwsVal(p.visibility);
   const temp = tempC != null ? (state.units === 'F' ? Math.round(tempC * 9/5 + 32) : Math.round(tempC)) + degSym() : '\u2014';
-  const wind = windMs != null ? Math.round(msToDisp(windMs)) + ' ' + windUnit() : '\u2014';
-  const gust = gustMs != null ? ', gusts ' + Math.round(msToDisp(gustMs)) : '';
+  const windStr = wind != null ? wind + ' ' + windUnit() : '\u2014';
+  const gustStr = gust != null ? ', gusts ' + gust : '';
   const vis = visM != null
     ? (state.units === 'F' ? (visM / 1609.34).toFixed(1) + ' mi' : (visM / 1000).toFixed(1) + ' km')
     : '\u2014';
@@ -162,7 +162,7 @@ function renderAviationMetarCard(icao, obs){
     + '<div class="av-icao">' + id + catBadge + '</div>'
     + '<div class="av-meta">' + esc(p.textDescription || 'Observation')
     + (when ? ' \u00B7 ' + when : '') + '</div>'
-    + '<div class="av-meta">Temp ' + temp + ' \u00B7 Wind ' + wind + gust + ' \u00B7 Vis ' + vis + '</div>'
+    + '<div class="av-meta">Temp ' + temp + ' \u00B7 Wind ' + windStr + gustStr + ' \u00B7 Vis ' + vis + '</div>'
     + (raw ? '<details class="av-raw"><summary>Raw METAR</summary><pre>' + esc(raw) + '</pre></details>' : '')
     + '</div>';
 }

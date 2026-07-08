@@ -19,6 +19,20 @@ function obsBiasBadge(obs, fc, kind, unit, dec){
     ? { html: n + unit + ' warmer', cls: 'obs-higher' }
     : { html: n + unit + ' cooler', cls: 'obs-lower' };
 }
+function obsPressureBiasBadge(obsHpa, fcHpa){
+  if(obsHpa === null || fcHpa === null || isNaN(obsHpa) || isNaN(fcHpa)) return { html: '\u2014', cls: 'obs-close' };
+  if(state.units === 'F'){
+    const obsIn = obsHpa * 0.02953;
+    const fcIn = fcHpa * 0.02953;
+    const d = obsIn - fcIn;
+    if(Math.abs(d) < 0.02) return { html: 'On forecast', cls: 'obs-close' };
+    const n = Math.abs(d).toFixed(2);
+    return d > 0
+      ? { html: n + ' inHg higher', cls: 'obs-higher' }
+      : { html: n + ' inHg lower', cls: 'obs-lower' };
+  }
+  return obsBiasBadge(obsHpa, fcHpa, 'pressure', ' hPa', 1);
+}
 function obsCompareRow(label, obsDisp, fcDisp, bias){
   return '<div class="obs-row">'
     + '<div class="obs-label">' + label + '</div>'
@@ -57,13 +71,11 @@ async function loadObs(loc){
 
       const obsTempC = nwsVal(obs.temperature);
       const obsDewC = nwsVal(obs.dewpoint);
-      const obsWindMs = nwsVal(obs.windSpeed);
       const obsPresPa = nwsVal(obs.barometricPressure);
       const toDispTemp = c => state.units === 'F' ? Math.round(c * 9/5 + 32) : Math.round(c);
-      const toDispWind = ms => state.units === 'F' ? Math.round(ms * 2.237) : Math.round(ms * 3.6);
       const obsTemp = obsTempC !== null && obsTempC !== undefined ? toDispTemp(obsTempC) : null;
       const obsDew = obsDewC !== null && obsDewC !== undefined ? toDispTemp(obsDewC) : null;
-      const obsWind = obsWindMs !== null && obsWindMs !== undefined ? toDispWind(obsWindMs) : null;
+      const obsWind = nwsWindToDisp(obs.windSpeed);
       const obsPresHpa = obsPresPa !== null && obsPresPa !== undefined ? obsPresPa / 100 : null;
       const obsTime = obs.timestamp ? new Date(obs.timestamp).toLocaleString([], { hour:'numeric', minute:'2-digit' }) : '';
       $('obsStation').textContent = sid + ' \u00B7 observed ' + obsTime;
@@ -87,7 +99,7 @@ async function loadObs(loc){
             ? (state.units === 'F' ? (obsPresHpa * 0.02953).toFixed(2) + ' inHg' : Math.round(obsPresHpa) + ' hPa')
             : null,
           state.units === 'F' ? (fcPres * 0.02953).toFixed(2) + ' inHg' : Math.round(fcPres) + ' hPa',
-          obsBiasBadge(obsPresHpa, fcPres, 'pressure', ' hPa', 1))
+          obsPressureBiasBadge(obsPresHpa, fcPres))
       ];
       $('obsMetrics').innerHTML = rows.join('');
       $('obsNote').textContent = 'Badge shows how the observation compares to the NWS forecast this hour (warmer/cooler, stronger/lighter wind, etc.).';
@@ -110,14 +122,13 @@ async function renderMetarTrace(stationId){
     if(feats.length < 3){ wrap.hidden = true; return; }
     const temps = [], winds = [], pressures = [];
     const toDispTemp = c => state.units === 'F' ? Math.round(c * 9/5 + 32) : Math.round(c);
-    const toDispWind = ms => state.units === 'F' ? Math.round(ms * 2.237) : Math.round(ms * 3.6);
     feats.forEach(f => {
       const p = f.properties || {};
       const t = nwsVal(p.temperature);
-      const w = nwsVal(p.windSpeed);
+      const w = nwsWindToDisp(p.windSpeed);
       const pr = nwsVal(p.barometricPressure);
       if(t != null) temps.push(toDispTemp(t));
-      if(w != null) winds.push(toDispWind(w));
+      if(w != null) winds.push(w);
       if(pr != null){
         const hpa = pr / 100;
         pressures.push(state.units === 'F' ? Math.round(hpa * 0.02953 * 100) / 100 : Math.round(hpa));
