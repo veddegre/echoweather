@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '232';
+const APP_VERSION = '233';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -395,6 +395,15 @@ function dateKeyAddDays(key, delta){
 }
 function isForecastToday(dateStr, tz){
   return forecastDayKey(dateStr) === todayKeyInTz(tz);
+}
+function nowPctInDayTimeline(indices, hh, tz){
+  if(!indices.length) return null;
+  const nowM = nowMinsInTz(tz);
+  const firstM = forecastWallMins(hh.time[indices[0]]);
+  const lastM = forecastWallMins(hh.time[indices[indices.length - 1]]) + 60;
+  const span = lastM - firstM;
+  if(span <= 0) return null;
+  return Math.max(0, Math.min(100, ((nowM - firstM) / span) * 100));
 }
 function dayLabelFromDate(dateStr, tz){
   const diff = dayDiffKeys(todayKeyInTz(tz), forecastDayKey(dateStr));
@@ -2022,10 +2031,6 @@ function dayForecastChartSvg(temps, wetScores, w, h, opts){
     const dotCls = i === opts.nowLabelIdx ? ' day-chart-temp-dot-now' : '';
     body += '<circle class="day-chart-temp-dot' + dotCls + '" cx="' + x + '" cy="' + y + '" r="2.5"/>';
   }
-  if(opts.nowPct != null){
-    const nx = ((opts.nowPct / 100) * w).toFixed(1);
-    body += '<line class="day-chart-now" x1="' + nx + '" y1="' + geo.padT + '" x2="' + nx + '" y2="' + (h - geo.padB) + '"/>';
-  }
   const aria = 'Hourly temperature and precipitation for the day';
   return '<svg class="day-chart-svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-label="' + esc(aria) + '">' + body + '</svg>';
 }
@@ -2073,8 +2078,9 @@ function buildDayTimeline(indices, hh, dd, i, opts){
       + '</div>'
     ).join('');
     const nowMark = nowPct != null
-      ? '<div class="day-now" style="left:' + nowPct.toFixed(2) + '%" title="Current time">'
-        + '<span class="day-now-lbl">Now</span></div>'
+      ? '<div class="day-now" style="--now-pct:' + nowPct.toFixed(2) + '" title="Current time">'
+        + '<span class="day-now-lbl">Now</span>'
+        + '<span class="day-now-line" aria-hidden="true"></span></div>'
       : '';
     const temps = indices.map(j => hh.temperature_2m[j]);
     const wet = dayHourlyWetData(indices, hh, {
@@ -2221,7 +2227,9 @@ function renderDaily(d){
       + ' · High <strong>' + hi + '°</strong>'
       + (hiAt ? ' at ' + hiAt : '');
     const compactTicks = window.matchMedia('(max-width:860px)').matches;
-    const nowPct = isForecastToday(t, d.timezone) ? (nowMinsInTz(d.timezone) / 1440) * 100 : null;
+    const nowPct = isForecastToday(t, d.timezone) && indices.length
+      ? nowPctInDayTimeline(indices, hh, d.timezone)
+      : null;
     const timeline = buildDayTimeline(indices, hh, dd, i, { compactTicks, nowHour, nowPct });
     const gust = Math.round(dd.wind_gusts_10m_max[i]);
     const uv = (dd.uv_index_max[i] ?? 0).toFixed(0);
@@ -2243,8 +2251,8 @@ function renderDaily(d){
       + (precipWin ? '<div class="day-precip-win">' + esc(precipWin) + '</div>' : '')
       + '</div>'
       + '<div class="day-timeline-wrap">'
-      + '<div class="day-cond-wrap">'
       + (timeline.nowMark || '')
+      + '<div class="day-cond-wrap">'
       + '<div class="day-cond-strip" role="img" aria-label="Hour-by-hour sky conditions for this day">' + timeline.segHtml + '</div>'
       + '</div>'
       + '<div class="day-temp-chart">'
