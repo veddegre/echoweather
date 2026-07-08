@@ -383,24 +383,60 @@ function pollenRingSvg(pct, strokeCls){
     + ' stroke-dasharray="' + dash.toFixed(1) + ' ' + circ.toFixed(1) + '" transform="rotate(-90 ' + c + ' ' + c + ')"/>'
     + '</svg>';
 }
-function pollenTypeFromGoogle(types, code){
+function isPollenNoneCategory(cat){
+  return (cat || '').toLowerCase().includes('none');
+}
+function pollenPlantTypeKey(plantType){
+  const t = String(plantType || '').toUpperCase();
+  if(!t) return '';
+  if(t.includes('GRASS') || t === 'GRAMINALES') return 'GRASS';
+  if(t.includes('WEED')) return 'WEED';
+  if(t.includes('TREE')) return 'TREE';
+  return t;
+}
+function maxPlantPollenForType(plants, code){
+  if(!Array.isArray(plants) || !plants.length) return null;
+  let best = null;
+  plants.forEach(p => {
+    if(pollenPlantTypeKey(p.type) !== code) return;
+    const idx = p.index || 0;
+    if(idx <= 0) return;
+    if(!best || idx > best.index) best = { index: idx, category: p.category || '' };
+  });
+  return best;
+}
+function pollenGoogleTypeUpi(types, code, plants){
+  const t = Array.isArray(types) ? types.find(x => (x.code || '').toUpperCase() === code) : null;
+  const plantBest = maxPlantPollenForType(plants, code);
+  const typeIdx = t && (t.inSeason || (t.index || 0) > 0) ? (t.index || 0) : 0;
+  const plantIdx = plantBest ? plantBest.index : 0;
+  let upi = Math.max(typeIdx, plantIdx);
+  let category = '';
+  if(upi === typeIdx && typeIdx >= plantIdx && t) category = t.category || '';
+  else if(plantIdx > 0 && plantBest) category = plantBest.category || '';
+  else if(t) category = t.category || '';
+  if(upi <= 0 && t && category && !isPollenNoneCategory(category)) upi = 1;
+  return { upi, category, hasData: !!(t || plantBest) };
+}
+function pollenTypeFromGoogle(types, code, plants){
   const name = code === 'GRASS' ? 'Grass' : code === 'TREE' ? 'Tree' : 'Weed';
-  if(!Array.isArray(types)) return { label: 'Low', cls: 'pl-low', score: 0, name };
-  const t = types.find(x => x.code === code);
-  if(!t || (!t.inSeason && !t.index)) return { label: 'Low', cls: 'pl-low', score: 0, name };
-  return Object.assign({ name }, pollenTierFromGoogle(t.index, t.category));
+  const { upi, category, hasData } = pollenGoogleTypeUpi(types, code, plants);
+  if(!hasData || (upi <= 0 && (!category || isPollenNoneCategory(category)))){
+    return { label: 'Low', cls: 'pl-low', score: 0, name };
+  }
+  return Object.assign({ name }, pollenTierFromGoogle(upi, category));
 }
 function pollenOverallFromGoogle(day){
-  if(!day || !Array.isArray(day.types)) return { index: 0, label: 'Low', cls: 'pl-low', main: '' };
+  if(!day) return { index: 0, label: 'Low', cls: 'pl-low', main: '' };
+  const types = day.types || [];
+  const plants = day.plants || [];
   let maxUpi = 0, main = '', maxCategory = '';
-  day.types.forEach(t => {
-    if(!t.inSeason && !t.index) return;
-    const idx = t.index || 0;
-    if(idx >= maxUpi){
-      maxUpi = idx;
-      maxCategory = t.category || '';
-      const code = (t.code || '').toUpperCase();
-      main = code === 'GRASS' ? 'Grass' : code === 'TREE' ? 'Tree' : code === 'WEED' ? 'Weed' : (t.name || '');
+  ['GRASS', 'TREE', 'WEED'].forEach(code => {
+    const { upi, category } = pollenGoogleTypeUpi(types, code, plants);
+    if(upi >= maxUpi){
+      maxUpi = upi;
+      maxCategory = category;
+      main = code === 'GRASS' ? 'Grass' : code === 'TREE' ? 'Tree' : 'Weed';
     }
   });
   const tier = pollenTierFromGoogle(maxUpi, maxCategory);
@@ -540,9 +576,9 @@ function renderPollenForecast(pollen, meteoDaily){
   if(pollen && pollen.days && pollen.days.length){
     const days = pollen.days.slice(0, 3).map((day, i) => {
       const overall = pollenOverallFromGoogle(day);
-      const grass = pollenTypeFromGoogle(day.types, 'GRASS');
-      const tree = pollenTypeFromGoogle(day.types, 'TREE');
-      const weed = pollenTypeFromGoogle(day.types, 'WEED');
+      const grass = pollenTypeFromGoogle(day.types, 'GRASS', day.plants);
+      const tree = pollenTypeFromGoogle(day.types, 'TREE', day.plants);
+      const weed = pollenTypeFromGoogle(day.types, 'WEED', day.plants);
       return {
         label: pollenDayLabel(day.date, i),
         overall,

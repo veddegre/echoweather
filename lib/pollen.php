@@ -97,7 +97,7 @@ function slim_pollen_response(string $regionCode, array $dailyInfo): array
         $days[] = [
             'date' => $dateStr,
             'types' => $types,
-            'plants' => array_slice($plants, 0, 8),
+            'plants' => array_slice($plants, 0, 15),
         ];
     }
 
