@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '230';
+const APP_VERSION = '231';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1051,7 +1051,8 @@ function defaultRadarMode(loc){
 function nwsToWmo(text){
   const s = String(text || '').toLowerCase();
   if(/tornado|severe thunder/.test(s)) return 95;
-  if(/thunder/.test(s)) return 95;
+  const isChance = /\b(chance|slight chance|isolated|scattered)\b/.test(s);
+  if(/thunder/.test(s)) return isChance ? 80 : 95;
   if(/wintry mix|rain\/snow|snow\/rain|ice pellet/.test(s)) return 67;
   if(/freezing rain|sleet|wintry/.test(s)) return 67;
   if(/snow|blizzard|flurr/.test(s)) return s.includes('light') ? 71 : 73;
@@ -1399,16 +1400,18 @@ function chartHourly(d){
 function inferHourlyPop(pop, code, short){
   let p = pop ?? 0;
   const s = String(short || '').toLowerCase();
-  if(code >= 95) p = Math.max(p, 70);
-  else if(code >= 80) p = Math.max(p, 50);
+  const chance = /\b(chance|slight|isolated|scattered)\b/.test(s);
+  if(code >= 95 && !chance) p = Math.max(p, 70);
+  else if(code >= 80) p = Math.max(p, chance ? 40 : 50);
   else if(code >= 61) p = Math.max(p, 40);
   else if(code >= 51) p = Math.max(p, 28);
-  if(/thunder|t-storm|tstorm/.test(s)) p = Math.max(p, 55);
+  if(/thunder|t-storm|tstorm/.test(s)) p = Math.max(p, chance ? 40 : 55);
   else if(/shower|rain|storm|drizzle/.test(s)) p = Math.max(p, 35);
   return p;
 }
-function wetScoreFromCode(code){
-  if(code >= 95) return 0.62;
+function wetScoreFromCode(code, short){
+  const chance = /\b(chance|slight|isolated|scattered)\b/i.test(String(short || ''));
+  if(code >= 95) return chance ? 0.35 : 0.62;
   if(code >= 80) return 0.42;
   if(code >= 61) return 0.32;
   if(code >= 51) return 0.22;
@@ -1748,6 +1751,9 @@ function isWarmPrecipTemp(temp){
 function conditionBucket(code, hourly, idx, tempOverride){
   const c = code ?? 2;
   const temp = tempOverride ?? (hourly != null && idx != null ? hourly.temperature_2m?.[idx] : null);
+  const pop = hourly != null && idx != null ? (hourly.precipitation_probability?.[idx] ?? 0) : null;
+  const short = hourly != null && idx != null ? String(hourly.shortForecast?.[idx] || '') : '';
+  const chanceWording = /\b(chance|slight|isolated|scattered)\b/i.test(short);
   if(hourly != null && idx != null){
     const rain = hourly.precipitation?.[idx] ?? 0;
     const snow = hourly.snowfall?.[idx] ?? 0;
@@ -1757,7 +1763,10 @@ function conditionBucket(code, hourly, idx, tempOverride){
       return isWarmPrecipTemp(temp) ? 'rain' : 'ice';
     }
   }
-  if(c >= 95) return 'storm';
+  if(c >= 95){
+    if(chanceWording || (pop != null && pop < 55)) return 'rain';
+    return 'storm';
+  }
   if(c >= 85 || (c >= 71 && c <= 77)){
     return isWarmPrecipTemp(temp) ? 'rain' : 'snow';
   }
@@ -1886,7 +1895,7 @@ function dayHourlyWetData(indices, hh, opts){
     const amtScore = maxAmt > 0 ? wetAmt[i] / maxAmt : 0;
     if(popScore > 0) return Math.max(popScore, amtScore);
     if(amtScore > 0.04) return amtScore;
-    return wetScoreFromCode(it.code);
+    return wetScoreFromCode(it.code, hh.shortForecast?.[j]);
   });
   const dayMaxPop = opts.dayMaxPop ?? 0;
   const dayShort = opts.dayShort || '';
