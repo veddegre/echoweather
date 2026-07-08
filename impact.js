@@ -1000,7 +1000,7 @@ function renderPlannerDayBar(day, d, def){
   const nowMins = isToday ? nowMinsInTz(d.timezone) : null;
   const bar = hours.map((h, hr) => {
     const cls = h.ineligible ? 'na' : (h.grade === 'good' ? 'g' : h.grade === 'fair' ? 'f' : 'p');
-    const past = isToday && hr * 60 < nowMins ? ' past' : '';
+    const past = isToday && (hr + 1) * 60 <= nowMins ? ' past' : '';
     let tip = hourLabelCompact(h.time) + ': ' + (h.ineligible ? activityIneligibleNote(def) : activityGradeLabel(h.grade, def));
     if(!h.ineligible && h.reasons[0]) tip += ' \u2014 ' + h.reasons[0];
     return '<span class="' + cls + past + '" title="' + esc(tip) + '"></span>';
@@ -1220,33 +1220,15 @@ function describeActivityWindow(def, w, hours, d, extra){
   }
   return sentences.join(' ');
 }
-function buildActivityWhyList(def, hours, windows, d, extra){
-  const eligible = hours.filter(h => !h.ineligible);
-  const intro = isImpactDef(def)
-    ? 'Each note matches a colored stretch on the bar above (green = low impact, amber = moderate, red = high).'
-    : 'Each note matches a colored stretch on the bar above (green = good, amber = fair, red = poor).';
-  if(!eligible.length){
-    return {
-      intro: '',
-      items: [{
-        grade: 'na',
-        label: '',
-        time: '',
-        text: def.nightOnly
-          ? 'Needs darkness — none left in this 24-hour window.'
-          : 'Best in daylight; remaining hours are after dark.'
-      }]
-    };
-  }
-  const nowIso = hours[0]?.time;
+function buildWhyItemsForWindows(def, windows, hours, d, extra, nowIso){
+  const items = [];
+  const gradeOrder = isImpactDef(def) ? ['poor', 'fair', 'good'] : ['good', 'fair', 'poor'];
   const windowSort = (a, b) => {
     const aNow = nowIso && a.start <= nowIso && a.end >= nowIso;
     const bNow = nowIso && b.start <= nowIso && b.end >= nowIso;
     if(aNow !== bNow) return aNow ? -1 : 1;
     return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
   };
-  const items = [];
-  const gradeOrder = isImpactDef(def) ? ['poor', 'fair', 'good'] : ['good', 'fair', 'poor'];
   for(const grade of gradeOrder){
     const wins = windows.filter(w => w.grade === grade).sort(windowSort);
     for(const w of wins.slice(0, 2)){
@@ -1258,6 +1240,72 @@ function buildActivityWhyList(def, hours, windows, d, extra){
       });
     }
   }
+  return items;
+}
+function renderWhyListItems(items){
+  return items.map(item => {
+    const cls = item.grade === 'good' ? 'why-good' : item.grade === 'fair' ? 'why-fair' : item.grade === 'poor' ? 'why-poor' : '';
+    const head = item.time
+      ? '<strong>' + esc(item.label) + ' (' + esc(item.time) + '):</strong> '
+      : '';
+    return '<li class="' + cls + '">' + head + esc(item.text) + '</li>';
+  }).join('');
+}
+function buildActivityWhyList(def, hours, windows, d, extra, dayBars){
+  const eligible = hours.filter(h => !h.ineligible);
+  const intro = isImpactDef(def)
+    ? 'Each note matches a colored stretch on the bars above (green = low impact, amber = moderate, red = high).'
+    : 'Each note matches a colored stretch on the bars above (green = good, amber = fair, red = poor).';
+  if(!eligible.length){
+    return {
+      intro: '',
+      sections: [{
+        title: '',
+        items: [{
+          grade: 'na',
+          label: '',
+          time: '',
+          text: def.nightOnly
+            ? 'Needs darkness — none left in this 24-hour window.'
+            : 'Best in daylight; remaining hours are after dark.'
+        }]
+      }]
+    };
+  }
+  if(dayBars && dayBars.length){
+    const nowIso = d.hourly.time[nowIndex(d)];
+    const sections = [];
+    for(const day of dayBars){
+      const dayEligible = day.hours.filter(h => !h.ineligible);
+      if(!dayEligible.length) continue;
+      const dayWindows = mergeActivityWindows(day.hours);
+      const isToday = day.dateStr && nowIso.slice(0, 10) === String(day.dateStr).slice(0, 10);
+      let items = buildWhyItemsForWindows(def, dayWindows, day.hours, d, extra, isToday ? nowIso : null);
+      if(!items.length){
+        items = [{
+          grade: 'poor',
+          label: isImpactDef(def) ? activityImpactSummaryLabel('poor') : activityGradeLabel('poor', def),
+          time: '',
+          text: 'No notable stretches for this day.'
+        }];
+      }
+      sections.push({ title: plannerDayTitle(day.dayIndex, day.dateStr), items });
+    }
+    if(!sections.length){
+      sections.push({
+        title: '',
+        items: [{
+          grade: 'poor',
+          label: 'Poor',
+          time: '',
+          text: 'No stretch rated good or fair in the next 24 hours.'
+        }]
+      });
+    }
+    return { intro, sections };
+  }
+  const nowIso = hours[0]?.time;
+  const items = buildWhyItemsForWindows(def, windows, hours, d, extra, nowIso);
   if(!items.length){
     items.push({
       grade: 'poor',
@@ -1266,7 +1314,7 @@ function buildActivityWhyList(def, hours, windows, d, extra){
       text: 'No stretch rated good or fair in the next 24 hours.'
     });
   }
-  return { intro, items };
+  return { intro, sections: [{ title: '', items }] };
 }
 function plannerCompactUnpinned(pins){
   return isMobileTabLayout() && pins.length > 0;
@@ -1285,14 +1333,15 @@ function renderActivityCard(def, hours, d, extra, pins){
   const overall = activityOverallGrade(def, eligible, d);
   const windows = mergeActivityWindows(buildActivityHours(d, def, extra));
   const barHtml = dayBars.map(day => renderPlannerDayBar(day, d, def)).join('');
-  const why = buildActivityWhyList(def, buildActivityHours(d, def, extra), windows, d, extra);
+  const why = buildActivityWhyList(def, buildActivityHours(d, def, extra), windows, d, extra, dayBars);
   const whyIntro = why.intro ? '<p class="activity-why-lede">' + esc(why.intro) + '</p>' : '';
-  const whyList = why.items.map(item => {
-    const cls = item.grade === 'good' ? 'why-good' : item.grade === 'fair' ? 'why-fair' : item.grade === 'poor' ? 'why-poor' : '';
-    const head = item.time
-      ? '<strong>' + esc(item.label) + ' (' + esc(item.time) + '):</strong> '
-      : '';
-    return '<li class="' + cls + '">' + head + esc(item.text) + '</li>';
+  const whyBody = why.sections.map(sec => {
+    const list = renderWhyListItems(sec.items);
+    if(sec.title){
+      return '<div class="activity-why-day"><div class="activity-why-day-lbl">' + esc(sec.title) + '</div>'
+        + '<ul class="activity-why-list">' + list + '</ul></div>';
+    }
+    return '<ul class="activity-why-list">' + list + '</ul>';
   }).join('');
   const isPinned = pins.includes(def.id);
   const head = '<div class="activity-head"><button type="button" class="activity-pin' + (isPinned ? ' on' : '')
@@ -1303,7 +1352,7 @@ function renderActivityCard(def, hours, d, extra, pins){
   const windowLine = '<div class="activity-window">' + esc(summarizeActivityWindows(windows, buildActivityHours(d, def, extra), def)) + '</div>';
   const detailBody = barHtml
     + '<details class="activity-why"><summary>Why</summary>' + whyIntro
-    + '<ul style="margin:6px 0 0;padding-left:1.1em">' + whyList + '</ul></details>';
+    + whyBody + '</details>';
   if(plannerCompactUnpinned(pins) && !isPinned){
     return '<article class="activity-card activity-card-compact">'
       + '<details class="activity-compact-details"><summary class="activity-compact-summary">' + head + windowLine

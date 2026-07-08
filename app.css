@@ -527,6 +527,10 @@ body.radar-expanded{overflow:hidden}
 .activity-why{margin-top:8px;font-size:.72rem;color:var(--mut);line-height:1.5}
 .activity-why summary{cursor:pointer;color:var(--accent);user-select:none;font-weight:600}
 .activity-why-lede{font-size:.7rem;color:var(--dim);margin:6px 0 8px;line-height:1.45}
+.activity-why-day{margin-top:8px}
+.activity-why-day:first-of-type{margin-top:4px}
+.activity-why-day-lbl{font-size:.625rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.activity-why-list{margin:0 0 4px;padding-left:1.1em}
 .activity-why li{margin-bottom:6px}
 .activity-why li strong{color:var(--ink);font-weight:600}
 .activity-why .why-good strong{color:var(--good)}

@@ -400,8 +400,9 @@ function pollenOverallFromMeteo(daily, i){
   return { index: max, label: tier.label, cls: tier.cls, main, grass, tree, weed };
 }
 function pollenRingHtml(ico, name, tier){
+  const fill = tier.score > 0 ? tier.score : 0;
   return '<div class="pollen-ring">'
-    + '<div class="pollen-ring-arc">' + pollenRingSvg(tier.score || 12, tier.cls) + '</div>'
+    + '<div class="pollen-ring-arc">' + pollenRingSvg(fill, tier.cls) + '</div>'
     + '<div class="pollen-ring-ico" aria-hidden="true">' + ico + '</div>'
     + '<div class="pollen-ring-name">' + esc(name) + '</div>'
     + '<div class="pollen-ring-cat ' + tier.cls + '">' + esc(tier.label) + '</div>'
@@ -413,7 +414,7 @@ function pollenDayPillHtml(label, tier, isToday){
     + '<div class="pdp-cat ' + tier.cls + '">' + esc(tier.label) + '</div>'
     + '</div>';
 }
-function renderPollenMsnHtml(todayOverall, grassTier, treeTier, weedTier, dayPills, todayDetailRows){
+function renderPollenMsnHtml(todayOverall, grassTier, treeTier, weedTier, dayPills){
   const tier = pollenIndexTier(todayOverall.index);
   const mainLine = todayOverall.main
     ? '<div class="pollen-main-type">Main allergy: <strong>' + esc(todayOverall.main) + '</strong></div>'
@@ -437,9 +438,6 @@ function renderPollenMsnHtml(todayOverall, grassTier, treeTier, weedTier, dayPil
     + '</div>'
     + pollenTipsHtml()
     + '<div class="pollen-days-row">' + dayPills.join('') + '</div>';
-  if(todayDetailRows && todayDetailRows.length){
-    html += renderPollenTodayDetailHtml(todayDetailRows);
-  }
   return html + '</div>';
 }
 function meteoPollenLevel(v){
@@ -480,17 +478,17 @@ function pollenDayLabel(dateStr, i){
   const d = new Date(dateStr + 'T12:00:00');
   return d.toLocaleDateString([], { weekday: 'short' });
 }
-function renderPollenPlaceholder(todayDetailRows){
+function renderPollenPlaceholder(){
   const box = $('pollenForecast'), block = $('pollenBlock');
   if(!box || !block) return;
   block.style.display = 'block';
   const off = pollenIndexTier(0);
   const pills = ['Today', 'Tomorrow', 'Day 3'].map((lbl, i) => pollenDayPillHtml(lbl, off, i === 0));
   box.innerHTML = renderPollenMsnHtml(
-    { index: 0, main: '' }, off, off, off, pills, todayDetailRows
+    { index: 0, main: '' }, off, off, off, pills
   );
 }
-function renderPollenFromMeteoDaily(daily, todayDetailRows){
+function renderPollenFromMeteoDaily(daily){
   const box = $('pollenForecast'), block = $('pollenBlock');
   if(!box || !block || !daily || !daily.time || !daily.time.length) return false;
   block.style.display = 'block';
@@ -509,17 +507,15 @@ function renderPollenFromMeteoDaily(daily, todayDetailRows){
   box.innerHTML = renderPollenMsnHtml(
     today.overall,
     today.grass, today.tree, today.weed,
-    days.map(d => pollenDayPillHtml(d.label, pollenIndexTier(d.overall.index), d.isToday)),
-    todayDetailRows
+    days.map(d => pollenDayPillHtml(d.label, pollenIndexTier(d.overall.index), d.isToday))
   );
   return true;
 }
-function renderPollenForecast(pollen, meteoDaily, todayDetailRows){
+function renderPollenForecast(pollen, meteoDaily){
   const box = $('pollenForecast'), block = $('pollenBlock');
   if(!box || !block) return;
   block.style.display = 'block';
   if(pollen && pollen.days && pollen.days.length){
-    const detail = todayDetailRows || collectPollenTodayRows(pollen);
     const days = pollen.days.slice(0, 3).map((day, i) => {
       const overall = pollenOverallFromGoogle(day);
       const grass = pollenTypeFromGoogle(day.types, 'GRASS');
@@ -538,13 +534,12 @@ function renderPollenForecast(pollen, meteoDaily, todayDetailRows){
     box.innerHTML = renderPollenMsnHtml(
       today.overall,
       today.grass, today.tree, today.weed,
-      days.map(d => pollenDayPillHtml(d.label, pollenIndexTier(d.overall.index), d.isToday)),
-      detail
+      days.map(d => pollenDayPillHtml(d.label, pollenIndexTier(d.overall.index), d.isToday))
     );
     return;
   }
-  if(meteoDaily && renderPollenFromMeteoDaily(meteoDaily, todayDetailRows)) return;
-  renderPollenPlaceholder(todayDetailRows);
+  if(meteoDaily && renderPollenFromMeteoDaily(meteoDaily)) return;
+  renderPollenPlaceholder();
 }
 function renderPollenMeta(pollen){
   if(!pollen) return '';
@@ -627,14 +622,13 @@ async function loadAir(loc){
         }
       }
       if(pollen){
-        const pollenTodayDetail = collectPollenTodayRows(pollen);
-        renderPollenForecast(pollen, meteoDaily, pollenTodayDetail);
+        renderPollenForecast(pollen, meteoDaily);
         $('pollenNote').textContent = renderPollenMeta(pollen);
       } else if(c){
         const pollenTodayDetail = collectMeteoPollenTodayRows(c);
-        renderPollenForecast(null, meteoDaily, pollenTodayDetail);
+        renderPollenForecast(null, meteoDaily);
         $('pollenNote').textContent = pollenTodayDetail.length
-          ? '3-day forecast below uses Open-Meteo modeled levels; species detail in Today card.'
+          ? '3-day forecast uses Open-Meteo modeled levels.'
           : 'Levels are low or off-season.';
       } else {
         renderPollenForecast(null, meteoDaily);
