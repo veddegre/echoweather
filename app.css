@@ -16,14 +16,14 @@
   --sans:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   --on-accent:#FFFFFF;
   --now-mark:#001845;--now-mark-halo:#FFFFFF;
-  --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
-  --dc-partly-bg:#B0C0D4;--dc-partly-fg:#1E3450;
-  --dc-cloudy-bg:#7A8490;--dc-cloudy-fg:#141C24;
-  --dc-fog-bg:#C9A8E0;--dc-fog-fg:#3A1848;
-  --dc-rain-bg:#0D5A8C;--dc-rain-fg:#E8F6FF;
-  --dc-snow-bg:#6EC4E8;--dc-snow-fg:#0A2840;
-  --dc-ice-bg:#C060B0;--dc-ice-fg:#3A0838;
-  --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
+  --dc-clear-bg:#F4C430;--dc-clear-fg:#3D2E00;
+  --dc-partly-bg:#C7CCD1;--dc-partly-fg:#2A3038;
+  --dc-cloudy-bg:#6C757D;--dc-cloudy-fg:#F5F7F8;
+  --dc-fog-bg:#90A4AE;--dc-fog-fg:#1A2830;
+  --dc-rain-bg:#2196F3;--dc-rain-fg:#FFFFFF;
+  --dc-snow-bg:#80DEEA;--dc-snow-fg:#0A3840;
+  --dc-ice-bg:#7E57C2;--dc-ice-fg:#FFFFFF;
+  --dc-storm-bg:#E53935;--dc-storm-fg:#FFFFFF;
 }
 html[data-theme="dark"] {
   color-scheme: dark;
@@ -37,14 +37,14 @@ html[data-theme="dark"] {
   --map-tiles:dark_all;
   --on-accent:#001845;
   --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
-  --dc-clear-bg:#9A7828;--dc-clear-fg:#FFF0C0;
-  --dc-partly-bg:#5C5848;--dc-partly-fg:#F2EDE4;
-  --dc-cloudy-bg:#8A929C;--dc-cloudy-fg:#0E1014;
-  --dc-fog-bg:#A888C8;--dc-fog-fg:#F8F0FF;
-  --dc-rain-bg:#2E88E8;--dc-rain-fg:#F0F8FF;
-  --dc-snow-bg:#88D4F0;--dc-snow-fg:#082838;
-  --dc-ice-bg:#D868C0;--dc-ice-fg:#FFF0FA;
-  --dc-storm-bg:#D04848;--dc-storm-fg:#FFF0F0;
+  --dc-clear-bg:#B8941A;--dc-clear-fg:#FFF4C8;
+  --dc-partly-bg:#8A9199;--dc-partly-fg:#F0F2F4;
+  --dc-cloudy-bg:#5A6268;--dc-cloudy-fg:#ECEEF0;
+  --dc-fog-bg:#6E8490;--dc-fog-fg:#E8F0F4;
+  --dc-rain-bg:#1976D2;--dc-rain-fg:#E3F2FD;
+  --dc-snow-bg:#4DD0E1;--dc-snow-fg:#082830;
+  --dc-ice-bg:#9575CD;--dc-ice-fg:#F3E8FF;
+  --dc-storm-bg:#C62828;--dc-storm-fg:#FFEBEE;
 }
 @media (prefers-color-scheme: dark) {
   html[data-theme="system"] {
@@ -59,14 +59,14 @@ html[data-theme="dark"] {
     --map-tiles:dark_all;
     --on-accent:#001845;
     --now-mark:#f0f4fa;--now-mark-halo:#1a1f27;
-    --dc-clear-bg:#9A7828;--dc-clear-fg:#FFF0C0;
-    --dc-partly-bg:#5C5848;--dc-partly-fg:#F2EDE4;
-    --dc-cloudy-bg:#8A929C;--dc-cloudy-fg:#0E1014;
-    --dc-fog-bg:#A888C8;--dc-fog-fg:#F8F0FF;
-    --dc-rain-bg:#2E88E8;--dc-rain-fg:#F0F8FF;
-    --dc-snow-bg:#88D4F0;--dc-snow-fg:#082838;
-    --dc-ice-bg:#D868C0;--dc-ice-fg:#FFF0FA;
-    --dc-storm-bg:#D04848;--dc-storm-fg:#FFF0F0;
+    --dc-clear-bg:#B8941A;--dc-clear-fg:#FFF4C8;
+    --dc-partly-bg:#8A9199;--dc-partly-fg:#F0F2F4;
+    --dc-cloudy-bg:#5A6268;--dc-cloudy-fg:#ECEEF0;
+    --dc-fog-bg:#6E8490;--dc-fog-fg:#E8F0F4;
+    --dc-rain-bg:#1976D2;--dc-rain-fg:#E3F2FD;
+    --dc-snow-bg:#4DD0E1;--dc-snow-fg:#082830;
+    --dc-ice-bg:#9575CD;--dc-ice-fg:#F3E8FF;
+    --dc-storm-bg:#C62828;--dc-storm-fg:#FFEBEE;
   }
 }
 @media (prefers-color-scheme: light) {
@@ -81,14 +81,14 @@ html[data-theme="dark"] {
     --map-tiles:light_all;
     --on-accent:#FFFFFF;
     --now-mark:#001845;--now-mark-halo:#FFFFFF;
-    --dc-clear-bg:#FFE6A3;--dc-clear-fg:#4A3808;
-    --dc-partly-bg:#B0C0D4;--dc-partly-fg:#1E3450;
-    --dc-cloudy-bg:#7A8490;--dc-cloudy-fg:#141C24;
-    --dc-fog-bg:#C9A8E0;--dc-fog-fg:#3A1848;
-    --dc-rain-bg:#0D5A8C;--dc-rain-fg:#E8F6FF;
-    --dc-snow-bg:#6EC4E8;--dc-snow-fg:#0A2840;
-    --dc-ice-bg:#C060B0;--dc-ice-fg:#3A0838;
-    --dc-storm-bg:#D94A4A;--dc-storm-fg:#FFF5F5;
+    --dc-clear-bg:#F4C430;--dc-clear-fg:#3D2E00;
+    --dc-partly-bg:#C7CCD1;--dc-partly-fg:#2A3038;
+    --dc-cloudy-bg:#6C757D;--dc-cloudy-fg:#F5F7F8;
+    --dc-fog-bg:#90A4AE;--dc-fog-fg:#1A2830;
+    --dc-rain-bg:#2196F3;--dc-rain-fg:#FFFFFF;
+    --dc-snow-bg:#80DEEA;--dc-snow-fg:#0A3840;
+    --dc-ice-bg:#7E57C2;--dc-ice-fg:#FFFFFF;
+    --dc-storm-bg:#E53935;--dc-storm-fg:#FFFFFF;
   }
 }
 *{box-sizing:border-box;margin:0;padding:0}
