@@ -1,4 +1,4 @@
-const CACHE = 'echo-weather-v228';
+const CACHE = 'echo-weather-v229';
 const ICON_Q = '?v=87';
 const ASSETS = [
   './app.css',
