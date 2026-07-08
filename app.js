@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '229';
+const APP_VERSION = '230';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1741,16 +1741,27 @@ function renderHourly(d){
 const COND_BUCKETS = {
   clear:'Clear', partly:'Partly', cloudy:'Cloudy', fog:'Fog', rain:'Rain', snow:'Snow', ice:'Ice/mix', storm:'Storm'
 };
-function conditionBucket(code, hourly, idx){
+function isWarmPrecipTemp(temp){
+  if(temp == null || temp === undefined) return false;
+  return state.units === 'F' ? temp > 35 : temp > 2;
+}
+function conditionBucket(code, hourly, idx, tempOverride){
   const c = code ?? 2;
+  const temp = tempOverride ?? (hourly != null && idx != null ? hourly.temperature_2m?.[idx] : null);
   if(hourly != null && idx != null){
     const rain = hourly.precipitation?.[idx] ?? 0;
     const snow = hourly.snowfall?.[idx] ?? 0;
-    if(rain > 0.05 && snow > 0.05) return 'ice';
+    const rainThresh = state.units === 'F' ? 0.02 : 0.2;
+    const snowThresh = state.units === 'F' ? 0.02 : 0.2;
+    if(rain > rainThresh && snow > snowThresh){
+      return isWarmPrecipTemp(temp) ? 'rain' : 'ice';
+    }
   }
   if(c >= 95) return 'storm';
-  if(c >= 85 || (c >= 71 && c <= 77)) return 'snow';
-  if(c >= 56 && c <= 67) return 'ice';
+  if(c >= 85 || (c >= 71 && c <= 77)){
+    return isWarmPrecipTemp(temp) ? 'rain' : 'snow';
+  }
+  if(c >= 56 && c <= 67) return isWarmPrecipTemp(temp) ? 'rain' : 'ice';
   if((c >= 51 && c <= 55) || (c >= 80 && c <= 82)) return 'rain';
   if(c >= 45 && c <= 48) return 'fog';
   if(c === 3) return 'cloudy';
@@ -1921,13 +1932,23 @@ function fmtChartPrecipAmt(amt){
   if(amt < 1) return amt.toFixed(1) + ' mm';
   return amt.toFixed(1) + ' mm';
 }
+function dayChartRainAxis(wet){
+  const useAmt = wet.maxAmt > (state.units === 'F' ? 0.005 : 0.05);
+  if(useAmt){
+    const top = fmtChartPrecipAmt(wet.maxAmt);
+    const mid = fmtChartPrecipAmt(wet.maxAmt / 2);
+    return { label: state.units === 'F' ? 'Precip (in)' : 'Precip (mm)', top, mid, bot: '0' };
+  }
+  const peak = wet.peakPop || Math.round(Math.max(...(wet.scores || [0]), 0) * 100);
+  return { label: 'Rain chance', top: peak + '%', mid: Math.round(peak / 2) + '%', bot: '0%' };
+}
 function dayChartTempGeometry(temps, h){
   const n = temps.length;
   const tempVals = temps.map(v => Number(v));
   const tMin = Math.min(...tempVals);
   const tMax = Math.max(...tempVals);
   const tSpan = Math.max(tMax - tMin, state.units === 'F' ? 8 : 5);
-  const padT = 6;
+  const padT = 14;
   const padB = 6;
   const precipSplit = 0.36;
   const precipTop = h * (1 - precipSplit);
@@ -1936,7 +1957,7 @@ function dayChartTempGeometry(temps, h){
   const yPct = v => ((padT + (1 - (v - tMin) / tSpan) * Math.max(tempPlotH - 4, 1)) / h) * 100;
   const xSvg = (i, w) => n < 2 ? w / 2 : (i / (n - 1)) * w;
   const ySvg = v => padT + (1 - (v - tMin) / tSpan) * Math.max(tempPlotH - 4, 1);
-  return { n, tempVals, tMin, tMax, precipTop, padT, padB, xPct, yPct, xSvg, ySvg };
+  return { n, tempVals, tMin, tMax, precipTop, precipSplit, padT, padB, xPct, yPct, xSvg, ySvg };
 }
 function dayChartTempLabelsHtml(temps, h, opts){
   opts = opts || {};
@@ -1945,8 +1966,11 @@ function dayChartTempLabelsHtml(temps, h, opts){
   let html = '';
   for(let i = 0; i < geo.n; i += step){
     const isNow = i === opts.nowLabelIdx;
-    html += '<span class="day-chart-temp-lbl' + (isNow ? ' now' : '') + '" style="left:'
-      + geo.xPct(i).toFixed(2) + '%;top:' + geo.yPct(geo.tempVals[i]).toFixed(2) + '%">'
+    const y = geo.yPct(geo.tempVals[i]);
+    const flip = y < 24;
+    const cls = 'day-chart-temp-lbl' + (isNow ? ' now' : '') + (flip ? ' below' : '');
+    html += '<span class="' + cls + '" style="left:'
+      + geo.xPct(i).toFixed(2) + '%;top:' + y.toFixed(2) + '%">'
       + Math.round(geo.tempVals[i]) + '°</span>';
   }
   return html;
@@ -1975,10 +1999,13 @@ function dayForecastChartSvg(temps, wetScores, w, h, opts){
     body += '<polygon class="day-chart-precip" fill="url(#' + pid + ')" points="' + area + '"/>';
   }
   const tPts = geo.tempVals.map((v, i) => xAt(i).toFixed(1) + ',' + yTemp(v).toFixed(1));
-  const tempArea = xAt(0).toFixed(1) + ',' + geo.precipTop + ' ' + tPts.join(' ') + ' ' + xAt(n - 1).toFixed(1) + ',' + geo.precipTop;
-  body += '<polygon class="day-chart-temp-fill" points="' + tempArea + '"/>'
-    + '<polyline class="day-chart-temp" points="' + tPts.join(' ') + '"/>'
+  body += '<polyline class="day-chart-temp" points="' + tPts.join(' ') + '"/>'
     + '<line class="day-chart-split" x1="0" y1="' + geo.precipTop.toFixed(1) + '" x2="' + w + '" y2="' + geo.precipTop.toFixed(1) + '"/>';
+  const peakScore = Math.max(...wet, 0);
+  if(peakScore > 0.08){
+    const yMid = yPrecip(peakScore / 2).toFixed(1);
+    body += '<line class="day-chart-rain-grid" x1="0" y1="' + yMid + '" x2="' + w + '" y2="' + yMid + '"/>';
+  }
   const labelStep = opts.labelStep || Math.max(1, Math.ceil(n / 8));
   for(let i = 0; i < n; i += labelStep){
     const x = xAt(i).toFixed(1);
@@ -1996,15 +2023,11 @@ function dayForecastChartSvg(temps, wetScores, w, h, opts){
 function dayForecastChartHtml(temps, wet, opts){
   opts = opts || {};
   const w = 320;
-  const h = 80;
+  const h = 88;
   const geo = dayChartTempGeometry(temps, h);
-  const rainLbl = wet.maxAmt > (state.units === 'F' ? 0.005 : 0.05)
-    ? fmtChartPrecipAmt(wet.maxAmt)
-    : (wet.peakPop > 0 ? wet.peakPop + '%' : '0');
-  const rainAxis = wet.maxAmt > (state.units === 'F' ? 0.005 : 0.05)
-    ? (state.units === 'F' ? 'Precip (in)' : 'Precip (mm)')
-    : 'Rain chance';
+  const rainAxis = dayChartRainAxis(wet);
   const labels = dayChartTempLabelsHtml(temps, h, opts);
+  const rainPad = Math.round(geo.precipSplit * 100);
   return '<div class="day-chart-wrap">'
     + '<div class="day-chart-yaxis" aria-hidden="true">'
     + '<span>' + Math.round(geo.tMax) + '°</span>'
@@ -2015,8 +2038,13 @@ function dayForecastChartHtml(temps, wet, opts){
     + (labels ? '<div class="day-chart-temp-labels" aria-hidden="true">' + labels + '</div>' : '')
     + '</div>'
     + '<div class="day-chart-yaxis day-chart-yaxis-r" aria-hidden="true">'
-    + '<span class="day-chart-rain-lbl">' + esc(rainAxis) + '</span>'
-    + '<span>' + esc(rainLbl) + '</span>'
+    + '<span class="day-chart-rain-lbl">' + esc(rainAxis.label) + '</span>'
+    + '<div class="day-chart-rain-scale" style="padding-top:' + rainPad + '%">'
+    + '<div class="day-chart-rain-scale-inner">'
+    + '<span>' + esc(rainAxis.top) + '</span>'
+    + '<span>' + esc(rainAxis.mid) + '</span>'
+    + '<span>' + esc(rainAxis.bot) + '</span>'
+    + '</div></div>'
     + '</div>'
     + '</div>'
     + '<div class="day-chart-key" aria-hidden="true">'
@@ -2072,7 +2100,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
       note: ''
     };
   }
-  const bucket = conditionBucket(dd.weather_code[i]);
+  const bucket = conditionBucket(dd.weather_code[i], null, null, dd.temperature_2m_max?.[i]);
   const lo = dd.temperature_2m_min[i];
   const hi = dd.temperature_2m_max[i];
   const segHtml = '<div class="day-seg dc-' + bucket + '" style="width:100%" title="' + esc(COND_BUCKETS[bucket]) + '">'
@@ -2109,7 +2137,8 @@ function dayPrecipWindow(indices, hh){
     const precip = hh.precipitation?.[j] ?? 0;
     const code = hh.weather_code?.[j] ?? 0;
     const snow = hh.snowfall?.[j] ?? 0;
-    const icy = code >= 56 && code <= 67;
+    const temp = hh.temperature_2m?.[j];
+    const icy = (code >= 56 && code <= 67) && !isWarmPrecipTemp(temp);
     const wet = pop >= 35 || precip > 0.1 || code >= 51;
     if(wet || icy){
       if(start < 0) start = k;
@@ -2123,7 +2152,7 @@ function dayPrecipWindow(indices, hh){
   const fmt = j => hourLabelCompact(hh.time[j]);
   const [a, b] = blocks[0];
   const codeA = hh.weather_code?.[a] ?? 0;
-  const icy = codeA >= 56 && codeA <= 67;
+  const icy = (codeA >= 56 && codeA <= 67) && !isWarmPrecipTemp(hh.temperature_2m?.[a]);
   const label = icy ? 'Freezing precip' : 'Rain';
   if(blocks.length === 1) return a === b ? label + ' possible ~' + fmt(a) : label + ' likely ' + fmt(a) + '\u2013' + fmt(b);
   return label + ' possible at times';
