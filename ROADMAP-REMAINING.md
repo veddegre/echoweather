@@ -1,7 +1,9 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
-Portable summary for continuing the enthusiast roadmap elsewhere.  
-**Current version: v196** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=196` in `index.html`).
+Portable summary for continuing work in a new chat.  
+**Current version: v235** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=235` in `index.html`).
+
+**Status: maintenance only.** The enthusiast roadmap (Phases 1–4) is **complete**. No feature batch is assigned. Use this file for orientation, version bumps, and optional upkeep — not as a product backlog.
 
 ---
 
@@ -17,41 +19,45 @@ Portable summary for continuing the enthusiast roadmap elsewhere.
 
 ---
 
-## What is shipped (v136–v196)
+## What is shipped
 
-### v196 (latest)
+### v197–v235 (post-roadmap polish)
+
+- **5-day forecast charts** — Combined temperature curve + hatched rain-chance band (or precip amount when measurable); temp labels on the line; rain scale on the right; **Now** marker aligned with plot; hover hints (**time · temp · precip %**); precip-likely time windows on cards
+- **Forecast classification** — Warm-season ice/mix suppression; chance shower/thunder wording maps to rain (not all-day storm); NWS PoP merged into hourly chart data (`chartHourly`)
+- **Forecast tab layout** — Removed redundant NWS discussion teaser and NWS grid hourly strip from Forecast; full AFD and grid hourly live on **More**; CPC extended outlook and U.S. Drought Monitor teasers **below** day cards
+- **Now tab** — **Precip chance** mini sparkline (0–100% domain) alongside pressure, temp, dew, CAPE
+- **Pollen UI** — MSN-style gauge; expandable **Pollen types & plants** (tree / grass / weed species when Google pollen is configured)
+- **Observations** — METAR backfill for null NWS observation wind (`backfillNwsObsFields`)
+- **Docs** — README synced to v235
+
+### v196
+
 - **panelUnavail edge cases** — RainViewer tile exhaustion (`radar_rainviewer_tiles`), RainViewer API vs generic radar load, obs points, pollen API, planner forecast gaps (activity/impact hours), loc-compare per-card weather (`loc_compare_wx`), climo API
-- **app.js splits** — `climo.js` (normals, NWS CLI records, day-card hints), `obs.js` (obs vs forecast, METAR 7-day trace), `loc-compare.js` (saved locations, alerts, SPC badges)
+- **app.js splits** — `climo.js`, `obs.js`, `loc-compare.js`
 
-### v195
-- **panelUnavail depth** — threat layer fetch/empty status; lightning feed failure after reconnect cap; alerts API failure copy
-- **app.js splits** — `forecast-extras.js`, `mesonet.js`, `tabs.js`
-- **MRMS chase UX** — Velocity toggle on MRMS; separate **Site radar** button in storm mode
-- **MRMS dual pane** — reflectivity + velocity side-by-side (opengeo)
-- **Radar mesonet strip** — compact regional ASOS row on Radar during elevated storm conditions
+### v174–v195 (summary)
 
-### v174–v194 (summary)
-Dual-pane radar (IEM + MRMS); CPC/USDM teasers; regional mesonet + auto-refresh; NWS CLI records; AHPS streamgages; snow accumulation; NBM grid expansion; alert expiration + shareable radar URLs; SPC meso links; MRMS animation/loop refresh/velocity; radar expand fullscreen; module splits (`impact.js`, `marine.js`, `air.js`, `aviation.js`, `nav.js`).
+Dual-pane radar (IEM + MRMS); CPC/USDM teasers; regional mesonet + auto-refresh; NWS CLI records; AHPS streamgages; NBM grid on More; alert expiration + shareable radar URLs; SPC meso links; MRMS chase UX; module splits (`forecast-extras.js`, `mesonet.js`, `tabs.js`, `impact.js`, `marine.js`, `air.js`, `aviation.js`, `nav.js`).
 
-### v151–v173 (summary)
-Storm banner polygon jumps; chase-mode radar; impact hours planner; `outdoor`→`impact` rename; Great Lakes/coastal/water verdict; pollen/AQI/UV; aurora OVATION; METAR history; AFD teaser; loc compare; fire weather banner; HMS smoke layer.
+### v136–v173 (summary)
 
-### v136–v150 (summary)
-Core PWA split (`app.css`, `app.js`, `storm.js`, `radar.js`, `boot.js`); storm mode + threat layers; 5-day visual forecast + climo anomaly; marine/coastal panels; `panelUnavail` foundation; version sync CI.
+Core PWA split; storm mode + threat layers; 5-day visual forecast + climo anomaly; marine/coastal; activity/impact planners; pollen/AQI/UV; aurora; METAR history; loc compare; fire weather; `panelUnavail` foundation.
 
-*Per-version notes through v193 remain in git history; this file tracks handoff state only.*
+*Per-version notes remain in git history.*
 
 ---
 
 ## What remains
 
-The enthusiast roadmap (Phases 1–4) is **complete**. v174–v196 batches shipped the planned refinement work.
+**Nothing planned.** Only optional maintenance if something breaks in the field or a module grows unwieldy again.
 
-### Optional future maintenance (no batch assigned)
-
-- Further `app.js` splits only if a lane grows again (core is ~2.4k lines)
-- New `panelUnavail` codes as edge cases appear in the field
-- README / ROADMAP sync on each version bump
+| Kind | Notes |
+|------|--------|
+| **`app.js` splits** | Core is ~3k lines; consider extracting daily-chart / render-daily lane only if it keeps growing |
+| **`panelUnavail`** | Add codes when new edge cases appear (API failures, empty upstream data) |
+| **Docs** | Keep README and this file in sync on meaningful version bumps |
+| **Version sync** | `./scripts/check-versions.sh` before deploy |
 
 ### Explicitly deprioritized (do not build unless scope changes)
 
@@ -68,13 +74,13 @@ The enthusiast roadmap (Phases 1–4) is **complete**. v174–v196 batches shipp
 |------|------|
 | `index.html` | Shell, tab bar, panel markup |
 | `app.css` | All styles |
-| `app.js` | Core app: state, fetch, render (~2.4k lines) |
+| `app.js` | Core: state, fetch, render, daily charts, hourly (~3k lines) |
 | `tabs.js` | Lazy tab panel loading and idle prefetch |
 | `nav.js` | Tab bar, hash deep links, chrome height |
 | `impact.js` | Impacts: activity/impact planners, aurora, section chips |
 | `marine.js` | Great Lakes, coastal/tides, buoy, stream gauges, water verdict |
 | `air.js` | Air quality, pollen, UV & exposure |
-| `forecast-extras.js` | CPC/USDM teasers, NBM grid, AFD teaser and full panel |
+| `forecast-extras.js` | CPC/USDM forecast teasers (below day cards), NBM grid + full AFD (More) |
 | `mesonet.js` | Regional ASOS strip (More + Radar storm row) |
 | `climo.js` | Climate normals, NWS CLI records, day-card anomaly hints |
 | `obs.js` | Observations vs NWS forecast, METAR 7-day history |
@@ -83,7 +89,7 @@ The enthusiast roadmap (Phases 1–4) is **complete**. v174–v196 batches shipp
 | `storm.js` | SPC, storm mode, threat layers, storm panel, fire banner hooks |
 | `radar.js` | Leaflet map, radar modes, animation, storm report jump |
 | `boot.js` | Entry / init glue |
-| `sw.js` | Service worker; `CACHE = 'echo-weather-v196'` |
+| `sw.js` | Service worker; `CACHE = 'echo-weather-v235'` |
 | `lib/taf_cache.php` | TAF proxy cache |
 | `scripts/check-versions.sh` | Ensures `APP_VERSION` ↔ `sw.js` ↔ `index.html` ?v= sync |
 | `scripts/ci-check.sh` | Syntax + static checks |
@@ -95,7 +101,8 @@ The enthusiast roadmap (Phases 1–4) is **complete**. v174–v196 batches shipp
 2. `CACHE` in `sw.js`
 3. All `?v=` query strings in `index.html` (css + scripts)
 4. Run `./scripts/check-versions.sh && ./scripts/ci-check.sh`
-5. Deploy: `./update.sh --smoke`
+5. Update README (and this file on meaningful releases)
+6. Deploy: `./update.sh --smoke`
 
 **Tabs:** `now` | `forecast` | `radar` | `impact` (label: Impacts) | `more`  
 **Deep links:** `#now`, `#forecast`, `#radar`, `#impact`, `#more`, `#radar?mode=mrms&frame=8&layers=warnings,watches,stormReports,spcCat`, `#afdPanel` → More tab; legacy `#outdoor`, `#air` → Impacts.
@@ -109,8 +116,15 @@ The enthusiast roadmap (Phases 1–4) is **complete**. v174–v196 batches shipp
 | Function | File | Purpose |
 |----------|------|---------|
 | `panelUnavail` / `setPanelUnavail` | `app.js` | Consistent unavailable copy |
+| `renderDaily` / `buildDayTimeline` | `app.js` | 5-day cards, condition strip, combined chart |
+| `dayHourlyWetData` / `dayChartHoverHtml` | `app.js` | Rain band scores + hover tooltips |
+| `chartHourly` / `conditionBucket` | `app.js` | Merged hourly data + sky/storm classification |
+| `backfillNwsObsFields` | `app.js` | METAR wind backfill for sparse NWS obs |
+| `renderHourly` | `app.js` | Now-tab hourly strip + sparklines |
 | `fetchClimoNormals` / `dayClimoAnomaly` | `climo.js` | 10-yr normals + day-card hints |
 | `loadObs` / `renderMetarTrace` | `obs.js` | Obs vs forecast + METAR history |
+| `pollenPlantExpandHtml` | `air.js` | Expandable pollen types & plants |
+| `loadForecastCpcTeaser` / `loadNbm` / `loadAFD` | `forecast-extras.js` | CPC/USDM teasers, grid hourly, full discussion |
 | `renderLocCompare` | `loc-compare.js` | Multi-location compare cards |
 | `jumpRadarToAlertPolygon` | `radar.js` | Center radar on warning/watch polygon |
 | `fetchMrmsFrameTimes` | `radar.js` | MRMS animated loop via opengeo WMS |
@@ -123,7 +137,7 @@ The enthusiast roadmap (Phases 1–4) is **complete**. v174–v196 batches shipp
 
 Paste or attach this file and say something like:
 
-> Continue Echo Weather maintenance from `ROADMAP-REMAINING.md`. Pick an optional item or fix a bug. Do not commit unless I ask.
+> Continue Echo Weather maintenance from `ROADMAP-REMAINING.md`. Fix a bug or polish UX. Do not commit unless I ask.
 
 ---
 
@@ -136,4 +150,4 @@ Paste or attach this file and say something like:
 
 ---
 
-*Updated after v196 (panelUnavail edge cases, climo/obs/loc-compare splits).*
+*Updated after v235 (5-day chart polish, Forecast tab cleanup, pollen expander, README sync). Roadmap complete — maintenance only.*

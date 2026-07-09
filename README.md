@@ -12,9 +12,12 @@ activity planner with NWS advisory awareness · 5-day visual forecast · METAR
 observations · SPC convective outlook · UV & air quality · Great Lakes &
 coastal · aviation TAF · installable PWA with offline cache
 
-**Recent (v196):** Deeper `panelUnavail` copy for RainViewer tiles, pollen,
-planner forecast gaps, loc-compare weather, and obs points; `climo.js`,
-`obs.js`, and `loc-compare.js` split out of `app.js` for maintenance.
+**Recent (v235):** 5-day cards with combined temperature curve and rain-chance band,
+hover hints (time · temp · precip %), and aligned **Now** marker; Forecast tab
+trimmed (NWS discussion and grid hourly on **More** only; CPC/drought teasers
+below day cards); Now-tab **precip chance** sparkline; pollen **types & plants**
+expander; warm-season rain/storm/ice classification fixes; METAR wind backfill
+for sparse NWS observations.
 
 ```
   browser ──────────────▶  Apache (or php -S locally)
@@ -48,7 +51,7 @@ split across `app.js` (core), `tabs.js`, `nav.js`, `impact.js`, `marine.js`, `ai
 | `impact.js` | Impacts: activity/impact planners, aurora, section chips |
 | `marine.js` | Great Lakes, coastal/tides, buoy, stream gauges, water verdict |
 | `air.js` | Air quality, pollen, UV & exposure |
-| `forecast-extras.js` | CPC/USDM teasers, NBM grid, AFD teaser and full panel |
+| `forecast-extras.js` | CPC/USDM forecast teasers, NBM grid panel, full AFD panel (More) |
 | `mesonet.js` | Regional ASOS strip (More + Radar storm row) |
 | `climo.js` | 10-yr climate normals, NWS CLI records, day-card anomaly hints |
 | `obs.js` | Observations vs NWS forecast, METAR 7-day history |
@@ -253,7 +256,7 @@ into `config.local.php` by hand.
 When you change client JS or CSS, bump **both**:
 
 - `APP_VERSION` in `app.js`
-- `CACHE` name in `sw.js` (e.g. `echo-weather-v172` → `echo-weather-v173`)
+- `CACHE` name in `sw.js` (e.g. `echo-weather-v234` → `echo-weather-v235`)
 - All `?v=` query strings on `app.css` and script tags in `index.html`
 
 Verify before deploy:
@@ -487,10 +490,10 @@ panels appear in one scrollable page with a compacting sticky header.
 | Tab | Panels |
 |---|---|
 | **Now** | Current conditions, storm setup *(when relevant)*, Sun & Light, next 24 hours |
-| **Forecast** | 5-day visual forecast, detailed NWS text, observations vs forecast |
+| **Forecast** | 5-day visual forecast (CPC/drought teasers below cards), detailed NWS text, observations vs forecast |
 | **Radar** | Animated radar (RainViewer / MRMS / IEM), threat layers, storm & fire banners, convective outlook |
 | **Impacts** | Activity planner, impact hours, air quality & pollen, UV & exposure, aurora *(when active)*, water/coast/rivers |
-| **More** | Moon, advanced atmosphere (HRRR), aviation TAF, NWS forecast discussion |
+| **More** | Moon, advanced atmosphere (HRRR), aviation TAF, NWS forecast discussion, NWS grid hourly, regional ASOS mesonet |
 
 - **Deep links** — `#now`, `#forecast`, `#radar`, `#impact`, `#more`; legacy `#outdoor` and `#air` → Impacts; panel anchors (`#airPanel`, `#activityPanel`, `#marinePanel`, …); radar state `#radar?mode=iem-n0q&frame=8`. On mobile Impacts, panel links scroll to the matching section chip (Plan · Air · Water · Sky) first.
 - **Locations** — Geolocation, Open-Meteo search, multiple saved chips, shareable
@@ -514,36 +517,40 @@ panels appear in one scrollable page with a compacting sticky header.
   darkness estimate; tonight's sunset outlook (cloud/visibility verdict).
 - **Next 24 Hours** — Scrollable hourly strip anchored at *now* (NWS periods
   overlaid on Open-Meteo timing); correct day/night icons; wind compass per hour;
-  source labels. Four mini sparklines (pressure, temperature, dew point, CAPE)
-  with **Now → Later** axes; pressure/temp/dew auto-scale with minimum span so
-  flat lines stay readable; **CAPE uses a fixed 0–2500 J/kg scale** with dashed
-  reference lines at 300 / 1000 / 2500 and stability category badge.
+  source labels. Five mini sparklines (pressure, temperature, dew point,
+  **precip chance**, CAPE) with **Now → Later** axes; pressure/temp/dew auto-scale
+  with minimum span so flat lines stay readable; **precip chance uses a fixed
+  0–100% scale**; **CAPE uses a fixed 0–2500 J/kg scale** with dashed reference
+  lines at 300 / 1000 / 2500 and stability category badge.
 
 ### Forecast
 
-- **5-Day Forecast** — Day cards with condition text, high/low and time-of-extrema,
-  rain/wind/snow meta, **climate anomaly** (vs 10-yr normals), **NWS record /
-  near-record** hints (official CLI at nearest ASOS, 10-yr fallback), and an **hour-by-hour sky-condition strip** (clear, partly
-  cloudy, cloudy, fog, rain, snow, storm) with a color legend and readable
-  light/dark/mobile palettes; temperature sparkline with hourly ticks; **now**
-  marker on Today (distinct from storm red).
+- **5-Day Forecast** — Day cards with condition text, high/low and
+  time-of-extrema, rain/wind/snow meta, **precip-likely time windows**,
+  **climate anomaly** (vs 10-yr normals), **NWS record / near-record** hints
+  (official CLI at nearest ASOS, 10-yr fallback), and an **hour-by-hour
+  sky-condition strip** (clear, partly cloudy, cloudy, fog, rain, snow, ice/mix,
+  storm) with a color legend and readable light/dark/mobile palettes. Below the
+  strip, a **combined chart**: temperature curve with labels on the line, hatched
+  **rain-chance band** (or precip amount when measurable), time ticks along the
+  bottom, and rain scale on the right. **Hover** the chart or time row for
+  **time · temperature · precip chance** hints. **Now** marker on Today (aligned
+  with the plot, distinct from storm red). Warm-season forecasts suppress
+  ice/mix when temperatures are above freezing; **chance** shower/thunder wording
+  maps to rain, not an all-day storm bar.
 - **Winter weather outlook** *(conditional)* — Snowfall, ice/freezing-rain
   signals, wind chill, and lake-effect wording when the forecast supports it.
-- **NWS precip probability strip** *(conditional)* — Compact hourly POP from the
-  NWS grid when today/tomorrow has meaningful rain or storm chances; **temp, wind,
-  and sky** strips when the grid supports them (full NBM panel in More).
-- **CPC extended outlook** *(US)* — 6–10 and 8–14 day temperature and
-  precipitation category at your location.
-- **U.S. Drought Monitor** *(US, when in drought)* — Current drought category
-  (D0–D4) at your location with link to the full map.
+- **CPC extended outlook** *(US, below day cards)* — 6–10 and 8–14 day
+  temperature and precipitation category at your location.
+- **U.S. Drought Monitor** *(US, below day cards when in drought)* — Current
+  drought category (D0–D4) at your location with link to the full map.
 - **Detailed Forecast** — NWS zone periods (US): days 1–3 inline, days 4–7 in
   expandable blocks.
 - **Observations vs NWS Forecast** — Latest station reading compared to the NWS
   hourly forecast for temperature, dew point, wind, and pressure; plain-language
-  bias badges (higher/lower/close). **Station history (7 days)** sparklines
+  bias badges (higher/lower/close). Wind uses recent METAR backfill when the
+  latest NWS observation omits it. **Station history (7 days)** sparklines
   (temperature, wind, pressure) with 24 h / 7 d trend summary.
-- **AFD synoptic teaser** — Short excerpt from the NWS forecast discussion with
-  link to the full discussion on the More tab.
 
 ### Radar & storm tracking
 
@@ -604,7 +611,9 @@ panels appear in one scrollable page with a compacting sticky header.
 - **Air Quality & Pollen** — AirNow (via PHP proxy) or Open-Meteo modeled AQI;
   pollutant breakdown; smoke/haze row when PM2.5 is high; **year-round** 3-day
   pollen forecast (Google via proxy when configured, otherwise modeled/off-season
-  messaging).
+  messaging) with MSN-style gauge, category pills, tips, and expandable
+  **Pollen types & plants** (tree / grass / weed species when Google data is
+  available).
 - **UV & Exposure** — Current UV index and category; humidity, dew point,
   visibility, wet bulb; **outdoor rest-of-today** hourly strip (UV, RH, comfort
   notes).
@@ -632,13 +641,14 @@ panels appear in one scrollable page with a compacting sticky header.
   request); **decoded** periods (wind, visibility, weather, clouds) plus
   collapsible raw aviation code. Proxied at `/api/taf` (AviationWeather.gov
   blocks browser CORS).
-- **NWS Forecast Discussion** — Full AFD text for your forecast office.
+- **NWS Forecast Discussion** — Full AFD text for your forecast office (synopsis
+  highlight when available).
 - **Regional mesonet** *(US)* — Nearest six ASOS stations within ~30 mi: ID,
   distance, temp, wind, station name, and regional spread note when temps diverge.
   Auto-refreshes on 15‑min app refresh and when storm mode or elevated SPC risk loads.
   **Radar strip** — compact four-station row on the Radar tab during elevated storm conditions.
-- **NBM grid** — NWS grid hourly temp, wind, sky, and precip probability when
-  available.
+- **NWS grid hourly** — Full NWS grid forecast: precip-probability hours plus
+  hourly temp, wind, and sky strips at your location.
 
 ### Alerts & global UX
 
@@ -650,7 +660,7 @@ panels appear in one scrollable page with a compacting sticky header.
   errors are handled separately so a render bug does not falsely trigger offline
   mode.
 - **PWA** — Installable; service worker caches shell assets; in-app **Update app**
-  link when a new service worker is waiting; footer shows app version (e.g. `v196`).
+  link when a new service worker is waiting; footer shows app version (e.g. `v235`).
 - **Auto-refresh** — Full data reload every 15 minutes; lazy-loads tab panels on
   first visit or idle prefetch.
 - **Contact** — [contact@echoweather.com](mailto:contact@echoweather.com) in the
@@ -660,4 +670,4 @@ panels appear in one scrollable page with a compacting sticky header.
 
 ## Data sources
 
-NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (outlooks, fire weather, mesoscale discussions, storm reports CSV), WPC (excessive rainfall ArcGIS), NOAA MRMS (WMS), AviationWeather.gov (TAF via `/api/taf` proxy), NOAA SWPC (Kp), NOAA CO-OPS (tides), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.
+NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (outlooks, fire weather, mesoscale discussions, storm reports CSV), WPC (excessive rainfall ArcGIS), NOAA CPC (extended outlook point queries), NOAA MRMS (WMS), AviationWeather.gov (TAF via `/api/taf` proxy), NOAA SWPC (Kp), NOAA CO-OPS (tides), USDM (drought point query), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.
