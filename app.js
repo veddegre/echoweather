@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '234';
+const APP_VERSION = '235';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2034,6 +2034,32 @@ function dayForecastChartSvg(temps, wetScores, w, h, opts){
   const aria = 'Hourly temperature and precipitation for the day';
   return '<svg class="day-chart-svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-label="' + esc(aria) + '">' + body + '</svg>';
 }
+function dayChartHoverHtml(tips){
+  if(!tips?.length) return '';
+  return '<div class="day-chart-hover" aria-hidden="true">'
+    + tips.map(t => {
+      const tip = t.time + ' \u00B7 ' + t.temp + ' \u00B7 ' + t.rain + ' rain';
+      return '<div class="day-chart-hit" title="' + esc(tip) + '">'
+        + '<span class="day-chart-tip">' + esc(t.time) + ' \u00B7 <strong>' + esc(t.temp) + '</strong> \u00B7 ' + esc(t.rain) + ' rain</span>'
+        + '</div>';
+    }).join('')
+    + '</div>';
+}
+function dayChartHoverTips(indices, hh, temps){
+  return indices.map((j, idx) => {
+    const code = hh.weather_code?.[j] ?? 0;
+    const pop = inferHourlyPop(
+      hh.precipitation_probability?.[j] ?? 0,
+      code,
+      hh.shortForecast?.[j]
+    );
+    return {
+      time: hourLabel(hh.time[j]),
+      temp: Math.round(temps[idx]) + '°',
+      rain: pop + '%'
+    };
+  });
+}
 function dayForecastChartHtml(temps, wet, opts){
   opts = opts || {};
   const w = 320;
@@ -2104,6 +2130,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
         + '<div class="day-tick-t">' + tickLbl + '</div>'
         + '</div>');
     }
+    const hoverTips = dayChartHoverTips(indices, hh, temps);
     return {
       hourly: true,
       segHtml: segHtml,
@@ -2111,6 +2138,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
       temps,
       wet,
       chartHtml: dayForecastChartHtml(temps, wet, { nowPct, chartId: i, labelStep: tickStep, nowLabelIdx }),
+      hoverHtml: dayChartHoverHtml(hoverTips),
       ticksHtml: tickParts.length ? '<div class="day-ticks">' + tickParts.join('') + '</div>' : '',
       note: ''
     };
@@ -2131,6 +2159,10 @@ function buildDayTimeline(indices, hh, dd, i, opts){
     maxAmt: 0,
     peakPop: boostedPop
   };
+  const hoverTips = [
+    { time: 'Low', temp: Math.round(lo) + '°', rain: boostedPop + '%' },
+    { time: 'High', temp: Math.round(hi) + '°', rain: boostedPop + '%' }
+  ];
   return {
     hourly: false,
     segHtml,
@@ -2138,6 +2170,7 @@ function buildDayTimeline(indices, hh, dd, i, opts){
     temps: [lo, hi],
     wet,
     chartHtml: dayForecastChartHtml([lo, hi], wet, { chartId: i, labelStep: 1 }),
+    hoverHtml: dayChartHoverHtml(hoverTips),
     ticksHtml,
     note: '<div class="day-card-note">Hourly detail not available for this day</div>'
   };
@@ -2258,6 +2291,7 @@ function renderDaily(d){
       + '<div class="day-temp-chart">'
       + timeline.chartHtml
       + timeline.ticksHtml
+      + (timeline.hoverHtml || '')
       + timeline.note
       + '</div>'
       + '</div></article>';
