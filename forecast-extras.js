@@ -1,4 +1,4 @@
-// ---------- forecast extras (AFD teaser, CPC, USDM, NBM grid) ----------
+// ---------- forecast extras (CPC, USDM, NBM grid on More) ----------
 async function fetchLatestAfdText(loc){
   if(!isLikelyUS(loc)) throw new Error('non_us');
   const r = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
@@ -22,28 +22,6 @@ async function fetchLatestAfdText(loc){
     issued: prod.issuanceTime || prod.productTimestamp || '',
     link
   };
-}
-async function loadForecastAfdTeaser(loc){
-  const box = $('forecastAfdTeaser');
-  if(!box) return;
-  if(!isLikelyUS(loc)){ box.hidden = true; box.innerHTML = ''; return; }
-  try{
-    const afd = await fetchLatestAfdText(loc);
-    const highlight = afdHighlightText(afd.text);
-    if(!highlight){ box.hidden = true; box.innerHTML = ''; return; }
-    const when = afd.issued
-      ? new Date(afd.issued).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' })
-      : '';
-    box.hidden = false;
-    box.innerHTML = '<div class="forecast-afd-teaser">'
-      + '<div class="lbl">From the NWS discussion \u00B7 ' + esc(afd.cwa) + (when ? ' \u00B7 ' + esc(when) : '') + '</div>'
-      + '<p>' + esc(highlight) + '</p>'
-      + '<a href="#afdPanel">Full forecast discussion \u2192</a>'
-      + '</div>';
-  }catch(e){
-    box.hidden = true;
-    box.innerHTML = '';
-  }
 }
 const CPC_OUTLOOK_BASE = {
   d610: 'https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/cpc_6_10_day_outlk/MapServer',
@@ -194,26 +172,7 @@ async function loadAFD(loc){
   });
 }
 
-// ---------- NWS hourly precip probability (US, free) ----------
-let forecastNbmGen = 0;
-function forecastNeedsNbmStrip(d){
-  if(!d || !isLikelyUS(state.locations[state.active])) return false;
-  const dd = d.daily;
-  if(dd){
-    const pop0 = dd.precipitation_probability_max?.[0] ?? 0;
-    const pop1 = dd.precipitation_probability_max?.[1] ?? 0;
-    if(pop0 >= 25 || pop1 >= 25) return true;
-  }
-  const hh = d.hourly;
-  if(!hh?.time?.length) return false;
-  const i0 = nowIndex({ hourly: hh });
-  for(let j = i0; j < Math.min(i0 + 36, hh.time.length); j++){
-    if((hh.precipitation_probability?.[j] ?? 0) >= 30) return true;
-    if(isRainWxCode(hh.weather_code?.[j])) return true;
-    if(isStormWxCode(hh.weather_code?.[j])) return true;
-  }
-  return false;
-}
+// ---------- NWS hourly grid (More tab) ----------
 async function fetchNwsGridHourlyPeriods(loc, limit){
   if(!isLikelyUS(loc)) return [];
   const pr = await nwsFetch('https://api.weather.gov/points/' + loc.lat + ',' + loc.lon);
@@ -287,39 +246,6 @@ function renderNbmGridPanel(periods){
       + '<div class="forecast-nbm-hours">' + renderNbmPeriodsHtml(grid, true) + '</div></div>';
   }
   return html || panelUnavail('no_precip_prob');
-}
-async function loadForecastNbmStrip(loc, d){
-  const box = $('forecastNbmStrip');
-  if(!box) return;
-  if(!loc || !d || !forecastNeedsNbmStrip(d)){
-    box.hidden = true;
-    box.innerHTML = '';
-    return;
-  }
-  const gen = ++forecastNbmGen;
-  box.hidden = false;
-  box.innerHTML = '<div class="forecast-nbm-lbl">NWS grid hourly</div>'
-    + '<div class="radar-note">Loading grid forecast\u2026</div>';
-  try{
-    const periods = await fetchNwsGridHourlyPeriods(loc, 12);
-    if(gen !== forecastNbmGen) return;
-    const precip = periods.filter(p =>
-      (p.probabilityOfPrecipitation?.value ?? 0) > 0 || /rain|shower|storm|snow|drizzle|sleet|freezing/i.test(p.shortForecast || '')
-    );
-    if(!precip.length && !periods.length){
-      box.hidden = true;
-      return;
-    }
-    box.innerHTML = '<div class="forecast-nbm-lbl">NWS grid hourly</div>'
-      + '<div class="forecast-nbm-hours">' + renderNbmPeriodsHtml(periods.slice(0, 8), true) + '</div>'
-      + '<p class="radar-note" style="margin-top:8px">Temp, wind, sky, and precip chance from NWS grid. Full grid in More \u2192 NWS grid hourly.</p>';
-  }catch(e){
-    if(gen !== forecastNbmGen) return;
-    box.hidden = false;
-    box.innerHTML = '<div class="forecast-nbm-lbl">NWS grid hourly</div>'
-      + panelUnavail('nbm_api');
-    console.warn('forecastNbmStrip', e);
-  }
 }
 async function loadNbm(loc){
   const panel = $('nbmPanel'), body = $('nbmBody');

@@ -41,10 +41,8 @@ function ensureTabPanels(tab){
     try{ renderForecastText(d); }catch(e){ console.error('renderForecastText', e); }
     loadObs(loc);
     loadClimoNormals(loc);
-    loadForecastAfdTeaser(loc);
     loadForecastCpcTeaser(loc);
     loadForecastUsdmTeaser(loc);
-    loadForecastNbmStrip(loc, d);
   }
   if((all || tab === 'radar') && !tabPanelsLoaded.radar){
     tabPanelsLoaded.radar = true;

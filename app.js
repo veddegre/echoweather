@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '233';
+const APP_VERSION = '234';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2268,9 +2268,6 @@ function renderDaily(d){
   }
   $('dailySource').textContent = (d.sources && d.sources.forecast === 'nws') ? 'NWS' : 'Open-Meteo';
   renderWinterOutlook(d);
-  const loc = state.locations[state.active];
-  if(loc && forecastNeedsNbmStrip(d)) loadForecastNbmStrip(loc, d);
-  else if($('forecastNbmStrip')){ $('forecastNbmStrip').hidden = true; $('forecastNbmStrip').innerHTML = ''; }
 }
 function renderWinterOutlook(d){
   const box = $('winterOutlook');
@@ -2686,7 +2683,6 @@ async function refreshWeatherSoft(){
     try{ cacheWeatherSnapshot(loc, fetched); }catch(e){}
     try{ renderWeatherUi(fetched); }catch(e){ console.error('renderWeatherUi', e); }
     prefetchImpactPanels(loc, fetched);
-    loadForecastNbmStrip(loc, fetched);
     if(isLikelyUS(loc) && state.data){
       refreshStormTracking(loc, state.data);
       refreshFireWeather(loc, state.data);
@@ -2740,7 +2736,6 @@ async function loadAll(){
     $('content').classList.remove('loading');
     loadAlerts(loc);
     prefetchImpactPanels(loc, fetched);
-    loadForecastNbmStrip(loc, fetched);
     if(isLikelyUS(loc) && state.data){
       refreshStormTracking(loc, state.data);
       refreshFireWeather(loc, state.data);

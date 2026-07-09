@@ -637,7 +637,6 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .storm-mode-banner .storm-banner-actions{margin-top:8px;font-size:.75rem;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
 .storm-mode-banner .storm-banner-actions a,.storm-mode-banner .storm-banner-actions .storm-banner-link{color:var(--sky);font-weight:600;text-decoration:none;cursor:pointer;background:none;border:none;padding:0;font-family:inherit;font-size:inherit}
 .storm-mode-banner .storm-banner-actions .storm-banner-link:hover,.storm-mode-banner .storm-banner-actions a:hover{text-decoration:underline}
-.forecast-nbm-strip{margin:12px 0 4px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
 .forecast-nbm-lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
 .forecast-nbm-hours{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
 .forecast-nbm-hour{flex:0 0 auto;min-width:4.5rem;padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:.75rem;line-height:1.35}
@@ -646,8 +645,8 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .forecast-nbm-hour .nbm-sub{color:var(--mut);font-size:.625rem;display:block;margin-top:2px;line-height:1.25}
 .forecast-nbm-hour .nbm-pop{color:var(--sky);font-size:.6875rem;font-weight:600;display:block;margin-top:3px}
 .forecast-nbm-hour.high{border-color:color-mix(in srgb,var(--warn) 55%,var(--line));background:color-mix(in srgb,var(--warn) 8%,var(--panel))}
-.forecast-cpc-teaser{margin:12px 0 4px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
-.forecast-usdm-teaser{margin:8px 0 4px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.forecast-cpc-teaser{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.forecast-usdm-teaser{margin-top:8px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
 .forecast-usdm-teaser.drought-warn{border-color:#c9a227;background:color-mix(in srgb,var(--panel-2) 88%,#c9a227 12%)}
 .forecast-usdm-lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
 .forecast-usdm-val{font-size:.8125rem;line-height:1.4}
@@ -815,10 +814,6 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .aurora-ov-lbls{display:flex;justify-content:space-between;font-size:.6875rem;color:var(--dim);padding:0 18px}
 .panel-unavail{margin:10px 0 0;padding:10px 12px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-size:.8125rem;color:var(--mut);line-height:1.45}
 .panel-unavail strong{color:var(--ink);font-weight:600}
-.forecast-afd-teaser{margin:0 0 14px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
-.forecast-afd-teaser .lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
-.forecast-afd-teaser p{margin:0;font-size:.875rem;line-height:1.45;color:var(--ink)}
-.forecast-afd-teaser a{display:inline-block;margin-top:8px;font-size:.8125rem;font-weight:600}
 .metar-summary{margin:8px 0 0;padding:10px 12px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-size:.8125rem;line-height:1.45;color:var(--ink)}
 .metar-summary .lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
 .taf-lede{font-size:.75rem;color:var(--mut);margin:6px 0 0;line-height:1.45}
