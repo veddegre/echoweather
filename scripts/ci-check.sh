@@ -7,12 +7,12 @@ cd "$ROOT"
 
 APP_ROOT="$ROOT" bash "$ROOT/scripts/check-versions.sh"
 
-for f in app.js nav.js impact.js marine.js air.js aviation.js storm.js radar.js boot.js; do
+for f in app.js tabs.js nav.js impact.js marine.js air.js forecast-extras.js mesonet.js climo.js obs.js loc-compare.js aviation.js storm.js radar.js boot.js sw.js; do
   node --check "$ROOT/$f"
   echo "OK   $f syntax"
 done
 
-for f in index.html app.css app.js nav.js impact.js marine.js air.js aviation.js storm.js radar.js boot.js sw.js manifest.json; do
+for f in index.html app.css app.js tabs.js nav.js impact.js marine.js air.js forecast-extras.js mesonet.js climo.js obs.js loc-compare.js aviation.js storm.js radar.js boot.js sw.js manifest.json; do
   [[ -f "$ROOT/$f" ]] || { echo "FAIL missing $f" >&2; exit 1; }
 done
 echo "OK   required static files present"

@@ -233,23 +233,13 @@ function setBuoyPin(loc, id){
   store.set('st_buoy_pins', { ...pins });
 }
 function migrateBuoyPins(){
-  let pins = buoyPins();
+  const pins = buoyPins();
   let changed = false;
   for(const k of Object.keys(pins)){
     const id = String(pins[k]).toUpperCase();
     if(id === '45003'){ pins[k] = '45212'; changed = true; }
   }
   if(changed) store.set('st_buoy_pins', { ...pins });
-  if(Object.keys(pins).length && !changed) return;
-  if(Object.keys(buoyPins()).length) return;
-  const manual = store.get('st_buoy_manual') === '1';
-  const saved = store.get('st_buoy');
-  const savedLoc = store.get('st_buoy_loc');
-  if(manual && saved && savedLoc){
-    const id = String(saved).toUpperCase();
-    pins[savedLoc] = id === '45003' ? '45212' : id;
-    store.set('st_buoy_pins', { ...pins });
-  }
 }
 function resolveBuoyForLocation(loc){
   const pinned = buoyPinForLocation(loc);

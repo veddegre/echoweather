@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Embed logo-mark.png into icon/logo/og SVG wrappers (external href breaks local preview).
+# The raster is re-encoded as WebP q95 (visually lossless, ~12x smaller than the source PNG).
 # Run after updating logo-mark.png, then ./scripts/render-icons.sh and ./scripts/render-og-image.sh
 set -euo pipefail
 
@@ -12,12 +13,15 @@ if [[ ! -f "$PNG" ]]; then
 fi
 
 python3 - "$ROOT" "$PNG" <<'PY'
-import base64, sys
+import base64, io, sys
 from pathlib import Path
+from PIL import Image
 
 root = Path(sys.argv[1])
-png = Path(sys.argv[2]).read_bytes()
-uri = 'data:image/png;base64,' + base64.b64encode(png).decode('ascii')
+src = Image.open(sys.argv[2]).convert('RGBA')
+buf = io.BytesIO()
+src.save(buf, 'WEBP', quality=95, method=6)
+uri = 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
 img = f'<image width="1024" height="1024" href="{uri}" xlink:href="{uri}"/>'
 ns = 'xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"'
 

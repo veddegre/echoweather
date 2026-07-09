@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#eaf4ff">
 <meta name="description" content="Forecasts, radar, observations, and atmosphere metrics — built for weather enthusiasts.">
 <link rel="canonical" href="https://echoweather.com/">
-<link rel="icon" href="icon.svg?v=87" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=87" sizes="180x180">
+<link rel="icon" href="icon.svg?v=236" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=236" sizes="180x180">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -27,11 +27,27 @@
 <meta name="twitter:description" content="Forecasts, radar, observations, and atmosphere metrics — built for weather enthusiasts.">
 <meta name="twitter:image" content="https://echoweather.com/og-image.png">
 <meta name="twitter:image:alt" content="Echo Weather — forecasts, radar, and atmosphere metrics">
-<link rel="manifest" href="manifest.json?v=235">
+<link rel="manifest" href="manifest.json?v=236">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=235">
+<link rel="stylesheet" href="app.css?v=236">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script defer src="app.js?v=236"></script>
+<script defer src="tabs.js?v=236"></script>
+<script defer src="nav.js?v=236"></script>
+<script defer src="impact.js?v=236"></script>
+<script defer src="marine.js?v=236"></script>
+<script defer src="air.js?v=236"></script>
+<script defer src="forecast-extras.js?v=236"></script>
+<script defer src="mesonet.js?v=236"></script>
+<script defer src="climo.js?v=236"></script>
+<script defer src="obs.js?v=236"></script>
+<script defer src="aviation.js?v=236"></script>
+<script defer src="storm.js?v=236"></script>
+<script defer src="loc-compare.js?v=236"></script>
+<script defer src="radar.js?v=236"></script>
+<script defer src="boot.js?v=236"></script>
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -39,7 +55,7 @@
   <header>
     <div class="brand-block">
       <a class="brand-mark" href="#now" aria-label="Echo Weather — back to Now">
-        <span class="brand-icon-wrap"><img class="brand-icon" src="logo.svg?v=87" width="72" height="72" alt="" decoding="async"></span>
+        <span class="brand-icon-wrap"><img class="brand-icon" src="logo.svg?v=236" width="72" height="72" alt="" decoding="async"></span>
         <div class="brand-text">
           <span class="brand-name">Echo</span>
           <span class="brand-kind">Weather</span>
@@ -56,8 +72,8 @@
         <button type="button" id="themeSystem" class="on">System</button>
       </div>
       <div class="pill-toggle" role="group" aria-label="Units">
-      <button id="unitF" class="on">°F</button>
-      <button id="unitC">°C</button>
+      <button type="button" id="unitF" class="on">°F</button>
+      <button type="button" id="unitC">°C</button>
       </div>
     </div>
   </header>
@@ -67,10 +83,10 @@
       <button type="button" class="loc-more-btn" id="locMoreBtn" hidden aria-expanded="false" aria-controls="locMorePanel">More</button>
     </div>
     <div class="locbar-tools">
-    <div class="search">
-      <input id="searchInput" type="text" placeholder="Add location&hellip;" aria-label="Search for a location">
-      <div class="search-results" id="searchResults"></div>
-    </div>
+      <div class="search">
+        <input id="searchInput" type="text" placeholder="Add location&hellip;" aria-label="Search for a location">
+        <div class="search-results" id="searchResults"></div>
+      </div>
       <button class="geo-btn" id="geoBtn" title="Use my location" aria-label="Use my current location"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span></button>
     </div>
     <div class="loc-more-panel" id="locMorePanel" hidden></div>
@@ -96,6 +112,7 @@
 
   <div id="content">
     <div class="offline-badge" id="offlineBadge" role="status">Showing cached data — connection unavailable</div>
+    <div class="app-error-badge" id="appErrorBadge" role="status" hidden></div>
     <div class="grid">
       <section class="panel nav-target" id="nowPanel" data-tab="now" aria-label="Current conditions">
         <h2 id="nowTitle">Current Conditions</h2>
@@ -239,7 +256,7 @@
             <button id="radarPlay" type="button" aria-label="Play or pause radar animation">&#9654; Play</button>
             <div class="radar-scrub-wrap">
               <div class="radar-storm-mark" id="radarStormMark" hidden></div>
-            <input type="range" id="radarScrub" class="radar-scrub" min="0" max="0" value="0" aria-label="Radar frame scrubber">
+              <input type="range" id="radarScrub" class="radar-scrub" min="0" max="0" value="0" aria-label="Radar frame scrubber">
             </div>
             <div class="radar-toggles">
               <button type="button" id="radarSat" aria-label="Toggle satellite infrared overlay">Satellite</button>
@@ -332,7 +349,7 @@
               <button type="button" class="smoke-radar-btn" id="smokeRadarBtn">Show NOAA smoke layer on radar</button>
             </div>
             <div class="air-metrics" id="airMetrics"></div>
-            <div class="pollen-block" id="pollenBlock">
+        <div class="pollen-block" id="pollenBlock">
               <div class="pollen-lbl">Pollen</div>
           <div class="pollen-forecast" id="pollenForecast"></div>
           <div class="radar-note" id="pollenNote" style="margin-top:8px"></div>
@@ -341,20 +358,20 @@
       </section>
 
           <section class="panel nav-target" id="exposurePanel" data-tab="impact" aria-label="UV and exposure">
-            <h2>UV &amp; Exposure</h2>
-            <div class="outlook" style="margin-top:0">
-              <div class="lbl">UV index</div>
-              <div class="verdict" id="uvVerdict">&mdash;</div>
-              <div class="detail" id="uvDetail"></div>
-          </div>
-            <div class="metrics" id="exposureMetrics" style="margin-top:12px"></div>
+        <h2>UV &amp; Exposure</h2>
+        <div class="outlook" style="margin-top:0">
+          <div class="lbl">UV index</div>
+          <div class="verdict" id="uvVerdict">&mdash;</div>
+          <div class="detail" id="uvDetail"></div>
+        </div>
+        <div class="metrics" id="exposureMetrics" style="margin-top:12px"></div>
             <div id="uvDayChartBlock">
               <div class="metrics-lbl">UV through today</div>
               <div class="uv-day-chart" id="uvDayChart" aria-label="UV index through today"></div>
         </div>
-            <div class="metrics-lbl">Outdoor rest of today</div>
-            <div class="exposure-strip-note">UV, humidity, and comfort each hour</div>
-            <div class="hourly-strip" id="exposureUvStrip"></div>
+        <div class="metrics-lbl">Outdoor rest of today</div>
+        <div class="exposure-strip-note">UV, humidity, and comfort each hour</div>
+        <div class="hourly-strip" id="exposureUvStrip"></div>
       </section>
         </div>
     </div>
@@ -370,20 +387,20 @@
             <div class="detail" id="waterVerdictDetail"></div>
             <div class="water-verdict-source" id="waterVerdictSource" hidden></div>
           </div>
-        </section>
+      </section>
 
         <section class="panel nav-target" id="coastalPanel" data-tab="impact" aria-label="Coastal tides and waves" hidden>
           <h2>Coastal <span class="panel-status" id="coastalStatus"></span></h2>
           <p class="activity-lede" id="coastalLede">Tides from NOAA CO-OPS, nearshore waves from Open-Meteo, and NWS marine zone forecast when available.</p>
-          <div class="outlook" style="margin-top:0">
-            <div class="lbl" id="coastalStationLbl">Tide station</div>
-            <div class="verdict" id="coastalVerdict">&mdash;</div>
-            <div class="detail" id="coastalDetail"></div>
-          </div>
-          <div class="metrics" id="coastalMetrics" style="margin-top:12px"></div>
+        <div class="outlook" style="margin-top:0">
+          <div class="lbl" id="coastalStationLbl">Tide station</div>
+          <div class="verdict" id="coastalVerdict">&mdash;</div>
+          <div class="detail" id="coastalDetail"></div>
+        </div>
+        <div class="metrics" id="coastalMetrics" style="margin-top:12px"></div>
           <div class="metrics coastal-marine-metrics" id="coastalMarine" style="margin-top:12px" hidden></div>
           <div class="coastal-nws" id="coastalNws" hidden></div>
-          <div class="radar-note" id="coastalNote" style="margin-top:8px"></div>
+        <div class="radar-note" id="coastalNote" style="margin-top:8px"></div>
       </section>
 
         <section class="panel nav-target" id="marinePanel" data-tab="impact" aria-label="Great Lakes water conditions" hidden>
@@ -400,39 +417,39 @@
         <div class="radar-note" id="marineNws" style="margin-top:8px;white-space:pre-wrap;font-size:.8125rem;color:var(--mut)"></div>
         <div class="metrics" id="marineMetrics"></div>
         <div class="radar-note" id="marineNote" style="margin-top:8px"></div>
-          <div class="buoy-card" id="buoyCard">
-            <div class="buoy-card-main">
-              <div>
-          <span class="lbl">NDBC Buoy</span>
-                <div class="buoy-card-title" id="buoyCardTitle">Select a station</div>
-                <div class="buoy-card-meta" id="buoyCardMeta"></div>
-              </div>
-              <div class="buoy-card-actions">
-                <button type="button" class="buoy-primary" id="buoyRefresh" title="Reload buoy observations">Refresh</button>
-                <button type="button" id="buoyNearest" title="Use nearest station for this location">Nearest</button>
-                <a id="buoyPageLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">NDBC page ↗</a>
-              </div>
+        <div class="buoy-card" id="buoyCard">
+          <div class="buoy-card-main">
+            <div>
+              <span class="lbl">NDBC Buoy</span>
+              <div class="buoy-card-title" id="buoyCardTitle">Select a station</div>
+              <div class="buoy-card-meta" id="buoyCardMeta"></div>
             </div>
-            <details class="buoy-card-picker" id="buoyPicker">
-              <summary>Change station</summary>
-              <div class="buoy-picker-body">
-          <select id="buoySelect" aria-label="Select NDBC buoy station"></select>
-          <input id="buoyId" aria-label="Custom NDBC buoy station ID" placeholder="ID" style="display:none">
-          <button id="buoyGo" type="button">Load</button>
-                <a class="buoy-find" id="buoyFindLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">Find stations ↗</a>
+            <div class="buoy-card-actions">
+              <button type="button" class="buoy-primary" id="buoyRefresh" title="Reload buoy observations">Refresh</button>
+              <button type="button" id="buoyNearest" title="Use nearest station for this location">Nearest</button>
+              <a id="buoyPageLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">NDBC page ↗</a>
+            </div>
+          </div>
+          <details class="buoy-card-picker" id="buoyPicker">
+            <summary>Change station</summary>
+            <div class="buoy-picker-body">
+              <select id="buoySelect" aria-label="Select NDBC buoy station"></select>
+              <input id="buoyId" aria-label="Custom NDBC buoy station ID" placeholder="ID" style="display:none">
+              <button id="buoyGo" type="button">Load</button>
+              <a class="buoy-find" id="buoyFindLink" href="https://www.ndbc.noaa.gov/" target="_blank" rel="noopener noreferrer">Find stations ↗</a>
+            </div>
+          </details>
+          <div class="buoy-card-metrics metrics" id="buoyMetrics"></div>
+          <div class="buoy-card-note" id="buoyNote"></div>
         </div>
-            </details>
-            <div class="buoy-card-metrics metrics" id="buoyMetrics"></div>
-            <div class="buoy-card-note" id="buoyNote"></div>
-        </div>
-        </section>
+      </section>
 
         <section class="panel nav-target" id="streamPanel" data-tab="impact" aria-label="Nearby river gauges" hidden>
           <h2>River Gauges <span class="panel-status" id="streamStatus"></span></h2>
           <p class="activity-lede" id="streamLede">Active USGS streamgages within ~30 mi — stage, flow, and NWS flood category with AHPS hydrograph links.</p>
           <div id="streamList" class="stream-list is-loading">Checking nearby gauges&hellip;</div>
         </section>
-      </div>
+    </div>
 
       <div class="impact-group impact-group-sky" id="impactSkyGroup">
         <p class="impact-group-lbl">Sky</p>
@@ -528,21 +545,5 @@
   </footer>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="app.js?v=235"></script>
-<script src="tabs.js?v=235"></script>
-<script src="nav.js?v=235"></script>
-<script src="impact.js?v=235"></script>
-<script src="marine.js?v=235"></script>
-<script src="air.js?v=235"></script>
-<script src="forecast-extras.js?v=235"></script>
-<script src="mesonet.js?v=235"></script>
-<script src="climo.js?v=235"></script>
-<script src="obs.js?v=235"></script>
-<script src="aviation.js?v=235"></script>
-<script src="storm.js?v=235"></script>
-<script src="loc-compare.js?v=235"></script>
-<script src="radar.js?v=235"></script>
-<script src="boot.js?v=235"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-const CACHE = 'echo-weather-v235';
-const ICON_Q = '?v=87';
+const CACHE = 'echo-weather-v236';
+const ICON_Q = '?v=236';
 const ASSETS = [
   './app.css',
   './app.js',
@@ -17,16 +17,13 @@ const ASSETS = [
   './loc-compare.js',
   './radar.js',
   './boot.js',
-  './manifest.json?v=197',
+  './manifest.json',
   './icon.svg' + ICON_Q,
   './icon-maskable.svg' + ICON_Q,
   './icon-192.png' + ICON_Q,
   './icon-512.png' + ICON_Q,
   './apple-touch-icon.png' + ICON_Q,
-  './apple-touch-icon.png',
-  './logo.svg' + ICON_Q,
-  './logo-mark.png',
-  './echo-weather-logo-exact.svg'
+  './logo.svg' + ICON_Q
 ];
 
 self.addEventListener('install', e => {
@@ -86,14 +83,16 @@ self.addEventListener('fetch', e => {
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return r;
     });
+    // ignoreSearch: precache entries and page requests may disagree on ?v= strings
+    const cachedMatch = () => caches.match(e.request, { ignoreSearch: true });
     if(isCode){
-      e.respondWith(fetchFresh.catch(() => caches.match(e.request)));
+      e.respondWith(fetchFresh.catch(cachedMatch));
       return;
     }
     e.respondWith(
       isBrandingRequest(u)
-        ? fetchFresh.catch(() => caches.match(e.request))
-        : caches.match(e.request).then(cached => fetchFresh.catch(() => cached))
+        ? fetchFresh.catch(cachedMatch)
+        : cachedMatch().then(cached => fetchFresh.catch(() => cached))
     );
   }
 });

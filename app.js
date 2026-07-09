@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '235';
+const APP_VERSION = '236';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -19,6 +19,27 @@ const store = {
   set(k,v){ _mem[k]=v; try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 };
 const $ = id => document.getElementById(id);
+
+// ---------- global error surface (field debugging) ----------
+let appErrorShown = false;
+function reportAppError(err){
+  console.error('appError', err);
+  if(appErrorShown) return;
+  const msg = String((err && err.message) || err || '');
+  // network flakiness is handled per-panel; only surface real code errors
+  if(/failed to fetch|networkerror|load failed|aborted/i.test(msg)) return;
+  appErrorShown = true;
+  const el = $('appErrorBadge');
+  if(!el) return;
+  el.textContent = 'Something went wrong in the app (v' + APP_VERSION + '). A hard refresh may help.';
+  el.hidden = false;
+}
+window.addEventListener('error', e => reportAppError(e.error || e.message));
+window.addEventListener('unhandledrejection', e => {
+  const r = e.reason;
+  if(r && r.name === 'AbortError') return;
+  reportAppError(r);
+});
 
 // ---------- state ----------
 const DEFAULT_LOC = { name:'Allendale', admin1:'Michigan', country:'US', lat:42.9721, lon:-85.9536 };
