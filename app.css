@@ -231,8 +231,6 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .buoy-picker-body .buoy-find:hover{text-decoration:underline}
 .grid{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;margin-top:8px;min-width:0}
 .grid.adv-only{grid-template-columns:1fr}
-/* Moon panel is much shorter than Advanced Atmosphere — don't stretch it to match. */
-#moonAdvGrid{align-items:start}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:var(--card-shadow);transition:background .2s,border-color .2s;min-width:0;max-width:100%;overflow-wrap:break-word}
 .panel h2{font-family:var(--serif);font-weight:600;font-size:1.15rem;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .now-top{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap}

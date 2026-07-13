@@ -2540,7 +2540,7 @@ function renderMoon(loc){
   $('moonIcon').textContent = picon;
   $('moonPhase').textContent = pname;
   $('moonIllum').textContent = Math.round(ill.fraction * 100) + '% ILLUMINATED \u00B7 AGE ' + (ill.phase * 29.53).toFixed(1) + ' DAYS';
-  $('moonCompass').innerHTML = '<div class="sky-compass-wrap" style="margin-top:0">'
+  $('moonCompass').innerHTML = '<div class="sky-compass-wrap" style="margin-top:14px">'
     + moonCompassHtml(pos.az, pos.alt, 48)
     + '<div class="sky-compass-meta"><strong>Moon in the sky</strong><br>'
     + pos.alt.toFixed(1) + '\u00B0 ' + (pos.alt > 0 ? 'above' : 'below') + ' horizon \u00B7 '
