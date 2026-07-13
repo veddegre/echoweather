@@ -212,18 +212,23 @@ function activityGrade(score){
 }
 function activityOverallGrade(def, eligible, d){
   if(!eligible.length) return 'poor';
+  // Hazard cards always reflect the worst upcoming hour — an active alert
+  // must never soften the grade to whatever the current (possibly mild) hour is.
+  if(isImpactDef(def)){
+    return activityGrade(Math.min(...eligible.map(h => h.score)));
+  }
   const tz = d.timezone;
   const nowIso = d.hourly.time[nowIndex(d)];
   const nowH = eligible.find(h => h.time.slice(0, 13) === nowIso.slice(0, 13))
     || eligible.find(h => h.time >= nowIso && !h.ineligible)
     || eligible.find(h => !h.ineligible)
     || eligible[0];
-  const nowAlert = activityAlertImpact(def, nowH.time, tz);
+  const nowAlert = activityAlertImpact(def, nowH.time, tz, resolveHourContext(d, nowH.time));
   if(nowAlert.notes.length){
     return activityGrade(nowH.score);
   }
   const alertHours = eligible.filter(h => {
-    const imp = activityAlertImpact(def, h.time, tz);
+    const imp = activityAlertImpact(def, h.time, tz, resolveHourContext(d, h.time));
     return imp.notes.length && imp.cap < 70;
   });
   if(alertHours.length){
@@ -233,9 +238,6 @@ function activityOverallGrade(def, eligible, d){
       return activityGrade(Math.min(peak, Math.max(alertPeak, 55)));
     }
     return activityGrade(Math.min(peak, alertPeak));
-  }
-  if(isImpactDef(def)){
-    return activityGrade(Math.min(...eligible.map(h => h.score)));
   }
   return activityGrade(Math.max(...eligible.map(h => h.score)));
 }
@@ -425,7 +427,15 @@ function alertActiveAtHour(feature, hourIso, timezone){
   }
   return true;
 }
-function activityAlertImpact(def, hourIso, timezone){
+// During a heat alert, is this forecast hour actually in the dangerous part of the day?
+// When no hour context is available, assume yes (be conservative).
+function heatAlertHotHour(ctx){
+  if(!ctx) return true;
+  const hotTemp = state.units === 'F' ? 85 : 29;
+  const hotWetBulb = state.units === 'F' ? 74 : 23;
+  return ctx.temp >= hotTemp || ctx.wetBulb >= hotWetBulb;
+}
+function activityAlertImpact(def, hourIso, timezone, ctx){
   const actId = def?.id || '';
   const feats = (stormState.alertFeatures || []).filter(f => alertActiveAtHour(f, hourIso, timezone));
   let cap = 100;
@@ -461,44 +471,38 @@ function activityAlertImpact(def, hourIso, timezone){
       apply(52, ev);
       return;
     }
-    if(['running', 'hiking', 'cycling', 'golf', 'beach', 'dog'].includes(actId) && /wind advisory|high wind|strong wind|lake wind|gale/i.test(evL)){
-      apply(58, ev);
-      return;
+    if(/wind advisory|high wind|strong wind|lake wind|gale/i.test(evL)){
+      const severe = /high wind warning|gale warning|storm warning/i.test(evL);
+      let capped = null;
+      if(actId === 'wind') capped = severe ? 30 : 45;
+      else if(['running', 'hiking', 'cycling', 'golf', 'beach', 'dog', 'yard'].includes(actId)) capped = severe ? 42 : 55;
+      if(capped != null){ apply(capped, ev); return; }
     }
-    if(['running', 'yard', 'dog', 'hiking', 'golf', 'cycling'].includes(actId) && /heat advisory|excessive heat/i.test(evL)){
-      apply(58, ev);
-      return;
-    }
-    if(actId === 'beach' && /heat advisory|excessive heat/i.test(evL)){
-      apply(65, ev);
-      return;
-    }
-    if(actId === 'dog' && /heat advisory|excessive heat/i.test(evL)){
-      apply(50, ev);
-      return;
+    // Covers legacy "Excessive Heat" and current (2025+) "Extreme Heat" event names.
+    if(/heat advisory|excessive heat|extreme heat/i.test(evL)){
+      const severe = /(excessive|extreme) heat (warning|emergency)/i.test(evL);
+      const hot = heatAlertHotHour(ctx);
+      let capped = null;
+      if(actId === 'heat') capped = severe ? 25 : (hot ? 40 : 50);
+      else if(actId === 'dog') capped = severe ? 32 : (hot ? 40 : 52);
+      else if(['running', 'hiking', 'cycling', 'golf', 'yard'].includes(actId)) capped = severe ? 38 : (hot ? 42 : 55);
+      else if(actId === 'beach') capped = severe ? 44 : (hot ? 55 : 62);
+      if(capped != null){ apply(capped, ev); return; }
     }
     if(['hiking', 'yard', 'cycling'].includes(actId) && /red flag|fire weather/i.test(evL)){
       apply(55, ev);
-      return;
-    }
-    if(actId === 'heat' && /heat advisory|excessive heat/i.test(evL)){
-      apply(40, ev);
-      return;
-    }
-    if(actId === 'wind' && /wind advisory|high wind|strong wind|lake wind|gale/i.test(evL)){
-      apply(45, ev);
       return;
     }
     if(actId === 'air' && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
       apply(45, ev);
       return;
     }
-    if(actId === 'storms' && /severe thunderstorm|tornado watch|tornado warning|severe weather/i.test(evL)){
-      apply(35, ev);
+    if(actId === 'storms' && /severe thunderstorm|tornado|severe weather/i.test(evL)){
+      apply(/warning/.test(evL) ? 20 : 35, ev);
       return;
     }
     if(actId === 'cold' && /wind chill|extreme cold|freeze warning|frost advisory|winter storm|blizzard|ice storm|cold advisory/i.test(evL)){
-      apply(40, ev);
+      apply(/extreme cold warning|blizzard warning|ice storm warning/i.test(evL) ? 28 : 40, ev);
       return;
     }
     if(/tornado|severe thunderstorm|flash flood|hurricane|blizzard|ice storm|winter storm/.test(evL)){
@@ -925,7 +929,7 @@ function scoreActivityFromContext(d, def, extra, ctx, scorer, tz){
     };
   }
   let { score, reasons } = scorer(ctx, extra);
-  const alert = activityAlertImpact(def, ctx.time, tz);
+  const alert = activityAlertImpact(def, ctx.time, tz, ctx);
   score = Math.min(score, alert.cap);
   if(alert.notes.length && score <= alert.cap){
     const note = alert.notes[0];
@@ -1178,7 +1182,7 @@ function describeActivityWindow(def, w, hours, d, extra){
   const idx = d.hourly.time.indexOf(sample.time);
   const ctx = idx >= 0 ? activityHourContext(d, idx) : null;
   const snap = weatherSnapshotPhrase(ctx);
-  const alert = activityAlertImpact(def, sample.time, d.timezone);
+  const alert = activityAlertImpact(def, sample.time, d.timezone, ctx);
   const reasons = [...new Set(sample.reasons.length ? sample.reasons : w.reasons)];
   const sentences = [];
 
