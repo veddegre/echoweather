@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '242';
+const APP_VERSION = '243';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1711,20 +1711,32 @@ function renderLight(d){
   if(kicker) kicker.textContent = "Tonight's golden hour";
   const meter = $('photoOutlookMeter');
   const fill = $('photoOutlookMeterFill');
+  const mark = $('photoOutlookMeterMark');
   const pctEl = $('photoOutlookMeterPct');
   const subEl = $('photoOutlookMeterSub');
+  const labelEl = $('photoOutlookMeterLabel');
   if(meter && fill && pctEl){
     if(si < 0){
       meter.hidden = true;
     }else{
       meter.hidden = false;
-      // Meter = cloud interest; when smoke is the color maker show a tint cue instead of 0%.
-      const showPct = anySmoke && skyPct < 20 ? Math.max(skyPct, heavySmoke ? 48 : 32) : skyPct;
-      fill.style.width = Math.max(0, Math.min(100, showPct)) + '%';
+      // 0 = clear/plain, ~40–70 = sweet spot (broken cloud or smoke tint), high = heavy/socked.
+      const showPct = anySmoke && skyPct < 20 ? Math.max(skyPct, heavySmoke ? 52 : 38) : skyPct;
+      const clamped = Math.max(0, Math.min(100, showPct));
+      fill.style.width = clamped + '%';
+      if(mark) mark.style.left = clamped + '%';
+      if(labelEl){
+        labelEl.textContent = anySmoke && skyPct < 20 ? 'Color potential' : 'Cloud cover at sunset';
+      }
       pctEl.textContent = anySmoke && skyPct < 20
         ? (heavySmoke ? 'Smoke tint' : 'Haze tint')
-        : (showPct + '% cloud');
-      if(subEl) subEl.textContent = meterSub;
+        : (clamped + '%');
+      if(subEl){
+        const tip = clamped < 20 ? 'Clear end — usually less sky color'
+          : clamped <= 70 ? 'Broken / textured — often the best photo odds'
+          : 'Heavy cover — color more likely muted';
+        subEl.textContent = (meterSub ? meterSub + ' \u00B7 ' : '') + tip;
+      }
     }
   }
   const win = $('photoOutlookWindow');
