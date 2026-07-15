@@ -610,8 +610,8 @@ function penalizeAqi(extra, reasons, strict){
   }
   if(aqi == null) return s;
   if(aqi > 150){ reasons.push('Unhealthy air (AQI ' + aqi + ')'); return s + (strict ? 45 : 35); }
-  if(aqi > 100){ reasons.push('Moderate AQI (' + aqi + ')'); return s + (strict ? 20 : 12); }
-  if(aqi > 75 && strict) reasons.push('Sensitive groups: elevated AQI');
+  if(aqi > 100){ reasons.push('Unhealthy for sensitive groups (AQI ' + aqi + ')'); return s + (strict ? 20 : 12); }
+  if(aqi > 75 && strict) reasons.push('Moderate AQI (' + aqi + ')');
   return s + (aqi > 75 && strict ? 8 : 0);
 }
 function coldImpactThresholds(){
@@ -814,14 +814,21 @@ const ACTIVITY_SCORERS = {
     return { score: clampActScore(s), reasons };
   },
   air(ctx, extra){
-    let s = 100;
     const reasons = [];
-    s -= penalizeAqi(extra, reasons, true);
-    if(extra.pm25 != null && extra.pm25 >= 35){
-      s -= extra.pm25 >= 55 ? 30 : 15;
-      reasons.push('Elevated PM2.5');
-    }
-    if(ctx.visibility != null && ctx.visibility < 3){ s -= 20; reasons.push('Reduced visibility'); }
+    const aqi = extra.aqi, pm25 = extra.pm25;
+    // Anchor the hazard grade to EPA AQI categories so the card never reads
+    // "Low" while the air is officially Unhealthy for Sensitive Groups.
+    let s;
+    if(aqi == null){ s = pm25 != null ? 92 : 85; }
+    else if(aqi > 300){ s = 10; reasons.push('Hazardous air quality (AQI ' + aqi + ')'); }
+    else if(aqi > 200){ s = 22; reasons.push('Very unhealthy air (AQI ' + aqi + ')'); }
+    else if(aqi > 150){ s = 38; reasons.push('Unhealthy air (AQI ' + aqi + ')'); }
+    else if(aqi > 100){ s = 58; reasons.push('Unhealthy for sensitive groups (AQI ' + aqi + ')'); }
+    else if(aqi > 50){ s = 80; reasons.push('Moderate AQI (' + aqi + ')'); }
+    else { s = 95; }
+    if(pm25 != null && pm25 >= 55){ s -= 15; reasons.push('High smoke / PM2.5 (' + Math.round(pm25) + ' \u00B5g/m\u00B3)'); }
+    else if(pm25 != null && pm25 >= 35){ s -= 8; reasons.push('Elevated PM2.5 — smoke or haze'); }
+    if(ctx.visibility != null && ctx.visibility < 3){ s -= 10; reasons.push('Reduced visibility'); }
     return { score: clampActScore(s), reasons };
   },
   storms(ctx, extra){
