@@ -256,9 +256,19 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .metric .v small{font-size:.75rem;color:var(--mut);font-weight:400}
 .metric .s{font-size:.6875rem;color:var(--mut);margin-top:5px;line-height:1.35}
 .metric .v .up{color:var(--warn)}.metric .v .dn{color:var(--sky)}.metric .v .st{color:var(--dim)}
-.lightbar-wrap{margin:8px 0 6px}
+.lightbar-wrap{margin:14px 0 6px;position:relative;padding-top:12px}
 .lightbar{position:relative;height:36px;border-radius:8px;overflow:hidden;border:1px solid var(--line);box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
-.lightbar .now-mark{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--ink);box-shadow:0 0 0 1px var(--panel),0 0 6px rgba(0,0,0,.35);z-index:1}
+.lightbar-now{position:absolute;top:0;bottom:22px;left:0;width:0;z-index:2;pointer-events:none;transform:translateX(-50%)}
+.lightbar-now-lbl{
+  position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%);
+  font-size:.5625rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink);line-height:1;white-space:nowrap;
+}
+.lightbar-now-mark{
+  position:absolute;top:0;bottom:0;left:50%;width:2px;transform:translateX(-50%);
+  background:var(--now-mark);
+  box-shadow:0 0 0 1px var(--now-mark-halo),0 0 0 2px color-mix(in srgb,var(--now-mark) 28%,transparent);
+}
 .lightbar-scale{display:flex;justify-content:space-between;font-size:.625rem;color:var(--dim);margin-top:5px}
 .suntimes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
 .suntimes .metric .k{font-weight:600}

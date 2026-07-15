@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '243';
+const APP_VERSION = '244';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1584,7 +1584,15 @@ function renderLight(d){
     + GOLD + ' ' + pc(goldPmS) + ',' + GOLD + ' ' + pc(ssM) + ','
     + BLUE + ' ' + pc(bluePmS) + ',' + BLUE + ' ' + pc(bluePmE) + ','
     + NIGHT + ' ' + pc(bluePmE + 25) + ',' + NIGHT + ' 100%)';
-  $('nowMark').style.left = pc(minsOfDay(d.current?.time || d.hourly?.time?.[nowIndex(d)]));
+  const nowPct = pc(nowMinsInTz(d.timezone));
+  const lightNow = $('lightbarNow');
+  if(lightNow){
+    lightNow.style.left = nowPct;
+    lightNow.hidden = false;
+  }
+  // Keep legacy id hook for any CSS/tests that still target #nowMark
+  const nowMark = $('nowMark');
+  if(nowMark) nowMark.title = 'Now';
 
   const cells = [
     ['Golden AM', hm(sr) + ' \u2013 ' + fmtMins(goldAmE), 'gold'],
