@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '241';
+const APP_VERSION = '242';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1610,7 +1610,7 @@ function renderLight(d){
     + '<div class="verdict ' + dark.cls + '">' + esc(dark.label) + '</div>'
     + '<div class="detail">' + esc(dark.detail) + '</div>';
 
-  // Sunset cloud outlook: average golden-hour window (ss-60 … ss), never fall back to "now".
+  // Photography sunset outlook: layered cloud + NWS smoke wording + AQI/PM2.5.
   const windowIdx = [];
   (d.hourly.time || []).forEach((t, i) => {
     const m = minsOfDay(t);
@@ -1621,8 +1621,8 @@ function renderLight(d){
     const dist = Math.abs(minsOfDay(t) - ssM);
     if(dist < bestDist){ bestDist = dist; si = i; }
   });
+  const idxs = windowIdx.length ? windowIdx : (si >= 0 ? [si] : []);
   const avgCloud = (key) => {
-    const idxs = windowIdx.length ? windowIdx : (si >= 0 ? [si] : []);
     if(!idxs.length) return 0;
     const arr = d.hourly[key];
     if(!arr) return 0;
@@ -1631,31 +1631,106 @@ function renderLight(d){
   const lo = avgCloud('cloud_cover_low');
   const mid = avgCloud('cloud_cover_mid');
   const hi = avgCloud('cloud_cover_high');
+  const tot = avgCloud('cloud_cover');
   const pp = avgCloud('precipitation_probability');
   const mh = mid + hi;
-  let verdict, cls, detail;
+  const layerSum = lo + mid + hi;
+  const skyPct = Math.max(tot, Math.min(100, Math.round(lo + mid * 0.85 + hi * 0.7)));
+
+  let smokeHits = 0, hazeHits = 0;
+  idxs.forEach(i => {
+    const sf = (d.hourly.shortForecast?.[i] || '').toLowerCase();
+    if(/smoke/.test(sf)) smokeHits++;
+    if(/\bhaze\b|dust/.test(sf)) hazeHits++;
+  });
+  const aqi = (typeof outdoorAir !== 'undefined' && outdoorAir) ? outdoorAir.aqi : null;
+  const pm25 = (typeof outdoorAir !== 'undefined' && outdoorAir) ? outdoorAir.pm25 : null;
+  const smokeAlert = (typeof stormState !== 'undefined' && stormState.alertFeatures || []).some(f =>
+    /air quality|smoke|particle pollution/i.test(f.properties?.event || '')
+    && alertActiveAtHour(f, d.hourly.time?.[si] || d.daily.sunset[0], d.timezone)
+  );
+  const heavySmoke = smokeHits > 0 || (pm25 != null && pm25 >= 55) || (aqi != null && aqi > 150);
+  const lightSmoke = !heavySmoke && (
+    hazeHits > 0 || smokeAlert || (pm25 != null && pm25 >= 35) || (aqi != null && aqi > 100)
+  );
+  const anySmoke = heavySmoke || lightSmoke;
+
+  let verdict, cls, detail, meterSub = '';
   if(si < 0){
     verdict = 'Unavailable'; cls = 'mid';
-    detail = 'No hourly cloud data near sunset yet.';
+    detail = 'No hourly sky data near sunset yet.';
   } else if(pp > 60 || lo > 75){
-    verdict = 'Poor \u2014 socked in'; cls = 'warn';
-    detail = 'Low cloud ~' + lo + '% / precip ~' + pp + '% through golden hour. Light will likely die flat.';
-  } else if(lo < 40 && hi >= 70 && mid < 25 && mh > 95){
-    verdict = 'Muted high overcast'; cls = 'mid';
-    detail = 'Mostly high cloud (~' + hi + '%) with little mid-level structure. Soft pastels possible; not a classic drama sky.';
+    verdict = 'Socked in'; cls = 'warn';
+    detail = 'Low cloud or rain through golden hour \u2014 light will likely die flat.';
+    meterSub = 'Low cloud ~' + lo + '% \u00B7 precip ~' + pp + '%';
+  } else if(anySmoke && lo < 45 && mh < 40){
+    verdict = heavySmoke ? 'Dramatic sky' : 'Color boost likely';
+    cls = 'good';
+    detail = heavySmoke
+      ? 'Wildfire smoke with a mostly clear deck \u2014 strong chance of deep orange and red, even without cloud structure.'
+      : 'Haze or light smoke over clearer skies \u2014 warmer than a clean sunset; worth being set up for golden hour.';
+    meterSub = 'Smoke / haze in the forecast' + (pm25 != null ? ' \u00B7 PM2.5 ' + Math.round(pm25) : (aqi != null ? ' \u00B7 AQI ' + aqi : ''));
+  } else if(anySmoke && lo < 50 && mh >= 25 && mh <= 110){
+    verdict = 'Dramatic sky'; cls = 'good';
+    detail = 'Broken mid/high cloud plus smoke or haze \u2014 best odds for a painted sunset.';
+    meterSub = 'Clouds ~' + skyPct + '% with smoke in the mix';
   } else if(lo < 40 && mh >= 25 && mh <= 95){
-    verdict = 'High drama potential'; cls = 'good';
-    detail = 'Mid ~' + mid + '% + high ~' + hi + '% cloud with a clear low deck (~' + lo + '%). Good canvas for color \u2014 be in position by golden hour.';
-  } else if(lo + mid + hi < 15){
-    verdict = 'Clean but plain'; cls = 'mid';
-    detail = 'Nearly cloudless (~' + (lo+mid+hi) + '% total). Crisp horizon light, minimal sky color.';
+    verdict = 'Dramatic sky'; cls = 'good';
+    detail = 'Broken mid/high cloud with a clear low deck \u2014 best odds for a painted sunset.';
+    meterSub = 'Mid ~' + mid + '% \u00B7 high ~' + hi + '% \u00B7 low ~' + lo + '%';
+  } else if(lo < 40 && hi >= 70 && mid < 25 && mh > 95){
+    verdict = 'Soft pastels'; cls = 'mid';
+    detail = 'Mostly high overcast with little mid-level structure. Gentle color possible; not classic drama.';
+    meterSub = 'High cloud ~' + hi + '%';
+  } else if(layerSum < 15 && tot < 15){
+    if(anySmoke){
+      verdict = heavySmoke ? 'Dramatic sky' : 'Color boost likely';
+      cls = 'good';
+      detail = 'Nearly cloudless, but smoke or haze should still tint the horizon.';
+      meterSub = 'Clear deck + smoke/haze';
+    }else{
+      verdict = 'Clean & crisp'; cls = 'mid';
+      detail = 'Nearly cloudless \u2014 crisp horizon light, minimal sky color.';
+      meterSub = 'Cloud cover ~' + skyPct + '%';
+    }
   } else {
-    verdict = 'Mixed \u2014 worth a look'; cls = 'mid';
-    detail = 'Cloud L/M/H through golden hour: ~' + lo + '/' + mid + '/' + hi + '%, precip ~' + pp + '%. Could break either way.';
+    verdict = 'Worth a look'; cls = 'mid';
+    detail = 'Mixed deck through golden hour \u2014 could break either way.';
+    meterSub = 'Cloud L/M/H ~' + lo + '/' + mid + '/' + hi + '%' + (anySmoke ? ' \u00B7 smoke also in play' : '');
   }
+
   const v = $('verdict');
-  v.textContent = verdict; v.className = 'verdict ' + cls;
-  $('verdictDetail').textContent = detail;
+  if(v){
+    v.textContent = verdict;
+    v.className = 'photo-outlook-verdict ' + cls;
+  }
+  const detailEl = $('verdictDetail');
+  if(detailEl) detailEl.textContent = detail;
+
+  const kicker = $('photoOutlookKicker');
+  if(kicker) kicker.textContent = "Tonight's golden hour";
+  const meter = $('photoOutlookMeter');
+  const fill = $('photoOutlookMeterFill');
+  const pctEl = $('photoOutlookMeterPct');
+  const subEl = $('photoOutlookMeterSub');
+  if(meter && fill && pctEl){
+    if(si < 0){
+      meter.hidden = true;
+    }else{
+      meter.hidden = false;
+      // Meter = cloud interest; when smoke is the color maker show a tint cue instead of 0%.
+      const showPct = anySmoke && skyPct < 20 ? Math.max(skyPct, heavySmoke ? 48 : 32) : skyPct;
+      fill.style.width = Math.max(0, Math.min(100, showPct)) + '%';
+      pctEl.textContent = anySmoke && skyPct < 20
+        ? (heavySmoke ? 'Smoke tint' : 'Haze tint')
+        : (showPct + '% cloud');
+      if(subEl) subEl.textContent = meterSub;
+    }
+  }
+  const win = $('photoOutlookWindow');
+  if(win){
+    win.innerHTML = 'Golden hour <span>' + fmtMins(goldPmS) + ' \u2013 ' + hm(ss) + '</span>';
+  }
 }
 function renderFireBanner(loc, d, spcLabel){
   const box = $('fireModeBanner');

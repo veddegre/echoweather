@@ -852,7 +852,10 @@ async function loadAir(loc){
         };
       }
       syncSmokeRadarHint(outdoorAir.pm25, outdoorAir.aqi);
-      if(state.data) renderActivityPlanner(state.data);
+      if(state.data){
+        renderActivityPlanner(state.data);
+        renderLight(state.data);
+      }
     }catch(e){
       $('aqiVerdict').textContent = 'unavailable';
       $('aqiDetail').innerHTML = panelUnavail('air_api');

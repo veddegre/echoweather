@@ -525,7 +525,10 @@ async function loadAlerts(loc){
       renderAlertsBox(feats);
       syncAlertPolygons(feats.filter(f => f.geometry));
       if(isRadarTabVisible()) showStormPanelPending(loc);
-      if(state.data) renderActivityPlanner(state.data);
+      if(state.data){
+        renderActivityPlanner(state.data);
+        renderLight(state.data);
+      }
       return feats.length;
     }catch(e){
       stormState.alertFeatures = [];
@@ -536,7 +539,10 @@ async function loadAlerts(loc){
         box.style.display = 'flex';
         box.innerHTML = panelUnavail('alerts_api');
       }
-      if(state.data) renderActivityPlanner(state.data);
+      if(state.data){
+        renderActivityPlanner(state.data);
+        renderLight(state.data);
+      }
       return 0;
     }
   });
