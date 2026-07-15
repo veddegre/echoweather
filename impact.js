@@ -437,7 +437,9 @@ function alertActiveAtHour(feature, hourIso, timezone){
   const p = feature.properties || {};
   const hour = wallPartsFromForecastIso(hourIso);
   if(!hour) return true;
-  const startIso = alertInEffectStartIso(p);
+  // Use hazard onset (not message `effective`) so a Heat Advisory issued today
+  // for tomorrow only caps tomorrow's hours — not the cool evening in between.
+  const startIso = alertStartIso(p);
   if(startIso){
     const start = wallPartsInTz(startIso, timezone);
     if(start && wallPartsCmp(hour, start) < 0) return false;

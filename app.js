@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '240';
+const APP_VERSION = '241';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -559,9 +559,11 @@ const fmtMins = m => {
 function sunAltAt(lat, lon, date){
   return sunPosition(date, lat, lon).alt;
 }
-function timeAtSunAlt(lat, lon, date, targetAlt, rising){
-  const base = new Date(date);
-  base.setSeconds(0, 0);
+function timeAtSunAlt(lat, lon, date, targetAlt, rising, timezone){
+  // Search the local calendar day (location TZ when provided), not "24h from now".
+  const base = timezone ? locDayStart(timezone) : (() => {
+    const d = new Date(date); d.setHours(0, 0, 0, 0); return d;
+  })();
   let lo = 0, hi = 24 * 60;
   for(let i = 0; i < 28; i++){
     const mid = (lo + hi) / 2;
@@ -570,16 +572,18 @@ function timeAtSunAlt(lat, lon, date, targetAlt, rising){
     if((rising && alt < targetAlt) || (!rising && alt > targetAlt)) lo = mid;
     else hi = mid;
   }
-  return new Date(base.getTime() + hi * 60000).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+  return new Date(base.getTime() + hi * 60000).toLocaleTimeString([], {
+    hour:'numeric', minute:'2-digit', timeZone: timezone || undefined
+  });
 }
-function twilightTimes(lat, lon, date){
+function twilightTimes(lat, lon, date, timezone){
   return {
-    civilDawn: timeAtSunAlt(lat, lon, date, -6, true),
-    civilDusk: timeAtSunAlt(lat, lon, date, -6, false),
-    nauticalDawn: timeAtSunAlt(lat, lon, date, -12, true),
-    nauticalDusk: timeAtSunAlt(lat, lon, date, -12, false),
-    astroDawn: timeAtSunAlt(lat, lon, date, -18, true),
-    astroDusk: timeAtSunAlt(lat, lon, date, -18, false)
+    civilDawn: timeAtSunAlt(lat, lon, date, -6, true, timezone),
+    civilDusk: timeAtSunAlt(lat, lon, date, -6, false, timezone),
+    nauticalDawn: timeAtSunAlt(lat, lon, date, -12, true, timezone),
+    nauticalDusk: timeAtSunAlt(lat, lon, date, -12, false, timezone),
+    astroDawn: timeAtSunAlt(lat, lon, date, -18, true, timezone),
+    astroDusk: timeAtSunAlt(lat, lon, date, -18, false, timezone)
   };
 }
 function estimateSkyDarkness(moonFrac, cloudPct, sunAlt){
@@ -1606,28 +1610,48 @@ function renderLight(d){
     + '<div class="verdict ' + dark.cls + '">' + esc(dark.label) + '</div>'
     + '<div class="detail">' + esc(dark.detail) + '</div>';
 
-  // sunset cloud outlook: find hourly index closest to sunset
-  const ssKey = ss.slice(0,13);
-  let si = d.hourly.time.findIndex(t => t.slice(0,13) === ssKey);
-  if(si < 0) si = nowIndex(d);
-  const lo = d.hourly.cloud_cover_low?.[si] ?? 0;
-  const mid = d.hourly.cloud_cover_mid?.[si] ?? 0;
-  const hi = d.hourly.cloud_cover_high?.[si] ?? 0;
-  const pp = d.hourly.precipitation_probability?.[si] ?? 0;
+  // Sunset cloud outlook: average golden-hour window (ss-60 … ss), never fall back to "now".
+  const windowIdx = [];
+  (d.hourly.time || []).forEach((t, i) => {
+    const m = minsOfDay(t);
+    if(Math.abs(m - ssM) <= 60) windowIdx.push(i);
+  });
+  let si = -1, bestDist = Infinity;
+  (d.hourly.time || []).forEach((t, i) => {
+    const dist = Math.abs(minsOfDay(t) - ssM);
+    if(dist < bestDist){ bestDist = dist; si = i; }
+  });
+  const avgCloud = (key) => {
+    const idxs = windowIdx.length ? windowIdx : (si >= 0 ? [si] : []);
+    if(!idxs.length) return 0;
+    const arr = d.hourly[key];
+    if(!arr) return 0;
+    return Math.round(idxs.reduce((s, i) => s + (arr[i] ?? 0), 0) / idxs.length);
+  };
+  const lo = avgCloud('cloud_cover_low');
+  const mid = avgCloud('cloud_cover_mid');
+  const hi = avgCloud('cloud_cover_high');
+  const pp = avgCloud('precipitation_probability');
   const mh = mid + hi;
   let verdict, cls, detail;
-  if(pp > 60 || lo > 75){
+  if(si < 0){
+    verdict = 'Unavailable'; cls = 'mid';
+    detail = 'No hourly cloud data near sunset yet.';
+  } else if(pp > 60 || lo > 75){
     verdict = 'Poor \u2014 socked in'; cls = 'warn';
-    detail = 'Low cloud ' + lo + '% / precip ' + pp + '% at sunset. Light will likely die flat.';
-  } else if(mh >= 25 && mh <= 130 && lo < 40){
+    detail = 'Low cloud ~' + lo + '% / precip ~' + pp + '% through golden hour. Light will likely die flat.';
+  } else if(lo < 40 && hi >= 70 && mid < 25 && mh > 95){
+    verdict = 'Muted high overcast'; cls = 'mid';
+    detail = 'Mostly high cloud (~' + hi + '%) with little mid-level structure. Soft pastels possible; not a classic drama sky.';
+  } else if(lo < 40 && mh >= 25 && mh <= 95){
     verdict = 'High drama potential'; cls = 'good';
-    detail = 'Mid ' + mid + '% + high ' + hi + '% cloud with a clear low deck (' + lo + '%). Good canvas for color \u2014 be in position by golden hour.';
+    detail = 'Mid ~' + mid + '% + high ~' + hi + '% cloud with a clear low deck (~' + lo + '%). Good canvas for color \u2014 be in position by golden hour.';
   } else if(lo + mid + hi < 15){
     verdict = 'Clean but plain'; cls = 'mid';
-    detail = 'Nearly cloudless (' + (lo+mid+hi) + '% total). Crisp horizon light, minimal sky color.';
+    detail = 'Nearly cloudless (~' + (lo+mid+hi) + '% total). Crisp horizon light, minimal sky color.';
   } else {
     verdict = 'Mixed \u2014 worth a look'; cls = 'mid';
-    detail = 'Cloud L/M/H at sunset: ' + lo + '/' + mid + '/' + hi + '%, precip ' + pp + '%. Could break either way.';
+    detail = 'Cloud L/M/H through golden hour: ~' + lo + '/' + mid + '/' + hi + '%, precip ~' + pp + '%. Could break either way.';
   }
   const v = $('verdict');
   v.textContent = verdict; v.className = 'verdict ' + cls;

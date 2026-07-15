@@ -473,7 +473,17 @@ function bearingDeg(lat1, lon1, lat2, lon2){
 async function fetchAllActiveAlerts(loc){
   const r = await nwsFetch('https://api.weather.gov/alerts/active?point=' + loc.lat + ',' + loc.lon);
   if(!r.ok) return [];
-  return (await r.json()).features || [];
+  return dedupeAlertFeatures((await r.json()).features || []);
+}
+function dedupeAlertFeatures(feats){
+  const seen = new Set();
+  return (feats || []).filter(f => {
+    const p = f.properties || {};
+    const key = (p.id || f.id || '') + '|' + (p.event || '') + '|' + (p.onset || '') + '|' + (p.ends || p.expires || '');
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 async function fetchActiveAlertFeatures(loc){
   const feats = await fetchAllActiveAlerts(loc);
