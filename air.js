@@ -762,7 +762,7 @@ async function loadAir(loc){
       const url = 'https://air-quality-api.open-meteo.com/v1/air-quality'
         + '?latitude=' + Number(loc.lat).toFixed(4) + '&longitude=' + Number(loc.lon).toFixed(4)
         + '&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
-        + '&hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
+        + '&hourly=us_aqi,pm2_5,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen'
         + '&forecast_days=3&timezone=auto';
       let j = null;
       if(!aqi || !pollen || !meteoDaily){
@@ -844,6 +844,13 @@ async function loadAir(loc){
       $('airMetrics').innerHTML = renderAirMetricSections(sections);
       renderAirnowKey();
       outdoorAir = { aqi: aqi ?? null, pm25: c?.pm2_5 ?? null };
+      if(j?.hourly?.time?.length){
+        outdoorAirHourly = {
+          time: j.hourly.time,
+          aqi: j.hourly.us_aqi || null,
+          pm25: j.hourly.pm2_5 || null
+        };
+      }
       syncSmokeRadarHint(outdoorAir.pm25, outdoorAir.aqi);
       if(state.data) renderActivityPlanner(state.data);
     }catch(e){

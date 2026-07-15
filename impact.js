@@ -1,6 +1,29 @@
 // ---------- impact (planners, aurora, section nav) ----------
 // ---------- activity planner ----------
 let outdoorAir = { aqi: null, pm25: null };
+// Hourly modeled AQI/PM2.5 forecast (Open-Meteo), so planner hours during a
+// smoke event reflect when the plume arrives or clears instead of smearing
+// the current reading across the whole window.
+let outdoorAirHourly = null;
+function airExtraForHour(d, extra, timeIso){
+  const h = outdoorAirHourly;
+  if(!h?.time?.length || !timeIso) return extra;
+  const key = timeIso.slice(0, 13);
+  const i = h.time.findIndex(t => t.slice(0, 13) === key);
+  if(i < 0) return extra;
+  let aqi = h.aqi?.[i] != null ? Math.round(h.aqi[i]) : null;
+  let pm25 = h.pm25?.[i] ?? null;
+  if(aqi == null && pm25 == null) return extra;
+  // Near the current hour, never read cleaner than the (monitor-preferred)
+  // snapshot — models often underestimate surface smoke that a station sees.
+  const nowIso = d?.hourly?.time?.[nowIndex(d)];
+  const nearNow = nowIso && Math.abs(Date.parse(timeIso) - Date.parse(nowIso)) <= 3 * 3600e3;
+  if(nearNow){
+    if(extra.aqi != null) aqi = Math.max(aqi ?? 0, extra.aqi);
+    if(extra.pm25 != null) pm25 = Math.max(pm25 ?? 0, extra.pm25);
+  }
+  return { ...extra, aqi: aqi ?? extra.aqi, pm25: pm25 ?? extra.pm25 };
+}
 function syncSmokeRadarHint(pm25, aqi){
   const box = $('smokeRadarHint'), text = $('smokeRadarHintText');
   if(!box || !text) return;
@@ -617,6 +640,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeHeat(ctx, reasons, 85, 92);
     s -= penalizeAfternoonHeat(ctx, reasons, { hot: 84, extreme: 90 });
     s -= penalizeWinter(ctx, reasons);
+    s -= penalizeAqi(extra, reasons, false);
     if(ctx.uv >= 8 && ctx.isDay) reasons.push('High UV — seek shade');
     return { score: clampActScore(s), reasons };
   },
@@ -642,6 +666,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeHeat(ctx, reasons, 88, 96);
     s -= penalizeAfternoonHeat(ctx, reasons, { hot: 88, extreme: 94, extremePenalty: 22 });
     s -= penalizeWinter(ctx, reasons);
+    s -= penalizeAqi(extra, reasons, false);
     if(ctx.wetBulb >= 80) reasons.push('Heavy work in heat — hydrate');
     return { score: clampActScore(s), reasons };
   },
@@ -669,6 +694,7 @@ const ACTIVITY_SCORERS = {
     });
     s -= penalizeRain(ctx, reasons, 55, 30);
     s -= penalizeWind(ctx, reasons, 20, 12);
+    s -= penalizeAqi(extra, reasons, false);
     if(ctx.uv >= 8 && ctx.isDay) reasons.push('High sun — sunscreen');
     if(extra.coastal) reasons.push('Near coast — check rip currents');
     return { score: clampActScore(s), reasons };
@@ -753,6 +779,16 @@ const ACTIVITY_SCORERS = {
     if(ctx.code === 3 && ctx.cloud < 70){ s -= 25; reasons.push('Overcast forecast'); }
     else if(ctx.code === 2 && ctx.cloud < 40){ s -= 12; reasons.push('Partly cloudy'); }
     s -= penalizeWind(ctx, reasons, 26, 18);
+    if(extra.pm25 != null && extra.pm25 >= 55){
+      s -= 45;
+      reasons.push('Dense smoke obscures the sky');
+    }else if(extra.pm25 != null && extra.pm25 >= 35){
+      s -= 20;
+      reasons.push('Smoke or haze dims the sky');
+    }else if(extra.aqi != null && extra.aqi > 150){
+      s -= 25;
+      reasons.push('Hazy air (AQI ' + extra.aqi + ')');
+    }
     if(ctx.isDay === 0 && ctx.cloud < 30) reasons.push('Clear night expected');
     return { score: clampActScore(s), reasons };
   },
@@ -928,7 +964,7 @@ function scoreActivityFromContext(d, def, extra, ctx, scorer, tz){
       reasons: [activityIneligibleNote(def)]
     };
   }
-  let { score, reasons } = scorer(ctx, extra);
+  let { score, reasons } = scorer(ctx, airExtraForHour(d, extra, ctx.time));
   const alert = activityAlertImpact(def, ctx.time, tz, ctx);
   score = Math.min(score, alert.cap);
   if(alert.notes.length && score <= alert.cap){
