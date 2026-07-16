@@ -296,34 +296,30 @@ function activityGrade(score){
 }
 function activityOverallGrade(def, eligible, d){
   if(!eligible.length) return 'poor';
-  // Hazard cards always reflect the worst upcoming hour — an active alert
-  // must never soften the grade to whatever the current (possibly mild) hour is.
+  // Hazard cards: worst upcoming hour — never soften an active alert period.
   if(isImpactDef(def)){
     return activityGrade(Math.min(...eligible.map(h => h.score)));
   }
-  const tz = d.timezone;
   const nowIso = d.hourly.time[nowIndex(d)];
-  const nowH = eligible.find(h => h.time.slice(0, 13) === nowIso.slice(0, 13))
-    || eligible.find(h => h.time >= nowIso && !h.ineligible)
-    || eligible.find(h => !h.ineligible)
-    || eligible[0];
-  const nowAlert = activityAlertImpact(def, nowH.time, tz, resolveHourContext(d, nowH.time));
-  if(nowAlert.notes.length){
-    return activityGrade(nowH.score);
+  const upcoming = eligible.filter(h => h.time.slice(0, 13) >= nowIso.slice(0, 13));
+  const pool = upcoming.length ? upcoming : eligible;
+  const nowH = pool.find(h => h.time.slice(0, 13) === nowIso.slice(0, 13))
+    || pool.find(h => !h.ineligible)
+    || pool[0];
+  const nowScore = nowH.score;
+  const worst = Math.min(...pool.map(h => h.score));
+  // Badge must not read Good when Poor/Hazardous hours are in the planner
+  // window (today+tomorrow bars / Why list). Use next hour as the primary
+  // signal, but never outrank a worse upcoming stretch.
+  let score = nowScore;
+  if(worst < 45){
+    // Any Poor hour ahead → overall at best that Poor (often smoke/heat/alerts).
+    score = Math.min(score, worst);
+  }else if(worst < 70 && score >= 70){
+    // Good now / next, but Fair later in the window → Fair overall.
+    score = Math.min(score, Math.max(worst, 55));
   }
-  const alertHours = eligible.filter(h => {
-    const imp = activityAlertImpact(def, h.time, tz, resolveHourContext(d, h.time));
-    return imp.notes.length && imp.cap < 70;
-  });
-  if(alertHours.length){
-    const peak = Math.max(...eligible.map(h => h.score));
-    const alertPeak = Math.max(...alertHours.map(h => h.score));
-    if(def.id === 'beach'){
-      return activityGrade(Math.min(peak, Math.max(alertPeak, 55)));
-    }
-    return activityGrade(Math.min(peak, alertPeak));
-  }
-  return activityGrade(Math.max(...eligible.map(h => h.score)));
+  return activityGrade(score);
 }
 function isImpactDef(def){ return !!def?.impact; }
 function activityGradeLabel(g, def){
@@ -545,15 +541,16 @@ function activityAlertImpact(def, hourIso, timezone, ctx){
       apply(55, ev);
       return;
     }
-    if(['running', 'hiking', 'cycling', 'dog', 'yard'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
-      apply(55, ev);
+    if(['running', 'hiking', 'cycling', 'dog', 'yard', 'stars'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
+      // Cap below Fair so smoke alerts surface as Poor / High, not amber-only.
+      apply(42, ev);
       return;
     }
     if(['golf', 'beach'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
-      apply(60, ev);
+      apply(48, ev);
       return;
     }
-    if(['running', 'hiking', 'cycling', 'golf', 'beach', 'dog'].includes(actId) && /dense fog|freezing fog|fog advisory|low visibility/i.test(evL)){
+    if(['running', 'hiking', 'cycling', 'golf', 'beach', 'dog', 'stars'].includes(actId) && /dense fog|freezing fog|fog advisory|low visibility/i.test(evL)){
       apply(52, ev);
       return;
     }
@@ -587,8 +584,8 @@ function activityAlertImpact(def, hourIso, timezone, ctx){
       const blob = ((f.properties?.headline || '') + ' ' + (f.properties?.description || '')).toLowerCase();
       if(/smoke|air quality|visibility/.test(blob)){
         if(actId === 'air'){ apply(40, 'Smoke / reduced visibility'); return; }
-        if(['running', 'hiking', 'cycling', 'dog', 'golf', 'yard', 'beach'].includes(actId)){
-          apply(52, 'Smoke / reduced visibility');
+        if(['running', 'hiking', 'cycling', 'dog', 'golf', 'yard', 'beach', 'stars'].includes(actId)){
+          apply(42, 'Smoke / reduced visibility');
           return;
         }
       }
@@ -713,7 +710,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeHeat(ctx, reasons, 85, 92);
     s -= penalizeAfternoonHeat(ctx, reasons, { hot: 84, extreme: 90 });
     s -= penalizeWinter(ctx, reasons);
-    s -= penalizeAqi(extra, reasons, false);
+    s -= penalizeAqi(extra, reasons, true);
     if(ctx.uv >= 8 && ctx.isDay) reasons.push('High UV — seek shade');
     return { score: clampActScore(s), reasons };
   },
@@ -769,7 +766,7 @@ const ACTIVITY_SCORERS = {
     });
     s -= penalizeRain(ctx, reasons, 55, 30);
     s -= penalizeWind(ctx, reasons, 20, 12);
-    s -= penalizeAqi(extra, reasons, false);
+    s -= penalizeAqi(extra, reasons, true);
     if(ctx.uv >= 8 && ctx.isDay) reasons.push('High sun — sunscreen');
     if(extra.coastal) reasons.push('Near coast — check rip currents');
     return { score: clampActScore(s), reasons };
@@ -782,7 +779,7 @@ const ACTIVITY_SCORERS = {
     s -= penalizeHeat(ctx, reasons, 84, 92);
     s -= penalizeAfternoonHeat(ctx, reasons, { hot: 86, extreme: 92 });
     s -= penalizeWinter(ctx, reasons);
-    s -= penalizeAqi(extra, reasons, false);
+    s -= penalizeAqi(extra, reasons, true);
     if(ctx.wind >= 20) s -= 15;
     return { score: clampActScore(s), reasons };
   },
@@ -854,17 +851,27 @@ const ACTIVITY_SCORERS = {
     if(ctx.code === 3 && ctx.cloud < 70){ s -= 25; reasons.push('Overcast forecast'); }
     else if(ctx.code === 2 && ctx.cloud < 40){ s -= 12; reasons.push('Partly cloudy'); }
     s -= penalizeWind(ctx, reasons, 26, 18);
-    if(extra.pm25 != null && extra.pm25 >= 55){
-      s -= 45;
-      reasons.push('Dense smoke obscures the sky');
-    }else if(extra.pm25 != null && extra.pm25 >= 35){
-      s -= 20;
-      reasons.push('Smoke or haze dims the sky');
-    }else if(extra.aqi != null && extra.aqi > 150){
-      s -= 25;
-      reasons.push('Hazy air (AQI ' + extra.aqi + ')');
+    // Smoke / haze wash out the Milky Way — same strict AQI as hiking, plus
+    // visibility so NWS smoke floors can't leave a clear-night Good grade.
+    s -= penalizeAqi(extra, reasons, true);
+    if(extra.pm25 != null && extra.pm25 >= 35){
+      s -= 12;
+      if(!reasons.some(r => /smoke|haze|PM2\.5/i.test(r))){
+        reasons.push(extra.pm25 >= 55 ? 'Dense smoke obscures the sky' : 'Smoke or haze dims the sky');
+      }
     }
-    if(ctx.isDay === 0 && ctx.cloud < 30) reasons.push('Clear night expected');
+    if(ctx.visibility != null && ctx.visibility < 3){
+      s -= 18;
+      reasons.push('Low visibility');
+    }else if(ctx.visibility != null && ctx.visibility < 6){
+      s -= 8;
+      reasons.push('Hazy visibility');
+    }
+    if(extra.smokeNote && !reasons.includes(extra.smokeNote)) reasons.unshift(extra.smokeNote);
+    if(!ctx.isDay && ctx.cloud < 30 && (extra.aqi == null || extra.aqi <= 50)
+      && (extra.pm25 == null || extra.pm25 < 35)){
+      reasons.push('Clear night expected');
+    }
     return { score: clampActScore(s), reasons };
   },
   heat(ctx, extra){
@@ -1050,14 +1057,30 @@ function scoreActivityFromContext(d, def, extra, ctx, scorer, tz){
       reasons: [activityIneligibleNote(def)]
     };
   }
-  let { score, reasons } = scorer(ctx, airExtraForHour(d, extra, ctx.time));
+  const hourAir = airExtraForHour(d, extra, ctx.time);
+  let { score, reasons } = scorer(ctx, hourAir);
+  if(hourAir.smokeNote && !reasons.includes(hourAir.smokeNote)){
+    reasons.unshift(hourAir.smokeNote);
+  }
   const alert = activityAlertImpact(def, ctx.time, tz, ctx);
   score = Math.min(score, alert.cap);
   if(alert.notes.length && score <= alert.cap){
     const note = alert.notes[0];
     if(!reasons.includes(note)) reasons.unshift(note);
   }
+  // Prefer alert / smoke / heat reasons first so Why lists the real hazard.
+  reasons = prioritizeImpactReasons(reasons);
   return { time: ctx.time, score, grade: activityGrade(score), reasons: reasons.slice(0, 5), ineligible: false };
+}
+function prioritizeImpactReasons(reasons){
+  const rank = (r) => {
+    const t = String(r || '').toLowerCase();
+    if(/hazardous|very unhealthy|unhealthy air|air quality alert|smoke|pm2\.5|nws smoke|haze/.test(t)) return 0;
+    if(/heat advisory|extreme heat|excessive heat|wet-bulb|heat stress/.test(t)) return 1;
+    if(/warning|watch|advisory|tornado|thunderstorm|severe/.test(t)) return 2;
+    return 3;
+  };
+  return [...reasons].sort((a, b) => rank(a) - rank(b));
 }
 function scoreActivityHour(d, def, extra, j, scorer, tz){
   return scoreActivityFromContext(d, def, extra, activityHourContext(d, j), scorer, tz);
@@ -1454,7 +1477,10 @@ function renderActivityCard(def, hours, d, extra, pins){
       + esc(activityGradeLabel('poor', def)) + '</span></div>'
       + '<div class="activity-window">No forecast hours available.</div></article>';
   }
-  const eligible = todayHours.filter(h => !h.ineligible);
+  // Badge uses today + tomorrow so Why's poor/hazardous stretches can't hide
+  // behind a green "best hour today" grade.
+  const plannerEligible = dayBars.flatMap(day => day.hours.filter(h => !h.ineligible));
+  const eligible = plannerEligible.length ? plannerEligible : todayHours.filter(h => !h.ineligible);
   const overall = activityOverallGrade(def, eligible, d);
   const windows = mergeActivityWindows(buildActivityHours(d, def, extra));
   const barHtml = dayBars.map(day => renderPlannerDayBar(day, d, def)).join('');
