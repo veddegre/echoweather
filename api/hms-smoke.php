@@ -31,12 +31,7 @@ $cacheFile = $cacheDir . '/latest.json';
 $ttl = 30 * 60;
 
 if (is_file($cacheFile) && (time() - (int) filemtime($cacheFile)) < $ttl) {
-    $cached = file_get_contents($cacheFile);
-    if ($cached !== false && $cached !== '') {
-        header('Content-Type: application/geo+json; charset=utf-8');
-        header('Access-Control-Allow-Origin: *');
-        header('Cache-Control: public, max-age=900');
-        echo $cached;
+    if (hms_smoke_try_send_cached($cacheFile, 900)) {
         exit;
     }
 }
@@ -53,17 +48,27 @@ try {
     header('Cache-Control: public, max-age=900');
     echo $json;
 } catch (Throwable $e) {
-    if (is_file($cacheFile)) {
-        $cached = file_get_contents($cacheFile);
-        if ($cached !== false && $cached !== '') {
-            header('Content-Type: application/geo+json; charset=utf-8');
-            header('Access-Control-Allow-Origin: *');
-            header('Cache-Control: public, max-age=300');
-            echo $cached;
-            exit;
-        }
+    // Prefer any cached product (even stale) over a blank map.
+    if (hms_smoke_try_send_cached($cacheFile, 300)) {
+        exit;
     }
     send_api_error(502, 'Upstream smoke product unavailable', $e, 'hms-smoke', cors: true);
+}
+
+function hms_smoke_try_send_cached(string $cacheFile, int $maxAge): bool
+{
+    if (!is_file($cacheFile)) {
+        return false;
+    }
+    $cached = file_get_contents($cacheFile);
+    if ($cached === false || $cached === '') {
+        return false;
+    }
+    header('Content-Type: application/geo+json; charset=utf-8');
+    header('Access-Control-Allow-Origin: *');
+    header('Cache-Control: public, max-age=' . $maxAge);
+    echo $cached;
+    return true;
 }
 
 /**
@@ -85,7 +90,7 @@ function fetch_hms_smoke_geojson(): array
         $url = 'https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/KML/'
             . $y . '/' . $m . '/hms_smoke' . $ymd . '.kml';
         try {
-            $kml = http_get($url, 40);
+            $kml = hms_http_get($url, 40);
             $geo = hms_kml_to_geojson($kml, $ymd);
             if (!empty($geo['features'])) {
                 $geo['properties'] = [
@@ -101,7 +106,91 @@ function fetch_hms_smoke_geojson(): array
             $lastErr = $e;
         }
     }
+
+    // Rolling "current analysis" KMZ (updated through the day).
+    try {
+        $kmzUrl = 'https://ospo.noaa.gov/data/spl/kmlfiles/fire/smoke.kmz';
+        $kml = hms_kmz_to_kml(hms_http_get($kmzUrl, 40));
+        $geo = hms_kml_to_geojson($kml, $now->format('Ymd'));
+        if (!empty($geo['features'])) {
+            $geo['properties'] = [
+                'source' => 'NOAA HMS',
+                'date' => $now->format('Ymd'),
+                'url' => $kmzUrl,
+            ];
+            return $geo;
+        }
+        $lastErr = new RuntimeException('OSPO smoke.kmz has no polygons');
+    } catch (Throwable $e) {
+        $lastErr = $e;
+    }
+
     throw $lastErr ?? new RuntimeException('No HMS smoke product available');
+}
+
+function hms_http_get(string $url, int $timeout = 40): string
+{
+    $last = null;
+    for ($attempt = 0; $attempt < 3; $attempt++) {
+        try {
+            if (function_exists('curl_init')) {
+                $res = curl_request($url, [
+                    CURLOPT_HTTPHEADER => ['Accept: */*'],
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_ENCODING => '',
+                ], $timeout);
+                if ($res['body'] === false) {
+                    throw new RuntimeException($res['err'] !== '' ? $res['err'] : 'request failed');
+                }
+                if ($res['code'] >= 400) {
+                    throw new RuntimeException('HTTP ' . $res['code']);
+                }
+                return (string) $res['body'];
+            }
+            return http_get($url, $timeout);
+        } catch (Throwable $e) {
+            $last = $e;
+            usleep(250000 * ($attempt + 1));
+        }
+    }
+    throw $last ?? new RuntimeException('HMS fetch failed');
+}
+
+function hms_kmz_to_kml(string $kmz): string
+{
+    if (!class_exists('ZipArchive')) {
+        throw new RuntimeException('ZipArchive unavailable for KMZ');
+    }
+    $tmp = tempnam(sys_get_temp_dir(), 'hmskmz');
+    if ($tmp === false) {
+        throw new RuntimeException('temp file failed');
+    }
+    try {
+        if (file_put_contents($tmp, $kmz) === false) {
+            throw new RuntimeException('KMZ write failed');
+        }
+        $zip = new ZipArchive();
+        if ($zip->open($tmp) !== true) {
+            throw new RuntimeException('KMZ open failed');
+        }
+        $kml = null;
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+            if ($name !== false && preg_match('/\.kml$/i', $name)) {
+                $kml = $zip->getFromIndex($i);
+                if ($kml !== false && $kml !== '') {
+                    break;
+                }
+            }
+        }
+        $zip->close();
+        if ($kml === null || $kml === false || $kml === '') {
+            throw new RuntimeException('KMZ missing KML');
+        }
+        return (string) $kml;
+    } finally {
+        @unlink($tmp);
+    }
 }
 
 /**

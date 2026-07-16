@@ -20,9 +20,9 @@ const WPC_ERO_URL = 'https://mapservices.weather.noaa.gov/vector/rest/services/h
 const HMS_SMOKE_URL = '/api/hms-smoke';
 function hmsSmokeStyle(f){
   const dens = String(f?.properties?.Density || f?.properties?.Label || '').toLowerCase();
-  if(/heavy|thick/.test(dens)) return { color: '#5c4030', weight: 1, fillColor: '#6b4423', fillOpacity: 0.42 };
-  if(/medium|mod/.test(dens)) return { color: '#8b6914', weight: 1, fillColor: '#b8860b', fillOpacity: 0.32 };
-  return { color: '#8b7355', weight: 1, fillColor: '#c4a574', fillOpacity: 0.22 };
+  if(/heavy|thick/.test(dens)) return { color: '#4a2f1a', weight: 1.5, fillColor: '#6b4423', fillOpacity: 0.55 };
+  if(/medium|mod/.test(dens)) return { color: '#7a5a10', weight: 1.25, fillColor: '#c4a035', fillOpacity: 0.42 };
+  return { color: '#8b7355', weight: 1, fillColor: '#d4b896', fillOpacity: 0.32 };
 }
 const THREAT_LAYER_URLS = {
   spcCat: 'https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson',
@@ -451,11 +451,11 @@ async function syncThreatOverlays(){
       try{
         const geo = await fetchThreatGeo('hmsSmoke', HMS_SMOKE_URL);
         if(!geo || !map || gen !== threatOverlayGen){
-          if(gen === threatOverlayGen) markThreatLayer('hmsSmoke', 'threat_layer_api');
+          if(gen === threatOverlayGen) markThreatLayer('hmsSmoke', 'hms_smoke_api');
           return;
         }
         if(!geo.features?.length){
-          markThreatLayer('hmsSmoke', 'threat_layer_empty');
+          markThreatLayer('hmsSmoke', 'hms_smoke_empty');
           return;
         }
         clearThreatLayerError('hmsSmoke');
@@ -474,7 +474,7 @@ async function syncThreatOverlays(){
         grp.addTo(map);
       }catch(e){
         console.warn('HMS smoke layer', e);
-        if(gen === threatOverlayGen) markThreatLayer('hmsSmoke', 'threat_layer_api');
+        if(gen === threatOverlayGen) markThreatLayer('hmsSmoke', 'hms_smoke_api');
       }
     })());
   }

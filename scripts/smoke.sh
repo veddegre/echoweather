@@ -57,3 +57,23 @@ if ! printf '%s' "$combo_body" | grep -q '"icaoId":"KAZO"'; then
   exit 1
 fi
 echo "OK   /api/taf?ids=KBIV,KAZO — KAZO TAF when KBIV has none"
+
+# HMS smoke proxy must be routed (api/.htaccess) — 404 means rewrite missing.
+# 200 with GeoJSON is ideal; 502 is acceptable when NESDIS is unreachable and cache is empty.
+hms_code="$(curl -sS -o /tmp/echoweather-hms.json -w '%{http_code}' -H "Host: ${SMOKE_HOST}" "${BASE_URL}/api/hms-smoke")"
+if [[ "$hms_code" == "404" ]]; then
+  echo "FAIL /api/hms-smoke — HTTP 404 (add RewriteRule ^hms-smoke\$ hms-smoke.php in api/.htaccess)" >&2
+  exit 1
+fi
+if [[ "$hms_code" == "200" ]]; then
+  if ! grep -q '"type":"FeatureCollection"' /tmp/echoweather-hms.json; then
+    echo "FAIL /api/hms-smoke — expected GeoJSON FeatureCollection, got: $(head -c 120 /tmp/echoweather-hms.json)" >&2
+    exit 1
+  fi
+  echo "OK   /api/hms-smoke — HTTP 200 GeoJSON FeatureCollection"
+elif [[ "$hms_code" == "502" ]]; then
+  echo "WARN /api/hms-smoke — HTTP 502 (upstream NESDIS unavailable; route OK)"
+else
+  echo "FAIL /api/hms-smoke — HTTP ${hms_code}" >&2
+  exit 1
+fi

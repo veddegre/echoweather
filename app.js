@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '245';
+const APP_VERSION = '246';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -241,6 +241,8 @@ const PANEL_UNAVAIL_MSG = {
   loc_compare_api: 'Saved location comparison could not be loaded.',
   threat_layer_api: 'Threat map layer could not be loaded — try refresh.',
   threat_layer_empty: 'No threat geometry for this layer at the moment.',
+  hms_smoke_api: 'Smoke layer unavailable — server proxy /api/hms-smoke failed.',
+  hms_smoke_empty: 'No HMS smoke polygons in the latest NESDIS product yet.',
   lightning_api: 'Live lightning feed could not connect — Blitzortung may be down.',
   alerts_api: 'Active NWS alerts could not be loaded.'
 };
