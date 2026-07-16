@@ -545,11 +545,11 @@ function activityAlertImpact(def, hourIso, timezone, ctx){
       apply(55, ev);
       return;
     }
-    if(['running', 'hiking', 'cycling', 'dog'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
+    if(['running', 'hiking', 'cycling', 'dog', 'yard'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
       apply(55, ev);
       return;
     }
-    if(['golf', 'yard', 'beach'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
+    if(['golf', 'beach'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
       apply(60, ev);
       return;
     }
@@ -739,7 +739,9 @@ const ACTIVITY_SCORERS = {
     s -= penalizeHeat(ctx, reasons, 88, 96);
     s -= penalizeAfternoonHeat(ctx, reasons, { hot: 88, extreme: 94, extremePenalty: 22 });
     s -= penalizeWinter(ctx, reasons);
-    s -= penalizeAqi(extra, reasons, false);
+    // Strict AQI: mowing / leaf blowing is sustained outdoor exertion and
+    // often kicks up extra dust — treat smoke like hiking/running, not golf.
+    s -= penalizeAqi(extra, reasons, true);
     if(ctx.wetBulb >= 80) reasons.push('Heavy work in heat — hydrate');
     return { score: clampActScore(s), reasons };
   },
