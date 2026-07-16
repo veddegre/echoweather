@@ -17,12 +17,6 @@ try {
     send_api_error(500, 'Service unavailable', $e, 'hms-smoke/config', cors: true);
 }
 
-try {
-    enforce_rate_limit('hms_smoke', rate_limit_for($cfg, 'rate_limit_hms_smoke') ?: 30);
-} catch (RateLimitExceeded $e) {
-    send_api_error(429, 'Too many requests', $e, 'hms-smoke/rate-limit', cors: true);
-}
-
 $cacheDir = dirname(__DIR__) . '/cache/hms';
 if (!is_dir($cacheDir)) {
     @mkdir($cacheDir, 0755, true);
@@ -30,10 +24,20 @@ if (!is_dir($cacheDir)) {
 $cacheFile = $cacheDir . '/latest.json';
 $ttl = 30 * 60;
 
+// Cached responses are cheap — do not count them against the hourly upstream limit.
 if (is_file($cacheFile) && (time() - (int) filemtime($cacheFile)) < $ttl) {
     if (hms_smoke_try_send_cached($cacheFile, 900)) {
         exit;
     }
+}
+
+try {
+    enforce_rate_limit('hms_smoke', rate_limit_for($cfg, 'rate_limit_hms_smoke') ?: 60);
+} catch (RateLimitExceeded $e) {
+    if (hms_smoke_try_send_cached($cacheFile, 7 * 24 * 3600)) {
+        exit;
+    }
+    send_api_error(429, 'Too many requests', $e, 'hms-smoke/rate-limit', cors: true);
 }
 
 try {

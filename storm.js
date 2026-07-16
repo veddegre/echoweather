@@ -227,18 +227,21 @@ function filterAlertFeatures(feats){
 }
 async function fetchThreatGeo(key, url){
   const hit = threatGeoCache[key];
-  if(hit && Date.now() - hit.t < THREAT_GEO_TTL) return hit.g;
+  const ttl = key === 'hmsSmoke' ? 15 * 60 * 1000 : THREAT_GEO_TTL;
+  if(hit && Date.now() - hit.t < ttl) return hit.g;
   const urls = [url];
   if(url === HMS_SMOKE_URL) urls.push('/api/hms-smoke.php');
-  for(const u of urls){
+  for(let i = 0; i < urls.length; i++){
+    const u = urls[i];
     try{
       const r = await fetch(u);
-      if(!r.ok) continue;
+      if(r.status === 404 && i < urls.length - 1) continue;
+      if(!r.ok) break;
       const g = await r.json();
-      if(!g || g.error || g.type !== 'FeatureCollection') continue;
+      if(!g || g.error || g.type !== 'FeatureCollection') break;
       threatGeoCache[key] = { g, t: Date.now() };
       return g;
-    }catch(e){ /* try next URL */ }
+    }catch(e){ /* try .php only after routing 404 */ }
   }
   return null;
 }
