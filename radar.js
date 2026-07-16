@@ -1416,9 +1416,6 @@ $('radarSat').addEventListener('click', () => {
 $('radarLightning').addEventListener('click', () => {
   setLightningOverlay(!radarLightningOn);
 });
-$('radarSmoke')?.addEventListener('click', () => {
-  setHmsSmokeLayer(!threatLayerOpts.hmsSmoke);
-});
 $('radarWind')?.addEventListener('click', () => {
   setWindOverlay(!radarWindOn);
 });
@@ -1427,14 +1424,7 @@ document.querySelectorAll('[data-threat]').forEach(inp => {
     const k = inp.getAttribute('data-threat');
     if(!(k in threatLayerOpts)) return;
     threatLayerOpts[k] = inp.checked;
-    if(k === 'hmsSmoke'){
-      const btn = $('radarSmoke');
-      if(btn){
-        btn.classList.toggle('on', inp.checked);
-        btn.setAttribute('aria-pressed', inp.checked ? 'true' : 'false');
-      }
-      if(typeof syncOverlayLegends === 'function') syncOverlayLegends();
-    }
+    if(k === 'hmsSmoke' && typeof syncOverlayLegends === 'function') syncOverlayLegends();
     saveThreatLayerPrefs();
     if(typeof updateRadarHash === 'function') updateRadarHash();
     if(k === 'stormReports'){

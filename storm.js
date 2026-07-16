@@ -104,11 +104,6 @@ function applyLocRadarPrefs(loc, opts){
     const k = inp.getAttribute('data-threat');
     if(k in threatLayerOpts) inp.checked = threatLayerOpts[k];
   });
-  const smokeBtn = $('radarSmoke');
-  if(smokeBtn){
-    smokeBtn.classList.toggle('on', !!threatLayerOpts.hmsSmoke);
-    smokeBtn.setAttribute('aria-pressed', threatLayerOpts.hmsSmoke ? 'true' : 'false');
-  }
   radarMode = p.mode;
   if(typeof radarDualOn !== 'undefined') radarDualOn = !!p.dualPane;
   if(typeof mrmsProduct !== 'undefined') mrmsProduct = p.mrmsProduct || 'bref';
@@ -158,11 +153,6 @@ function applyThreatLayersFromHash(param){
     const k = inp.getAttribute('data-threat');
     if(k in threatLayerOpts) inp.checked = threatLayerOpts[k];
   });
-  const smokeBtn = $('radarSmoke');
-  if(smokeBtn){
-    smokeBtn.classList.toggle('on', !!threatLayerOpts.hmsSmoke);
-    smokeBtn.setAttribute('aria-pressed', threatLayerOpts.hmsSmoke ? 'true' : 'false');
-  }
   syncThreatOverlays();
   syncStormReportMarkers();
   if(stormState.alertFeatures) syncAlertPolygons(stormState.alertFeatures);
@@ -176,11 +166,6 @@ function enableHmsSmokeLayer(){
   if(inp) inp.checked = true;
   const details = $('threatLayers');
   if(details) details.open = true;
-  const btn = $('radarSmoke');
-  if(btn){
-    btn.classList.add('on');
-    btn.setAttribute('aria-pressed', 'true');
-  }
   saveLocRadarPrefs();
   syncThreatOverlays();
   syncOverlayLegends();
@@ -190,11 +175,6 @@ function setHmsSmokeLayer(on){
   threatLayerOpts.hmsSmoke = !!on;
   const inp = document.querySelector('[data-threat="hmsSmoke"]');
   if(inp) inp.checked = !!on;
-  const btn = $('radarSmoke');
-  if(btn){
-    btn.classList.toggle('on', !!on);
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  }
   if(on){
     const details = $('threatLayers');
     if(details) details.open = true;
