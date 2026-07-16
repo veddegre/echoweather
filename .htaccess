@@ -9,6 +9,10 @@
     RewriteRule ^lib/ - [F,L]
     RewriteRule ^cache/ - [F,L]
     RewriteRule ^router\.php$ - [F,L]
+    # API routes — backup when api/.htaccess is not applied on the host.
+    RewriteRule ^api/hms-smoke$ api/hms-smoke.php [L,QSA]
+    RewriteRule ^api/wpc-ero$ api/wpc-ero.php [L,QSA]
+    RewriteRule ^api/nhc-storms$ api/nhc-storms.php [L,QSA]
 </IfModule>
 
 <IfModule mod_headers.c>

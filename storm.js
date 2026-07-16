@@ -198,13 +198,19 @@ function filterAlertFeatures(feats){
 async function fetchThreatGeo(key, url){
   const hit = threatGeoCache[key];
   if(hit && Date.now() - hit.t < THREAT_GEO_TTL) return hit.g;
-  try{
-    const r = await fetch(url);
-    if(!r.ok) return null;
-    const g = await r.json();
-    threatGeoCache[key] = { g, t: Date.now() };
-    return g;
-  }catch(e){ return null; }
+  const urls = [url];
+  if(url === HMS_SMOKE_URL) urls.push('/api/hms-smoke.php');
+  for(const u of urls){
+    try{
+      const r = await fetch(u);
+      if(!r.ok) continue;
+      const g = await r.json();
+      if(!g || g.error || g.type !== 'FeatureCollection') continue;
+      threatGeoCache[key] = { g, t: Date.now() };
+      return g;
+    }catch(e){ /* try next URL */ }
+  }
+  return null;
 }
 function removeThreatOverlays(){
   if(!map) return;
@@ -467,8 +473,9 @@ async function syncThreatOverlays(){
     jobs.push((async () => {
       try{
         const geo = await fetchThreatGeo('hmsSmoke', HMS_SMOKE_URL);
-        if(!geo || !map || gen !== threatOverlayGen){
-          if(gen === threatOverlayGen) markThreatLayer('hmsSmoke', 'hms_smoke_api');
+        if(!map || gen !== threatOverlayGen) return;
+        if(!geo){
+          markThreatLayer('hmsSmoke', 'hms_smoke_api');
           return;
         }
         if(!geo.features?.length){

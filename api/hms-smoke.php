@@ -60,6 +60,11 @@ function hms_smoke_try_send_cached(string $cacheFile, int $maxAge): bool
     if (!is_file($cacheFile)) {
         return false;
     }
+    $age = time() - (int) filemtime($cacheFile);
+    // Fresh cache — honor maxAge; stale cache only when upstream is down (max 7 days).
+    if ($age > $maxAge && $age > 7 * 24 * 3600) {
+        return false;
+    }
     $cached = file_get_contents($cacheFile);
     if ($cached === false || $cached === '') {
         return false;
@@ -107,7 +112,25 @@ function fetch_hms_smoke_geojson(): array
         }
     }
 
-    // Rolling "current analysis" KMZ (updated through the day).
+    // Rolling "current analysis" KML (no ZipArchive required).
+    try {
+        $kmlUrl = 'https://ospo.noaa.gov/data/spl/kmlfiles/fire/smoke.kml';
+        $kml = hms_http_get($kmlUrl, 40);
+        $geo = hms_kml_to_geojson($kml, $now->format('Ymd'));
+        if (!empty($geo['features'])) {
+            $geo['properties'] = [
+                'source' => 'NOAA HMS',
+                'date' => $now->format('Ymd'),
+                'url' => $kmlUrl,
+            ];
+            return $geo;
+        }
+        $lastErr = new RuntimeException('OSPO smoke.kml has no polygons');
+    } catch (Throwable $e) {
+        $lastErr = $e;
+    }
+
+    // Rolling KMZ fallback (needs ZipArchive).
     try {
         $kmzUrl = 'https://ospo.noaa.gov/data/spl/kmlfiles/fire/smoke.kmz';
         $kml = hms_kmz_to_kml(hms_http_get($kmzUrl, 40));
