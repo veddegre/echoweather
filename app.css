@@ -679,6 +679,7 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .radar-ctl button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .leaflet-container{font-family:var(--sans);font-size:.75rem;background:var(--panel-2)}
 .lightning-canvas{position:absolute;left:0;top:0;z-index:500;pointer-events:none}
+.wind-canvas{position:absolute;left:0;top:0;right:0;bottom:0;z-index:550;pointer-events:none}
 .threat-layers{grid-column:1/-1;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);padding:0;font-size:.75rem}
 .threat-layers>summary{padding:6px 10px;font-size:.75rem;font-weight:600;color:var(--sky);cursor:pointer;list-style:none}
 .threat-layers>summary::-webkit-details-marker{display:none}
@@ -783,7 +784,6 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .legend-swatches .sw-smoke-light{background:#d4b896}
 .legend-swatches .sw-smoke-med{background:#c4a035}
 .legend-swatches .sw-smoke-heavy{background:#6b4423}
-.wind-canvas{position:absolute;left:0;top:0;z-index:455;pointer-events:none}
 .trends{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-bottom:14px}
 .trend{background:var(--panel-2);border-radius:8px;padding:10px 12px;min-width:0}
 .trend .lbl{font-size:.625rem;color:var(--dim);font-weight:500}

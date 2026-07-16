@@ -868,10 +868,10 @@ let windFetchAt = 0;
 let windMoveTimer = null;
 let windBoundsKey = '';
 let windLastTs = 0;
-const WIND_PARTICLE_N = 560;
+const WIND_PARTICLE_N = 700;
 const WIND_FETCH_TTL_MS = 12 * 60 * 1000;
-const WIND_GRID_COLS = 9;
-const WIND_GRID_ROWS = 7;
+const WIND_GRID_COLS = 8;
+const WIND_GRID_ROWS = 6;
 
 function syncOverlayLegends(){
   const smoke = $('smokeLegend');
@@ -897,9 +897,10 @@ function windShouldRun(){
 function sizeWindCanvas(){
   if(!windCanvas || !map) return;
   const sz = map.getSize();
-  const dpr = window.devicePixelRatio || 1;
-  windCanvas.width = sz.x * dpr;
-  windCanvas.height = sz.y * dpr;
+  if(!sz.x || !sz.y) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  windCanvas.width = Math.round(sz.x * dpr);
+  windCanvas.height = Math.round(sz.y * dpr);
   windCanvas.style.width = sz.x + 'px';
   windCanvas.style.height = sz.y + 'px';
   if(windCtx) windCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -941,25 +942,22 @@ function updateWindStatus(msg, cls){
   el.textContent = msg || 'Wind · Open-Meteo';
   el.className = 'radar-note wind-status' + (cls ? ' ' + cls : '');
 }
-function windColor(spd, maxSpd){
-  const t = Math.max(0, Math.min(1, spd / Math.max(8, maxSpd * 0.85)));
-  if(t < 0.33){
-    const u = t / 0.33;
-    return 'rgba(' + Math.round(158 + (90 - 158) * u) + ',' + Math.round(182 + (159 - 182) * u) + ',' + Math.round(200 + (212 - 200) * u) + ',';
-  }
-  if(t < 0.66){
-    const u = (t - 0.33) / 0.33;
-    return 'rgba(' + Math.round(90 + (47 - 90) * u) + ',' + Math.round(159 + (111 - 159) * u) + ',' + Math.round(212 + (173 - 212) * u) + ',';
-  }
-  const u = (t - 0.66) / 0.34;
-  return 'rgba(' + Math.round(47 + (26 - 47) * u) + ',' + Math.round(111 + (63 - 111) * u) + ',' + Math.round(173 + (110 - 173) * u) + ',';
+/** @param {number} spdMs wind speed m/s */
+function windStrokeStyle(spdMs, alpha){
+  const mph = spdMs * 2.23694;
+  let r, g, b;
+  if(mph < 8){ r = 40; g = 120; b = 200; }
+  else if(mph < 18){ r = 20; g = 90; b = 180; }
+  else if(mph < 30){ r = 10; g = 60; b = 140; }
+  else { r = 5; g = 35; b = 90; }
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
 }
 function sampleWindAt(lat, lon){
   const f = windField;
   if(!f) return null;
   const x = (lon - f.west) / f.dLon;
   const y = (lat - f.south) / f.dLat;
-  if(x < -0.5 || y < -0.5 || x > f.cols - 0.5 || y > f.rows - 0.5) return null;
+  if(x < -0.01 || y < -0.01 || x > f.cols - 0.99 || y > f.rows - 0.99) return null;
   const x0 = Math.max(0, Math.min(f.cols - 2, Math.floor(x)));
   const y0 = Math.max(0, Math.min(f.rows - 2, Math.floor(y)));
   const tx = Math.max(0, Math.min(1, x - x0));
@@ -972,18 +970,17 @@ function sampleWindAt(lat, lon){
     + f.u[i01] * (1 - tx) * ty + f.u[i11] * tx * ty;
   const v = f.v[i00] * (1 - tx) * (1 - ty) + f.v[i10] * tx * (1 - ty)
     + f.v[i01] * (1 - tx) * ty + f.v[i11] * tx * ty;
-  const spd = Math.hypot(u, v);
-  return { u, v, spd };
+  return { u, v, spd: Math.hypot(u, v) };
 }
 function resetWindParticle(p, bounds){
   p.lat = bounds.getSouth() + Math.random() * (bounds.getNorth() - bounds.getSouth());
   p.lon = bounds.getWest() + Math.random() * (bounds.getEast() - bounds.getWest());
-  p.age = Math.random() * 1.2;
-  p.life = 1.6 + Math.random() * 2.4;
+  p.age = Math.random() * 0.8;
+  p.life = 2.2 + Math.random() * 3.5;
 }
 function ensureWindParticles(){
   if(!map) return;
-  const bounds = map.getBounds().pad(0.05);
+  const bounds = map.getBounds().pad(0.02);
   if(windParticles.length !== WIND_PARTICLE_N){
     windParticles = [];
     for(let i = 0; i < WIND_PARTICLE_N; i++){
@@ -994,11 +991,63 @@ function ensureWindParticles(){
     return;
   }
   for(let i = 0; i < windParticles.length; i++){
-    if(Math.random() < 0.04) resetWindParticle(windParticles[i], bounds);
+    if(Math.random() < 0.03) resetWindParticle(windParticles[i], bounds);
   }
 }
-function metersPerPixel(lat){
-  return (156543.03392 * Math.cos(lat * Math.PI / 180)) / Math.pow(2, map.getZoom());
+function windFromMet(spdDisp, dirDeg, windU){
+  const toMs = windU === 'kmh' ? (1 / 3.6) : 0.44704;
+  const ms = (Number(spdDisp) || 0) * toMs;
+  const rad = (Number(dirDeg) || 0) * Math.PI / 180;
+  return {
+    u: -Math.sin(rad) * ms,
+    v: -Math.cos(rad) * ms,
+    spdMs: ms,
+    spdDisp: Number(spdDisp) || 0
+  };
+}
+function buildUniformWindField(bounds, spdDisp, dirDeg, windU){
+  const west = bounds.getWest(), east = bounds.getEast();
+  const south = bounds.getSouth(), north = bounds.getNorth();
+  const cols = 3, rows = 3;
+  const dLon = (east - west) / Math.max(1, cols - 1);
+  const dLat = (north - south) / Math.max(1, rows - 1);
+  const w = windFromMet(spdDisp, dirDeg, windU);
+  const n = cols * rows;
+  const u = new Float32Array(n), v = new Float32Array(n);
+  for(let i = 0; i < n; i++){ u[i] = w.u; v[i] = w.v; }
+  return {
+    cols, rows, west, south, dLon, dLat, u, v,
+    maxSpdMs: w.spdMs, maxSpdDisp: w.spdDisp, unit: windU, source: 'local'
+  };
+}
+function drawWindStreak(ctx, x, y, nx, ny, len, spdMs, alpha){
+  const x0 = x - nx * len * 0.35;
+  const y0 = y - ny * len * 0.35;
+  const x1 = x + nx * len * 0.65;
+  const y1 = y + ny * len * 0.65;
+  ctx.beginPath();
+  ctx.moveTo(x0, y0);
+  ctx.lineTo(x1, y1);
+  ctx.strokeStyle = 'rgba(255,255,255,' + (alpha * 0.85) + ')';
+  ctx.lineWidth = 3.2;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x0, y0);
+  ctx.lineTo(x1, y1);
+  ctx.strokeStyle = windStrokeStyle(spdMs, alpha);
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // Arrow head
+  const ah = Math.max(4, len * 0.28);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 - nx * ah + ny * ah * 0.55, y1 - ny * ah - nx * ah * 0.55);
+  ctx.lineTo(x1 - nx * ah - ny * ah * 0.55, y1 - ny * ah + nx * ah * 0.55);
+  ctx.closePath();
+  ctx.fillStyle = windStrokeStyle(spdMs, Math.min(1, alpha + 0.15));
+  ctx.fill();
 }
 function drawWindFrame(ts){
   windRaf = 0;
@@ -1012,9 +1061,29 @@ function drawWindFrame(ts){
     if(windShouldRun()) windRaf = requestAnimationFrame(drawWindFrame);
     return;
   }
-  const bounds = map.getBounds().pad(0.08);
-  const maxSpd = Math.max(8, windField.maxSpd);
-  const boost = 2.4;
+  const bounds = map.getBounds().pad(0.06);
+  // Visual boost so streaks move clearly at regional zoom.
+  const boost = 55;
+  const maxSpdMs = Math.max(2, windField.maxSpdMs || 2);
+
+  // Static grid arrows — always visible even if particles fail to sample.
+  const f = windField;
+  for(let r = 0; r < f.rows; r++){
+    for(let c = 0; c < f.cols; c++){
+      const lat = f.south + r * f.dLat;
+      const lon = f.west + c * f.dLon;
+      const i = r * f.cols + c;
+      const u = f.u[i], v = f.v[i];
+      const spd = Math.hypot(u, v);
+      if(spd < 0.15) continue;
+      const pt = map.latLngToContainerPoint([lat, lon]);
+      if(pt.x < -20 || pt.y < -20 || pt.x > sz.x + 20 || pt.y > sz.y + 20) continue;
+      const nx = u / spd, ny = -v / spd;
+      const len = Math.max(10, Math.min(28, 8 + spd * 2.8));
+      drawWindStreak(ctx, pt.x, pt.y, nx, ny, len, spd, 0.9);
+    }
+  }
+
   for(let i = 0; i < windParticles.length; i++){
     const p = windParticles[i];
     p.age += dt;
@@ -1023,30 +1092,19 @@ function drawWindFrame(ts){
       continue;
     }
     const w = sampleWindAt(p.lat, p.lon);
-    if(!w || w.spd < 0.4){
+    if(!w || w.spd < 0.15){
       resetWindParticle(p, bounds);
       continue;
     }
-    const mpp = metersPerPixel(p.lat);
-    // u east m/s, v north m/s → container pixels (y down)
-    const dx = (w.u / mpp) * dt * boost;
-    const dy = (-w.v / mpp) * dt * boost;
+    const nx = w.u / w.spd;
+    const ny = -w.v / w.spd;
     const pt = map.latLngToContainerPoint([p.lat, p.lon]);
-    const fade = Math.min(1, p.age * 2) * Math.min(1, (p.life - p.age) * 2);
-    const alpha = 0.15 + 0.7 * fade * Math.min(1, w.spd / maxSpd);
-    const len = Math.max(4, Math.min(18, 3 + w.spd * 0.55));
-    const hyp = Math.hypot(dx, dy) || 1;
-    const nx = dx / hyp, ny = dy / hyp;
-    ctx.beginPath();
-    ctx.moveTo(pt.x - nx * len * 0.35, pt.y - ny * len * 0.35);
-    ctx.lineTo(pt.x + nx * len * 0.65, pt.y + ny * len * 0.65);
-    ctx.strokeStyle = windColor(w.spd, maxSpd) + alpha + ')';
-    ctx.lineWidth = 1.15;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-    // Advect in geographic space for stable motion across zoom.
+    const fade = Math.min(1, p.age * 1.8) * Math.min(1, (p.life - p.age) * 1.5);
+    const alpha = 0.35 + 0.55 * fade * Math.min(1, w.spd / maxSpdMs);
+    const len = Math.max(7, Math.min(22, 5 + w.spd * 2.4));
+    drawWindStreak(ctx, pt.x, pt.y, nx, ny, len, w.spd, alpha);
     const dLat = (w.v * dt * boost) / 111320;
-    const dLon = (w.u * dt * boost) / (111320 * Math.cos(p.lat * Math.PI / 180));
+    const dLon = (w.u * dt * boost) / (111320 * Math.max(0.2, Math.cos(p.lat * Math.PI / 180)));
     p.lat += dLat;
     p.lon += dLon;
   }
@@ -1065,16 +1123,32 @@ function stopWindLoop(){
     windCtx.clearRect(0, 0, sz.x, sz.y);
   }
 }
+function applyLocalWindFallback(reason){
+  if(!map) return false;
+  const d = state.data;
+  const spd = d?.current?.wind_speed_10m ?? d?.hourly?.wind_speed_10m?.[0];
+  const dir = d?.current?.wind_direction_10m ?? d?.hourly?.wind_direction_10m?.[0];
+  if(spd == null || dir == null) return false;
+  const windU = state.units === 'F' ? 'mph' : 'kmh';
+  windField = buildUniformWindField(map.getBounds().pad(0.12), spd, dir, windU);
+  windBoundsKey = '';
+  ensureWindParticles();
+  updateWindStatus('Wind · local forecast' + (reason ? ' (' + reason + ')' : ''));
+  syncOverlayLegends();
+  return true;
+}
 async function fetchWindField(force){
   if(!map || !windShouldRun()) return;
   const b = map.getBounds().pad(0.12);
   const key = [b.getWest().toFixed(2), b.getSouth().toFixed(2), b.getEast().toFixed(2), b.getNorth().toFixed(2), map.getZoom()].join('|');
-  if(!force && windField && key === windBoundsKey && (Date.now() - windFetchAt) < WIND_FETCH_TTL_MS){
+  if(!force && windField && windField.source !== 'local' && key === windBoundsKey && (Date.now() - windFetchAt) < WIND_FETCH_TTL_MS){
     ensureWindParticles();
     return;
   }
   const gen = ++windFetchGen;
   updateWindStatus('Wind · loading…', 'wait');
+  // Show something immediately from the pin's forecast while the grid loads.
+  if(!windField) applyLocalWindFallback('loading');
   const west = b.getWest(), east = b.getEast(), south = b.getSouth(), north = b.getNorth();
   const cols = WIND_GRID_COLS, rows = WIND_GRID_ROWS;
   const dLon = (east - west) / Math.max(1, cols - 1);
@@ -1089,38 +1163,42 @@ async function fetchWindField(force){
   const windU = state.units === 'F' ? 'mph' : 'kmh';
   const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lats.map(v => v.toFixed(3)).join(',')
     + '&longitude=' + lons.map(v => v.toFixed(3)).join(',')
-    + '&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=' + windU + '&timezone=auto';
+    + '&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=' + windU;
   try{
     const res = await fetch(url);
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if(gen !== windFetchGen) return;
     const rowsData = Array.isArray(data) ? data : [data];
-    if(rowsData.length !== lats.length) throw new Error('grid size mismatch');
+    if(rowsData.length !== lats.length) throw new Error('grid size mismatch (' + rowsData.length + '/' + lats.length + ')');
     const toMs = windU === 'mph' ? 0.44704 : (1 / 3.6);
     const u = new Float32Array(lats.length);
     const v = new Float32Array(lats.length);
-    let maxSpd = 0;
+    let maxSpdMs = 0, maxSpdDisp = 0;
     for(let i = 0; i < rowsData.length; i++){
       const cur = rowsData[i].current || {};
-      const spd = Number(cur.wind_speed_10m) || 0;
-      const dir = Number(cur.wind_direction_10m) || 0;
-      const ms = spd * toMs;
-      const rad = dir * Math.PI / 180;
-      // Meteorological "from" → vector of motion (toward).
-      u[i] = -Math.sin(rad) * ms;
-      v[i] = -Math.cos(rad) * ms;
-      if(spd > maxSpd) maxSpd = spd;
+      const w = windFromMet(cur.wind_speed_10m, cur.wind_direction_10m, windU);
+      u[i] = w.u;
+      v[i] = w.v;
+      if(w.spdMs > maxSpdMs) maxSpdMs = w.spdMs;
+      if(w.spdDisp > maxSpdDisp) maxSpdDisp = w.spdDisp;
     }
-    windField = { cols, rows, west, south, dLon, dLat, u, v, maxSpd, unit: windU };
+    windField = {
+      cols, rows, west, south, dLon, dLat, u, v,
+      maxSpdMs, maxSpdDisp, unit: windU, source: 'open-meteo'
+    };
     windBoundsKey = key;
     windFetchAt = Date.now();
     ensureWindParticles();
-    updateWindStatus('Wind · Open-Meteo 10 m');
+    const unit = windU === 'mph' ? 'mph' : 'km/h';
+    updateWindStatus('Wind · Open-Meteo 10 m · up to ' + Math.round(maxSpdDisp) + ' ' + unit);
     syncOverlayLegends();
   }catch(e){
     console.warn('wind field', e);
-    if(gen === windFetchGen) updateWindStatus('Wind · unavailable', 'wait');
+    if(gen !== windFetchGen) return;
+    if(!applyLocalWindFallback('grid unavailable')){
+      updateWindStatus('Wind · unavailable', 'wait');
+    }
   }
 }
 function syncWindOverlay(){
@@ -1149,7 +1227,14 @@ function syncWindOverlay(){
     return;
   }
   ensureWindCanvas();
-  fetchWindField(false);
+  // Invalidate size after layout — empty canvas is a common cause of "nothing shows".
+  requestAnimationFrame(() => {
+    if(!windShouldRun()) return;
+    sizeWindCanvas();
+    map.invalidateSize(false);
+    sizeWindCanvas();
+  });
+  fetchWindField(true);
   startWindLoop();
 }
 function setWindOverlay(on){
