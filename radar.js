@@ -414,6 +414,8 @@ function destroyMapB(){
     mrmsFrameIdxB = -1;
     mrmsWmsLayerKeyB = '';
   }
+  Object.keys(threatOverlayGroupsB).forEach(k => { threatOverlayGroupsB[k] = null; });
+  nhcMarkerGroupB = null;
   if(!mapB) return;
   if(map) map.off('moveend', syncMapBFromA);
   mapB.off('moveend', syncMapAFromB);
@@ -433,6 +435,7 @@ function initMapB(){
     if(mapBMarker) mapBMarker.setLatLng([loc.lat, loc.lon]);
     syncMapBBasemap();
     showDualPaneFrame(radarIdx);
+    if(typeof syncThreatOverlays === 'function') syncThreatOverlays();
     return;
   }
   mapB = L.map('radarB', {
@@ -441,6 +444,7 @@ function initMapB(){
     maxZoom: radarMaxZoom(),
     attributionControl: false
   }).setView([loc.lat, loc.lon], map ? map.getZoom() : RADAR_ZOOM.default);
+  if(typeof ensureThreatOverlayPane === 'function') ensureThreatOverlayPane(mapB);
   syncMapBBasemap();
   mapBMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(mapB);
   if(map){
@@ -508,6 +512,7 @@ function syncRadarDualUi(){
   if(radarDualOn && avail) initMapB();
   else destroyMapB();
   refreshRadarMapSize();
+  if(typeof syncThreatOverlays === 'function') syncThreatOverlays();
 }
 function activateRadarPanel(){
   const loc = state.locations[state.active];
@@ -522,6 +527,8 @@ function activateRadarPanel(){
   if(typeof radarWindOn !== 'undefined' && radarWindOn) setWindOverlay(true);
   syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
   syncStormReportMarkers();
+  syncThreatOverlays();
+  if(typeof syncOverlayLegends === 'function') syncOverlayLegends();
 }
 function initMap(loc){
   if(map){
@@ -540,6 +547,7 @@ function initMap(loc){
     maxZoom: radarMaxZoom(),
     attributionControl: true
   }).setView([loc.lat, loc.lon], RADAR_ZOOM.default);
+  if(typeof ensureThreatOverlayPane === 'function') ensureThreatOverlayPane(map);
   L.control.zoom({ position: 'topleft' }).addTo(map);
   map.on('zoomend', () => {
     const maxZ = radarMaxZoom();

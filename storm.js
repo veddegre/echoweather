@@ -6,8 +6,11 @@ const stormState = {
 };
 let alertLayerGroup = null;
 let threatOverlayGroups = {};
+let threatOverlayGroupsB = {};
 let stormReportGroup = null;
 let nhcMarkerGroup = null;
+let nhcMarkerGroupB = null;
+const THREAT_OVERLAY_PANE = 'threatOverlay';
 let threatGeoCache = {};
 let threatOverlayGen = 0;
 const threatLayerErrors = {};
@@ -21,9 +24,36 @@ const NHC_STORMS_URL = '/api/nhc-storms';
 const HMS_SMOKE_URL = '/api/hms-smoke';
 function hmsSmokeStyle(f){
   const dens = String(f?.properties?.Density || f?.properties?.Label || '').toLowerCase();
-  if(/heavy|thick/.test(dens)) return { color: '#4a2f1a', weight: 1.5, fillColor: '#6b4423', fillOpacity: 0.55 };
-  if(/medium|mod/.test(dens)) return { color: '#7a5a10', weight: 1.25, fillColor: '#c4a035', fillOpacity: 0.42 };
-  return { color: '#8b7355', weight: 1, fillColor: '#d4b896', fillOpacity: 0.32 };
+  if(/heavy|thick/.test(dens)) return { color: '#3d2512', weight: 2, fillColor: '#8b5a2b', fillOpacity: 0.62 };
+  if(/medium|mod/.test(dens)) return { color: '#6b4a08', weight: 1.5, fillColor: '#c9941a', fillOpacity: 0.52 };
+  return { color: '#7a6348', weight: 1.25, fillColor: '#c9a882', fillOpacity: 0.45 };
+}
+function ensureThreatOverlayPane(m){
+  if(!m?.createPane) return;
+  if(m.getPane(THREAT_OVERLAY_PANE)) return;
+  m.createPane(THREAT_OVERLAY_PANE);
+  const pane = m.getPane(THREAT_OVERLAY_PANE);
+  if(pane) pane.style.zIndex = '480';
+}
+function buildThreatLayerGroup(targetMap, geo, styleFn, onEachFeature){
+  ensureThreatOverlayPane(targetMap);
+  const grp = L.layerGroup();
+  L.geoJSON(geo, {
+    pane: THREAT_OVERLAY_PANE,
+    style: styleFn,
+    onEachFeature
+  }).eachLayer(l => grp.addLayer(l));
+  return grp;
+}
+function addThreatGroups(key, geo, styleFn, onEachFeature){
+  if(!map) return;
+  threatOverlayGroups[key] = buildThreatLayerGroup(map, geo, styleFn, onEachFeature);
+  threatOverlayGroups[key].addTo(map);
+  threatOverlayGroupsB[key] = null;
+  if(mapB && typeof radarDualOn !== 'undefined' && radarDualOn){
+    threatOverlayGroupsB[key] = buildThreatLayerGroup(mapB, geo, styleFn, onEachFeature);
+    threatOverlayGroupsB[key].addTo(mapB);
+  }
 }
 const THREAT_LAYER_URLS = {
   spcCat: 'https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson',
@@ -213,15 +243,23 @@ async function fetchThreatGeo(key, url){
   return null;
 }
 function removeThreatOverlays(){
-  if(!map) return;
   Object.keys(threatOverlayGroups).forEach(k => {
     const grp = threatOverlayGroups[k];
-    if(grp && map.hasLayer(grp)) map.removeLayer(grp);
+    if(grp && map?.hasLayer(grp)) map.removeLayer(grp);
     threatOverlayGroups[k] = null;
   });
-  if(nhcMarkerGroup && map.hasLayer(nhcMarkerGroup)){
+  Object.keys(threatOverlayGroupsB).forEach(k => {
+    const grp = threatOverlayGroupsB[k];
+    if(grp && mapB?.hasLayer(grp)) mapB.removeLayer(grp);
+    threatOverlayGroupsB[k] = null;
+  });
+  if(nhcMarkerGroup && map?.hasLayer(nhcMarkerGroup)){
     map.removeLayer(nhcMarkerGroup);
     nhcMarkerGroup = null;
+  }
+  if(nhcMarkerGroupB && mapB?.hasLayer(nhcMarkerGroupB)){
+    mapB.removeLayer(nhcMarkerGroupB);
+    nhcMarkerGroupB = null;
   }
 }
 function clearThreatLayerErrors(){
@@ -329,10 +367,13 @@ function syncStormReportMarkers(){
   bringStormMapLayersFront();
 }
 async function syncThreatOverlays(){
-  if(!map || !isRadarTabVisible() || !anyThreatOverlayOn()){
+  if(!anyThreatOverlayOn()){
     clearThreatOverlays();
     return;
   }
+  if(!map || !isRadarTabVisible()) return;
+  ensureThreatOverlayPane(map);
+  if(mapB) ensureThreatOverlayPane(mapB);
   const gen = ++threatOverlayGen;
   removeThreatOverlays();
   clearThreatLayerErrors();
@@ -351,17 +392,11 @@ async function syncThreatOverlays(){
           return;
         }
         clearThreatLayerError(key);
-        const grp = L.layerGroup();
-        L.geoJSON(geo, {
-          style: spcThreatStyle,
-          onEachFeature(f, layer){
-            const p = f.properties || {};
-            layer.bindPopup('<strong>SPC ' + esc(p.LABEL2 || p.LABEL || key) + '</strong>');
-          }
-        }).eachLayer(l => grp.addLayer(l));
+        addThreatGroups(key, geo, spcThreatStyle, (f, layer) => {
+          const p = f.properties || {};
+          layer.bindPopup('<strong>SPC ' + esc(p.LABEL2 || p.LABEL || key) + '</strong>');
+        });
         if(gen !== threatOverlayGen) return;
-        threatOverlayGroups[key] = grp;
-        grp.addTo(map);
       }catch(e){
         console.warn('threat layer', key, e);
         if(gen === threatOverlayGen) markThreatLayer(key, 'threat_layer_api');
@@ -383,25 +418,37 @@ async function syncThreatOverlays(){
         }
         if(gen !== threatOverlayGen) return;
         clearThreatLayerError('nhc');
+        ensureThreatOverlayPane(map);
+        if(mapB) ensureThreatOverlayPane(mapB);
         nhcMarkerGroup = L.layerGroup();
+        nhcMarkerGroupB = (mapB && typeof radarDualOn !== 'undefined' && radarDualOn) ? L.layerGroup() : null;
         storms.forEach(s => {
           const lat = Number(s.latitudeNumeric ?? parseNhcCoord(s.latitude, 'lat'));
           const lon = Number(s.longitudeNumeric ?? parseNhcCoord(s.longitude, 'lon'));
           if(!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-          const m = L.circleMarker([lat, lon], {
-            radius: 8, color: '#9b59b6', fillColor: '#9b59b6', fillOpacity: 0.75, weight: 2
-          });
-          m.bindPopup('<strong>' + esc(s.name || 'Tropical system') + '</strong><br>'
+          const popup = '<strong>' + esc(s.name || 'Tropical system') + '</strong><br>'
             + esc(s.intensity || s.classification || '')
             + (s.movementDir != null ? '<br>Moving ' + esc(String(s.movementDir)) + '° at '
-              + esc(String(s.movementSpeed ?? '')) + ' kt' : ''));
+              + esc(String(s.movementSpeed ?? '')) + ' kt' : '');
+          const opts = {
+            pane: THREAT_OVERLAY_PANE,
+            radius: 8, color: '#9b59b6', fillColor: '#9b59b6', fillOpacity: 0.75, weight: 2
+          };
+          const m = L.circleMarker([lat, lon], opts);
+          m.bindPopup(popup);
           nhcMarkerGroup.addLayer(m);
+          if(nhcMarkerGroupB){
+            const m2 = L.circleMarker([lat, lon], opts);
+            m2.bindPopup(popup);
+            nhcMarkerGroupB.addLayer(m2);
+          }
         });
         if(!nhcMarkerGroup.getLayers().length){
           markThreatLayer('nhc', 'threat_layer_empty');
           return;
         }
         nhcMarkerGroup.addTo(map);
+        if(nhcMarkerGroupB?.getLayers().length) nhcMarkerGroupB.addTo(mapB);
       }catch(e){
         console.warn('NHC layer', e);
         if(gen === threatOverlayGen) markThreatLayer('nhc', 'threat_layer_api');
@@ -421,18 +468,12 @@ async function syncThreatOverlays(){
           return;
         }
         clearThreatLayerError('wpcEro');
-        const grp = L.layerGroup();
-        L.geoJSON(geo, {
-          style: wpcEroStyle,
-          onEachFeature(f, layer){
-            const p = f.properties || {};
-            layer.bindPopup('<strong>WPC excessive rainfall</strong><br>' + esc(p.outlook || 'Day 1')
-              + (p.valid_time ? '<br>' + esc(p.valid_time) : ''));
-          }
-        }).eachLayer(l => grp.addLayer(l));
+        addThreatGroups('wpcEro', geo, wpcEroStyle, (f, layer) => {
+          const p = f.properties || {};
+          layer.bindPopup('<strong>WPC excessive rainfall</strong><br>' + esc(p.outlook || 'Day 1')
+            + (p.valid_time ? '<br>' + esc(p.valid_time) : ''));
+        });
         if(gen !== threatOverlayGen) return;
-        threatOverlayGroups.wpcEro = grp;
-        grp.addTo(map);
       }catch(e){
         console.warn('WPC ERO layer', e);
         if(gen === threatOverlayGen) markThreatLayer('wpcEro', 'threat_layer_api');
@@ -452,17 +493,11 @@ async function syncThreatOverlays(){
           return;
         }
         clearThreatLayerError('fireWx');
-        const grp = L.layerGroup();
-        L.geoJSON(geo, {
-          style: spcThreatStyle,
-          onEachFeature(f, layer){
-            const p = f.properties || {};
-            layer.bindPopup('<strong>SPC fire weather</strong><br>' + esc(p.LABEL2 || p.LABEL || ''));
-          }
-        }).eachLayer(l => grp.addLayer(l));
+        addThreatGroups('fireWx', geo, spcThreatStyle, (f, layer) => {
+          const p = f.properties || {};
+          layer.bindPopup('<strong>SPC fire weather</strong><br>' + esc(p.LABEL2 || p.LABEL || ''));
+        });
         if(gen !== threatOverlayGen) return;
-        threatOverlayGroups.fireWx = grp;
-        grp.addTo(map);
       }catch(e){
         console.warn('fire wx layer', e);
         if(gen === threatOverlayGen) markThreatLayer('fireWx', 'threat_layer_api');
@@ -483,19 +518,13 @@ async function syncThreatOverlays(){
           return;
         }
         clearThreatLayerError('hmsSmoke');
-        const grp = L.layerGroup();
-        L.geoJSON(geo, {
-          style: hmsSmokeStyle,
-          onEachFeature(f, layer){
-            const p = f.properties || {};
-            const dens = p.Density || p.Label || 'Smoke';
-            const day = p.date ? ' <small>(' + esc(p.date) + ')</small>' : '';
-            layer.bindPopup('<strong>NOAA HMS smoke</strong><br>' + esc(dens) + day);
-          }
-        }).eachLayer(l => grp.addLayer(l));
+        addThreatGroups('hmsSmoke', geo, hmsSmokeStyle, (f, layer) => {
+          const p = f.properties || {};
+          const dens = p.Density || p.Label || 'Smoke';
+          const day = p.date ? ' <small>(' + esc(p.date) + ')</small>' : '';
+          layer.bindPopup('<strong>NOAA HMS smoke</strong><br>' + esc(dens) + day);
+        });
         if(gen !== threatOverlayGen) return;
-        threatOverlayGroups.hmsSmoke = grp;
-        grp.addTo(map);
       }catch(e){
         console.warn('HMS smoke layer', e);
         if(gen === threatOverlayGen) markThreatLayer('hmsSmoke', 'hms_smoke_api');
@@ -619,11 +648,12 @@ function syncAlertPolygons(features){
   const filtered = filterAlertFeatures(features);
   if(!filtered.length){
     if(isRadarTabVisible()) syncThreatOverlays();
-    else clearThreatOverlays();
     return;
   }
+  ensureThreatOverlayPane(map);
   alertLayerGroup = L.layerGroup();
   L.geoJSON({ type: 'FeatureCollection', features: filtered }, {
+    pane: THREAT_OVERLAY_PANE,
     style(f){
       const ev = f.properties.event || '';
       const isWarn = /warning/i.test(ev);
@@ -645,13 +675,21 @@ function syncAlertPolygons(features){
   bringStormMapLayersFront();
 }
 function bringStormMapLayersFront(){
+  const raise = grp => {
+    if(!grp) return;
+    grp.eachLayer(l => l.bringToFront && l.bringToFront());
+  };
   if(!map) return;
-  Object.values(threatOverlayGroups).forEach(grp => {
-    if(grp) grp.eachLayer(l => l.bringToFront && l.bringToFront());
-  });
-  if(alertLayerGroup) alertLayerGroup.eachLayer(l => l.bringToFront && l.bringToFront());
-  if(stormReportGroup) stormReportGroup.eachLayer(l => l.bringToFront && l.bringToFront());
+  Object.values(threatOverlayGroups).forEach(raise);
+  raise(alertLayerGroup);
+  raise(stormReportGroup);
+  raise(nhcMarkerGroup);
   if(mapMarker) mapMarker.bringToFront();
+  if(mapB){
+    Object.values(threatOverlayGroupsB).forEach(raise);
+    raise(nhcMarkerGroupB);
+    if(mapBMarker) mapBMarker.bringToFront();
+  }
 }
 function decodeBlitzortung(raw){
   const d = ('' + raw).split('');
