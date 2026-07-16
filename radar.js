@@ -310,8 +310,11 @@ function syncExpandedRadarLayout(){
   const panes = $('radarPanes');
   const ctl = stage.querySelector('.radar-ctl');
   if(!wrap || !panes) return;
-  const gap = 10;
-  const wrapH = Math.max(200, stage.clientHeight - (ctl ? ctl.offsetHeight + gap : 0) - gap);
+  const gap = 8;
+  const viewH = window.visualViewport?.height || window.innerHeight;
+  const stageRect = stage.getBoundingClientRect();
+  const ctlH = ctl ? ctl.offsetHeight : 0;
+  const wrapH = Math.max(180, Math.min(viewH, stageRect.height || viewH) - ctlH - gap);
   wrap.style.height = wrapH + 'px';
   panes.style.height = wrapH + 'px';
   panes.querySelectorAll('.radar-pane:not([hidden]) #radar, .radar-pane:not([hidden]) #radarB').forEach(el => {
@@ -926,6 +929,18 @@ function toggleRadarExpand(){
   document.body.classList.toggle('radar-expanded', on);
   btn.textContent = on ? 'Close' : 'Expand';
   btn.setAttribute('aria-label', on ? 'Close expanded radar' : 'Expand radar fullscreen');
+  const threatDetails = $('threatLayers');
+  if(threatDetails){
+    if(on){
+      if(threatDetails.open){
+        threatDetails.dataset.wasOpen = '1';
+        threatDetails.open = false;
+      }
+    }else if(threatDetails.dataset.wasOpen === '1'){
+      threatDetails.open = true;
+      delete threatDetails.dataset.wasOpen;
+    }
+  }
   if(!on) clearExpandedRadarLayout();
   refreshRadarMapSize();
   setTimeout(refreshRadarMapSize, 80);
