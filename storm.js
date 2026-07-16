@@ -1020,33 +1020,52 @@ function buildUniformWindField(bounds, spdDisp, dirDeg, windU){
     maxSpdMs: w.spdMs, maxSpdDisp: w.spdDisp, unit: windU, source: 'local'
   };
 }
-function drawWindStreak(ctx, x, y, nx, ny, len, spdMs, alpha){
-  const x0 = x - nx * len * 0.35;
-  const y0 = y - ny * len * 0.35;
-  const x1 = x + nx * len * 0.65;
-  const y1 = y + ny * len * 0.65;
+function drawWindStreak(ctx, x, y, nx, ny, len, spdMs, alpha, opts){
+  opts = opts || {};
+  const bold = !!opts.bold;
+  const x0 = x - nx * len * 0.4;
+  const y0 = y - ny * len * 0.4;
+  const x1 = x + nx * len * 0.6;
+  const y1 = y + ny * len * 0.6;
+  // Larger, wider heads so direction reads at a glance.
+  const ah = Math.max(bold ? 9 : 7, len * (bold ? 0.48 : 0.42));
+  const aw = ah * (bold ? 0.72 : 0.62);
+  const hx1 = x1 - nx * ah + ny * aw;
+  const hy1 = y1 - ny * ah - nx * aw;
+  const hx2 = x1 - nx * ah - ny * aw;
+  const hy2 = y1 - ny * ah + nx * aw;
+  const shaftW = bold ? 3.4 : 2.2;
+  const outlineW = shaftW + (bold ? 3.2 : 2.4);
+  const fill = windStrokeStyle(spdMs, Math.min(1, alpha + 0.1));
+  const outline = 'rgba(255,255,255,' + Math.min(1, alpha * 0.95) + ')';
+
+  // Shaft outline + fill
   ctx.beginPath();
   ctx.moveTo(x0, y0);
-  ctx.lineTo(x1, y1);
-  ctx.strokeStyle = 'rgba(255,255,255,' + (alpha * 0.85) + ')';
-  ctx.lineWidth = 3.2;
+  ctx.lineTo(x1 - nx * ah * 0.35, y1 - ny * ah * 0.35);
+  ctx.strokeStyle = outline;
+  ctx.lineWidth = outlineW;
   ctx.lineCap = 'round';
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(x0, y0);
-  ctx.lineTo(x1, y1);
-  ctx.strokeStyle = windStrokeStyle(spdMs, alpha);
-  ctx.lineWidth = 1.8;
+  ctx.lineTo(x1 - nx * ah * 0.35, y1 - ny * ah * 0.35);
+  ctx.strokeStyle = fill;
+  ctx.lineWidth = shaftW;
   ctx.lineCap = 'round';
   ctx.stroke();
-  // Arrow head
-  const ah = Math.max(4, len * 0.28);
+
+  // Filled chevron head with white rim
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.lineTo(x1 - nx * ah + ny * ah * 0.55, y1 - ny * ah - nx * ah * 0.55);
-  ctx.lineTo(x1 - nx * ah - ny * ah * 0.55, y1 - ny * ah + nx * ah * 0.55);
+  ctx.lineTo(hx1, hy1);
+  ctx.lineTo(hx2, hy2);
   ctx.closePath();
-  ctx.fillStyle = windStrokeStyle(spdMs, Math.min(1, alpha + 0.15));
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = outline;
+  ctx.lineWidth = bold ? 3 : 2.2;
+  ctx.stroke();
+  ctx.fillStyle = fill;
   ctx.fill();
 }
 function drawWindFrame(ts){
@@ -1066,7 +1085,7 @@ function drawWindFrame(ts){
   const boost = 55;
   const maxSpdMs = Math.max(2, windField.maxSpdMs || 2);
 
-  // Static grid arrows — always visible even if particles fail to sample.
+  // Static grid arrows — chunky chevrons for clear direction.
   const f = windField;
   for(let r = 0; r < f.rows; r++){
     for(let c = 0; c < f.cols; c++){
@@ -1077,10 +1096,10 @@ function drawWindFrame(ts){
       const spd = Math.hypot(u, v);
       if(spd < 0.15) continue;
       const pt = map.latLngToContainerPoint([lat, lon]);
-      if(pt.x < -20 || pt.y < -20 || pt.x > sz.x + 20 || pt.y > sz.y + 20) continue;
+      if(pt.x < -30 || pt.y < -30 || pt.x > sz.x + 30 || pt.y > sz.y + 30) continue;
       const nx = u / spd, ny = -v / spd;
-      const len = Math.max(10, Math.min(28, 8 + spd * 2.8));
-      drawWindStreak(ctx, pt.x, pt.y, nx, ny, len, spd, 0.9);
+      const len = Math.max(16, Math.min(36, 12 + spd * 3.4));
+      drawWindStreak(ctx, pt.x, pt.y, nx, ny, len, spd, 0.95, { bold: true });
     }
   }
 
@@ -1100,9 +1119,9 @@ function drawWindFrame(ts){
     const ny = -w.v / w.spd;
     const pt = map.latLngToContainerPoint([p.lat, p.lon]);
     const fade = Math.min(1, p.age * 1.8) * Math.min(1, (p.life - p.age) * 1.5);
-    const alpha = 0.35 + 0.55 * fade * Math.min(1, w.spd / maxSpdMs);
-    const len = Math.max(7, Math.min(22, 5 + w.spd * 2.4));
-    drawWindStreak(ctx, pt.x, pt.y, nx, ny, len, w.spd, alpha);
+    const alpha = 0.4 + 0.5 * fade * Math.min(1, w.spd / maxSpdMs);
+    const len = Math.max(10, Math.min(26, 7 + w.spd * 2.8));
+    drawWindStreak(ctx, pt.x, pt.y, nx, ny, len, w.spd, alpha, { bold: false });
     const dLat = (w.v * dt * boost) / 111320;
     const dLon = (w.u * dt * boost) / (111320 * Math.max(0.2, Math.cos(p.lat * Math.PI / 180)));
     p.lat += dLat;
