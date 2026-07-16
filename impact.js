@@ -1648,13 +1648,60 @@ function renderConditionsGlance(d, c, vis, visMiNum, dewVal, inHg){
     + (it.s ? '<div class="gs">' + it.s + '</div>' : '') + '</div>'
   ).join('');
 }
+function currentVisibilityMi(d, c, i){
+  let visMeters = c.visibility_m;
+  if(visMeters == null) visMeters = d.hourly.visibility?.[i];
+  const visUnit = (d.om && d.om.hourly_units && d.om.hourly_units.visibility) || 'm';
+  if(visUnit === 'ft' && visMeters != null) visMeters = visMeters * 0.3048;
+  if(visMeters == null) return null;
+  return state.units === 'F' ? visMeters / 1609.34 : visMeters / 1000;
+}
+function currentSkyPresentation(d, c, hourIdx){
+  const i = hourIdx != null ? hourIdx : nowIndex(d);
+  const nwsShort = String(d.hourly?.shortForecast?.[i] || '').trim();
+  const metarText = String(c.textDescription || '').trim();
+  const baseCond = c.condition || wmo(c.weather_code)[0];
+  const baseIcon = c.icon || wmo(c.weather_code)[1];
+  const pm25 = outdoorAir?.pm25 ?? null;
+  const aqi = outdoorAir?.aqi ?? null;
+  const smokeAlert = hasActiveSmokeAdvisory();
+  const visMi = currentVisibilityMi(d, c, i);
+  const smokeWording = /\bsmoke\b|areas of smoke|dense smoke|widespread smoke/i.test(nwsShort)
+    || /\bsmoke\b/i.test(metarText);
+  const hazeWording = /\bhaze\b/i.test(nwsShort) || /\bhaze\b/i.test(metarText);
+  const heavySmoke = /dense|heavy|widespread smoke/i.test(nwsShort)
+    || (pm25 != null && pm25 >= 55) || (aqi != null && aqi > 150)
+    || (visMi != null && visMi < 2);
+  const modSmoke = smokeWording || hazeWording || smokeAlert
+    || (pm25 != null && pm25 >= 35) || (aqi != null && aqi > 100)
+    || (visMi != null && visMi < 6);
+  const readsClear = isGenericClearSkyText(metarText)
+    && isGenericClearSkyText(nwsShort)
+    && /^(Clear|Mostly clear)$/i.test(baseCond);
+  if(modSmoke && (readsClear || isGenericClearSkyText(metarText) || isGenericClearSkyText(nwsShort))){
+    const icon = '\uD83C\uDF2B\uFE0F';
+    if(/smoke/i.test(nwsShort)) return { condition: nwsForecastPair(nwsShort)[0], icon, text: nwsShort };
+    if(smokeAlert){
+      return { condition: 'Smoke', icon, text: 'Smoke / haze — air quality alert in effect' };
+    }
+    if(heavySmoke){
+      return { condition: 'Smoke', icon, text: 'Smoke — reduced air quality and visibility' };
+    }
+    if(hazeWording && nwsShort) return { condition: 'Haze', icon, text: nwsShort };
+    return { condition: hazeWording ? 'Haze' : 'Smoke', icon, text: 'Haze / smoke in the area' };
+  }
+  if(nwsShort && !isGenericClearSkyText(nwsShort) && isGenericClearSkyText(metarText)){
+    const pair = nwsForecastPair(nwsShort);
+    return { condition: pair[0], icon: pair[1], text: nwsShort };
+  }
+  return { condition: baseCond, icon: baseIcon, text: metarText || nwsShort || baseCond };
+}
 function renderCurrent(d){
   const c = d.current, i = nowIndex(d);
-  const cond = c.condition || wmo(c.weather_code)[0];
-  const icon = c.icon || wmo(c.weather_code)[1];
+  const sky = currentSkyPresentation(d, c, i);
   $('bigTemp').innerHTML = Math.round(c.temperature_2m) + '<sup>' + degSym() + '</sup>';
-  $('nowIcon').textContent = icon;
-  $('nowCond').textContent = c.textDescription || cond;
+  $('nowIcon').textContent = sky.icon;
+  $('nowCond').textContent = sky.text;
   const feels = c.apparent_temperature != null ? Math.round(c.apparent_temperature) : Math.round(c.temperature_2m);
   const src = c.source === 'metar'
     ? 'METAR ' + (c.station || '') + ' \u00B7 as of ' + new Date(c.time).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})

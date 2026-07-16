@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '257';
+const APP_VERSION = '258';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1084,6 +1084,14 @@ function isLikelyUS(loc){
 function defaultRadarMode(loc){
   return loc && isLikelyUS(loc) ? 'mrms' : 'rainviewer';
 }
+function isGenericClearSkyText(text){
+  const t = String(text || '').trim().toLowerCase();
+  if(!t) return true;
+  if(/\b(smoke|haze|fog|mist|dust|shower|rain|snow|thunder|storm)\b/.test(t)) return false;
+  return /^(clear|mostly clear|fair)( skies)?(\.|,|$)/.test(t)
+    || /^mostly sunny/.test(t)
+    || /^sunny\b/.test(t);
+}
 function nwsToWmo(text){
   const s = String(text || '').toLowerCase();
   if(/tornado|severe thunder/.test(s)) return 95;
@@ -1333,12 +1341,23 @@ function buildCurrentFromMetar(metar, om, nwsHourly){
   else if(chillC !== null) apparent = state.units === 'F' ? Math.round(chillC * 9/5 + 32) : Math.round(chillC);
   else if(om.current.apparent_temperature != null) apparent = Math.round(om.current.apparent_temperature);
   const hp = nwsHourly && nwsHourly[0];
-  const [cond, icon] = hp ? nwsForecastPair(hp.shortForecast) : wmo(om.current.weather_code);
+  const nwsShort = hp?.shortForecast || '';
+  const [cond, icon] = hp ? nwsForecastPair(nwsShort) : wmo(om.current.weather_code);
+  let textDescription = p.textDescription || nwsShort || cond;
+  if(isGenericClearSkyText(p.textDescription) && /smoke|haze/i.test(nwsShort)){
+    textDescription = nwsShort;
+  }else if(isGenericClearSkyText(textDescription) && visM != null){
+    const visMi = visM / 1609.34;
+    if(visMi < 3) textDescription = 'Haze — reduced visibility';
+    else if(visMi < 6) textDescription = 'Haze / light smoke possible';
+  }
+  const skyText = isGenericClearSkyText(p.textDescription) && /smoke|haze/i.test(nwsShort)
+    ? nwsShort : (p.textDescription || nwsShort || '');
   return {
     time: p.timestamp || om.current.time,
     source: 'metar',
     station: metar.id,
-    textDescription: p.textDescription || hp?.shortForecast || cond,
+    textDescription,
     temperature_2m: temp,
     apparent_temperature: apparent,
     relative_humidity_2m: fmtRh(nwsVal(p.relativeHumidity) ?? om.current.relative_humidity_2m),
@@ -1347,7 +1366,7 @@ function buildCurrentFromMetar(metar, om, nwsHourly){
     wind_gusts_10m: gustMs !== null ? msToDisp(gustMs) : om.current.wind_gusts_10m,
     pressure_msl: presPa !== null ? presPa / 100 : om.current.pressure_msl,
     visibility_m: visM,
-    weather_code: nwsToWmo(p.textDescription || hp?.shortForecast || ''),
+    weather_code: nwsToWmo(skyText),
     icon,
     condition: cond,
     dewpoint_c: dewC

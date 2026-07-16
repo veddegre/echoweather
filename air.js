@@ -853,6 +853,7 @@ async function loadAir(loc){
       }
       syncSmokeRadarHint(outdoorAir.pm25, outdoorAir.aqi);
       if(state.data){
+        renderCurrent(state.data);
         renderActivityPlanner(state.data);
         renderLight(state.data);
       }

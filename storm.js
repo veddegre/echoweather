@@ -579,6 +579,7 @@ async function loadAlerts(loc){
       syncAlertPolygons(feats.filter(f => f.geometry));
       if(isRadarTabVisible()) showStormPanelPending(loc);
       if(state.data){
+        renderCurrent(state.data);
         renderActivityPlanner(state.data);
         renderLight(state.data);
       }
@@ -594,6 +595,7 @@ async function loadAlerts(loc){
         box.innerHTML = panelUnavail('alerts_api');
       }
       if(state.data){
+        renderCurrent(state.data);
         renderActivityPlanner(state.data);
         renderLight(state.data);
       }
@@ -2037,7 +2039,10 @@ async function refreshStormTracking(loc, d){
     syncStormReportMarkers();
     refreshFireWeather(loc, d);
     renderAlertsBox(alertFeats);
-    if(state.data) renderActivityPlanner(state.data);
+    if(state.data){
+      renderCurrent(state.data);
+      renderActivityPlanner(state.data);
+    }
   }catch(e){
     console.error('storm intel', e);
     stormState.loaded = false;
