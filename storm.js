@@ -16,7 +16,8 @@ const THREAT_LAYER_LABELS = {
   nhc: 'NHC storms', wpcEro: 'WPC excessive rain', fireWx: 'SPC fire weather', hmsSmoke: 'NOAA HMS smoke'
 };
 const THREAT_GEO_TTL = 5 * 60 * 1000;
-const WPC_ERO_URL = 'https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer/0/query?where=1%3D1&outFields=outlook,valid_time&returnGeometry=true&f=geojson';
+const WPC_ERO_URL = '/api/wpc-ero';
+const NHC_STORMS_URL = '/api/nhc-storms';
 const HMS_SMOKE_URL = '/api/hms-smoke';
 function hmsSmokeStyle(f){
   const dens = String(f?.properties?.Density || f?.properties?.Label || '').toLowerCase();
@@ -284,9 +285,24 @@ function spcThreatStyle(f){
 }
 function wpcEroStyle(f){
   const o = String(f.properties?.outlook || '').toUpperCase();
-  const colors = { MRGL: '#00c800', SLGT: '#ffff00', MDRT: '#ff7f00', HIGH: '#ff0000' };
-  const fill = colors[o] || '#88cc88';
+  let fill = '#88cc88';
+  if(/\bHIGH\b/.test(o)) fill = '#ff0000';
+  else if(/\bMODERATE\b|\bMDRT\b/.test(o)) fill = '#ff7f00';
+  else if(/\bSLIGHT\b|\bSLGT\b/.test(o)) fill = '#ffff00';
+  else if(/\bMARGINAL\b|\bMRGL\b/.test(o)) fill = '#00c800';
   return { color: fill, fillColor: fill, fillOpacity: 0.22, weight: 1.5, opacity: 0.9 };
+}
+/** Parse NHC strings like 15.6N / 116.5W when numeric fields are missing. */
+function parseNhcCoord(raw, kind){
+  const s = String(raw || '').trim();
+  const m = s.match(/^(-?\d+(?:\.\d+)?)\s*([NSEW])?$/i);
+  if(!m) return NaN;
+  let v = parseFloat(m[1]);
+  const hemi = (m[2] || '').toUpperCase();
+  if(hemi === 'S' || hemi === 'W') v = -Math.abs(v);
+  else if(hemi === 'N' || hemi === 'E') v = Math.abs(v);
+  else if(kind === 'lon' && v > 0 && !hemi) v = -v; // lone west longitudes sometimes omit W
+  return v;
 }
 function stormReportIcon(type){
   const t = String(type || '').toLowerCase();
@@ -340,7 +356,10 @@ async function syncThreatOverlays(){
     jobs.push((async () => {
       try{
         const geo = await fetchThreatGeo(key, THREAT_LAYER_URLS[key]);
-        if(!geo || !map || gen !== threatOverlayGen) return;
+        if(!geo || !map || gen !== threatOverlayGen){
+          if(gen === threatOverlayGen && !geo) markThreatLayer(key, 'threat_layer_api');
+          return;
+        }
         if(!geo.features || !geo.features.length){
           markThreatLayer(key, 'threat_layer_empty');
           return;
@@ -366,7 +385,7 @@ async function syncThreatOverlays(){
   if(threatLayerOpts.nhc){
     jobs.push((async () => {
       try{
-        const r = await fetch('https://www.nhc.noaa.gov/CurrentStorms.json');
+        const r = await fetch(NHC_STORMS_URL);
         if(!r.ok || !map || gen !== threatOverlayGen){
           if(gen === threatOverlayGen) markThreatLayer('nhc', 'threat_layer_api');
           return;
@@ -380,13 +399,22 @@ async function syncThreatOverlays(){
         clearThreatLayerError('nhc');
         nhcMarkerGroup = L.layerGroup();
         storms.forEach(s => {
-          if(s.latitude == null || s.longitude == null) return;
-          const m = L.circleMarker([s.latitude, s.longitude], {
+          const lat = Number(s.latitudeNumeric ?? parseNhcCoord(s.latitude, 'lat'));
+          const lon = Number(s.longitudeNumeric ?? parseNhcCoord(s.longitude, 'lon'));
+          if(!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+          const m = L.circleMarker([lat, lon], {
             radius: 8, color: '#9b59b6', fillColor: '#9b59b6', fillOpacity: 0.75, weight: 2
           });
-          m.bindPopup('<strong>' + esc(s.name || 'Tropical system') + '</strong><br>' + esc(s.intensity || s.classification || ''));
+          m.bindPopup('<strong>' + esc(s.name || 'Tropical system') + '</strong><br>'
+            + esc(s.intensity || s.classification || '')
+            + (s.movementDir != null ? '<br>Moving ' + esc(String(s.movementDir)) + '° at '
+              + esc(String(s.movementSpeed ?? '')) + ' kt' : ''));
           nhcMarkerGroup.addLayer(m);
         });
+        if(!nhcMarkerGroup.getLayers().length){
+          markThreatLayer('nhc', 'threat_layer_empty');
+          return;
+        }
         nhcMarkerGroup.addTo(map);
       }catch(e){
         console.warn('NHC layer', e);
@@ -430,7 +458,7 @@ async function syncThreatOverlays(){
       try{
         const geo = await fetchThreatGeo('fireWx', THREAT_LAYER_URLS.fireWx);
         if(!geo || !map || gen !== threatOverlayGen){
-          if(gen === threatOverlayGen) markThreatLayer('fireWx', 'threat_layer_api');
+          if(gen === threatOverlayGen && !geo) markThreatLayer('fireWx', 'threat_layer_api');
           return;
         }
         if(!geo.features?.length){

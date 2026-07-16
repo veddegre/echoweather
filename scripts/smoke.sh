@@ -77,3 +77,17 @@ else
   echo "FAIL /api/hms-smoke — HTTP ${hms_code}" >&2
   exit 1
 fi
+
+# WPC / NHC map proxies — must not 404 (CORS bypass for browser threat layers).
+for path in /api/wpc-ero /api/nhc-storms; do
+  code="$(curl -sS -o /tmp/echoweather-threat.json -w '%{http_code}' -H "Host: ${SMOKE_HOST}" "${BASE_URL}${path}")"
+  if [[ "$code" == "404" ]]; then
+    echo "FAIL ${path} — HTTP 404 (missing api/.htaccess rewrite)" >&2
+    exit 1
+  fi
+  if [[ "$code" != "200" && "$code" != "502" ]]; then
+    echo "FAIL ${path} — HTTP ${code}" >&2
+    exit 1
+  fi
+  echo "OK   ${path} — HTTP ${code}"
+done
