@@ -674,6 +674,7 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .radar-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;grid-column:1/-1}
 .lightning-status{color:var(--sky);font-weight:500}
 .lightning-status.wait{color:var(--mut)}
+.wind-status.wait{color:var(--mut)}
 .lightning-status.err{color:var(--warn)}
 .radar-ctl button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .leaflet-container{font-family:var(--sans);font-size:.75rem;background:var(--panel-2)}
@@ -772,8 +773,17 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .radar-wrap .leaflet-control-zoom a{width:34px;height:34px;line-height:34px;background:var(--panel);color:var(--ink);border:1px solid var(--line);font-size:18px}
 .radar-wrap .leaflet-control-zoom a:hover{background:var(--panel-2);color:var(--ink)}
 .radar-wrap .leaflet-top.leaflet-left .leaflet-control-zoom{margin-top:10px;margin-left:10px}
-.radar-legend{position:absolute;bottom:10px;left:10px;z-index:500;background:var(--legend-bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.625rem;color:var(--dim);pointer-events:none;box-shadow:var(--card-shadow)}
+.radar-legends{position:absolute;bottom:10px;left:10px;z-index:500;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:min(200px,calc(100% - 20px))}
+.radar-legend{background:var(--legend-bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:.625rem;color:var(--dim);box-shadow:var(--card-shadow)}
 .radar-legend .bar{display:flex;height:8px;width:120px;border-radius:2px;overflow:hidden;margin-top:4px;background:linear-gradient(90deg,#00ffc8,#00e800,#ffff00,#ff8000,#ff0000,#ff00ff)}
+.radar-legend .bar.wind-bar{background:linear-gradient(90deg,#9eb6c8,#5a9fd4,#2f6fad,#1a3f6e)}
+.legend-swatches{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:4px}
+.legend-swatches span{display:inline-flex;align-items:center;gap:4px;color:var(--dim)}
+.legend-swatches i{display:inline-block;width:10px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,.18)}
+.legend-swatches .sw-smoke-light{background:#d4b896}
+.legend-swatches .sw-smoke-med{background:#c4a035}
+.legend-swatches .sw-smoke-heavy{background:#6b4423}
+.wind-canvas{position:absolute;left:0;top:0;z-index:455;pointer-events:none}
 .trends{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-bottom:14px}
 .trend{background:var(--panel-2);border-radius:8px;padding:10px 12px;min-width:0}
 .trend .lbl{font-size:.625rem;color:var(--dim);font-weight:500}

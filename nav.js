@@ -148,8 +148,11 @@ function setAppTab(tab, opts){
     if(location.hash !== next) history.replaceState(null, '', next);
   }
   if(tab === 'radar') activateRadarPanel();
-  else if(radarLightningOn) syncLightningOverlay();
-  else if(map) refreshRadarMapSize();
+  else{
+    if(radarLightningOn) syncLightningOverlay();
+    if(typeof radarWindOn !== 'undefined' && radarWindOn) syncWindOverlay();
+    else if(map) refreshRadarMapSize();
+  }
   const scrub = $('radarScrub');
   if(scrub){
     const onRadar = tab === 'radar';

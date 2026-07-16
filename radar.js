@@ -509,7 +509,8 @@ function activateRadarPanel(){
   syncRadarVelToggle();
   syncRadarSiteBtn();
   if(radarLightningOn) setLightningOverlay(true);
-  else syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
+  if(typeof radarWindOn !== 'undefined' && radarWindOn) setWindOverlay(true);
+  syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
   syncStormReportMarkers();
 }
 function initMap(loc){
@@ -520,6 +521,7 @@ function initMap(loc){
     else mapMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(map);
     syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
     if(radarLightningOn) setLightningOverlay(true);
+    if(typeof radarWindOn !== 'undefined' && radarWindOn) setWindOverlay(true);
     return;
   }
   map = L.map('radar', {
@@ -1046,13 +1048,14 @@ function onIemTileError(){
   loadIemRadar('iem-n0q');
 }
 function updateRadarLegend(){
-  const leg = document.querySelector('.radar-legend');
+  const leg = $('radarLegend') || document.querySelector('.radar-legend');
   if(!leg) return;
   const vel = (IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity)
     || (radarMode === 'mrms' && mrmsProduct === 'bvel');
   leg.innerHTML = vel
     ? '<div>Velocity</div><div class="bar" style="background:linear-gradient(90deg,#00f,#0ff,#0f0,#ff0,#f00,#f0f)"></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>In</span><span>0</span><span>Out</span></div>'
     : '<div>Reflectivity (dBZ)</div><div class="bar"></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>5</span><span>35</span><span>65+</span></div>';
+  if(typeof syncOverlayLegends === 'function') syncOverlayLegends();
 }
 function radarFrameCount(){
   if(radarMode === 'rainviewer') return radarFrames.length;
@@ -1416,6 +1419,9 @@ $('radarLightning').addEventListener('click', () => {
 $('radarSmoke')?.addEventListener('click', () => {
   setHmsSmokeLayer(!threatLayerOpts.hmsSmoke);
 });
+$('radarWind')?.addEventListener('click', () => {
+  setWindOverlay(!radarWindOn);
+});
 document.querySelectorAll('[data-threat]').forEach(inp => {
   inp.addEventListener('change', () => {
     const k = inp.getAttribute('data-threat');
@@ -1427,6 +1433,7 @@ document.querySelectorAll('[data-threat]').forEach(inp => {
         btn.classList.toggle('on', inp.checked);
         btn.setAttribute('aria-pressed', inp.checked ? 'true' : 'false');
       }
+      if(typeof syncOverlayLegends === 'function') syncOverlayLegends();
     }
     saveThreatLayerPrefs();
     if(typeof updateRadarHash === 'function') updateRadarHash();
