@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#eaf4ff">
 <meta name="description" content="Forecasts, radar, observations, and atmosphere metrics — built for weather enthusiasts.">
 <link rel="canonical" href="https://echoweather.com/">
-<link rel="icon" href="icon.svg?v=256" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=256" sizes="180x180">
+<link rel="icon" href="icon.svg?v=257" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=257" sizes="180x180">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -27,27 +27,27 @@
 <meta name="twitter:description" content="Forecasts, radar, observations, and atmosphere metrics — built for weather enthusiasts.">
 <meta name="twitter:image" content="https://echoweather.com/og-image.png">
 <meta name="twitter:image:alt" content="Echo Weather — forecasts, radar, and atmosphere metrics">
-<link rel="manifest" href="manifest.json?v=256">
+<link rel="manifest" href="manifest.json?v=257">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=256">
+<link rel="stylesheet" href="app.css?v=257">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script defer src="app.js?v=256"></script>
-<script defer src="tabs.js?v=256"></script>
-<script defer src="nav.js?v=256"></script>
-<script defer src="impact.js?v=256"></script>
-<script defer src="marine.js?v=256"></script>
-<script defer src="air.js?v=256"></script>
-<script defer src="forecast-extras.js?v=256"></script>
-<script defer src="mesonet.js?v=256"></script>
-<script defer src="climo.js?v=256"></script>
-<script defer src="obs.js?v=256"></script>
-<script defer src="aviation.js?v=256"></script>
-<script defer src="storm.js?v=256"></script>
-<script defer src="loc-compare.js?v=256"></script>
-<script defer src="radar.js?v=256"></script>
-<script defer src="boot.js?v=256"></script>
+<script defer src="app.js?v=257"></script>
+<script defer src="tabs.js?v=257"></script>
+<script defer src="nav.js?v=257"></script>
+<script defer src="impact.js?v=257"></script>
+<script defer src="marine.js?v=257"></script>
+<script defer src="air.js?v=257"></script>
+<script defer src="forecast-extras.js?v=257"></script>
+<script defer src="mesonet.js?v=257"></script>
+<script defer src="climo.js?v=257"></script>
+<script defer src="obs.js?v=257"></script>
+<script defer src="aviation.js?v=257"></script>
+<script defer src="storm.js?v=257"></script>
+<script defer src="loc-compare.js?v=257"></script>
+<script defer src="radar.js?v=257"></script>
+<script defer src="boot.js?v=257"></script>
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -55,7 +55,7 @@
   <header>
     <div class="brand-block">
       <a class="brand-mark" href="#now" aria-label="Echo Weather — back to Now">
-        <span class="brand-icon-wrap"><img class="brand-icon" src="logo.svg?v=256" width="72" height="72" alt="" decoding="async"></span>
+        <span class="brand-icon-wrap"><img class="brand-icon" src="logo.svg?v=257" width="72" height="72" alt="" decoding="async"></span>
         <div class="brand-text">
           <span class="brand-name">Echo</span>
           <span class="brand-kind">Weather</span>
@@ -236,6 +236,7 @@
         <div class="fire-timeline-foot"><span>Now</span><span>+24h</span></div>
       </div>
       <div class="radar-stage" id="radarStage">
+        <div class="radar-map-stack">
         <div class="radar-wrap">
           <div class="radar-map-tools">
             <button type="button" class="radar-map-btn" id="radarCenterBtn" aria-label="Center map on location">Center</button>
@@ -252,16 +253,19 @@
               <div id="radarB"></div>
             </div>
           </div>
+        </div>
           <div class="radar-legends" aria-hidden="true">
             <div class="radar-legend" id="radarLegend">
-              <div>Reflectivity (dBZ)</div>
-              <div class="bar"></div>
-              <div style="display:flex;justify-content:space-between;margin-top:2px">
-                <span>5</span><span>35</span><span>65+</span>
+              <div class="radar-legend-lbl">Reflectivity (dBZ)</div>
+              <div class="radar-legend-body">
+                <div class="bar"></div>
+                <div class="radar-legend-scale">
+                  <span>5</span><span>35</span><span>65+</span>
+                </div>
               </div>
             </div>
             <div class="radar-legend smoke-legend" id="smokeLegend" hidden>
-              <div>HMS smoke</div>
+              <div class="radar-legend-lbl">HMS smoke</div>
               <div class="legend-swatches">
                 <span><i class="sw-smoke-light"></i>Light</span>
                 <span><i class="sw-smoke-med"></i>Medium</span>
@@ -269,10 +273,12 @@
               </div>
             </div>
             <div class="radar-legend wind-legend" id="windLegend" hidden>
-              <div>Wind flow (10&nbsp;m)</div>
-              <div class="bar wind-bar"></div>
-              <div class="wind-leg-scale" style="display:flex;justify-content:space-between;margin-top:2px">
-                <span>Calm</span><span id="windLegMid">15</span><span id="windLegHi">30+ mph</span>
+              <div class="radar-legend-lbl">Wind flow (10&nbsp;m)</div>
+              <div class="radar-legend-body">
+                <div class="bar wind-bar"></div>
+                <div class="radar-legend-scale wind-leg-scale">
+                  <span>Calm</span><span id="windLegMid">15</span><span id="windLegHi">30+ mph</span>
+                </div>
               </div>
             </div>
           </div>

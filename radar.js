@@ -291,8 +291,10 @@ function isRadarTabVisible(){
 }
 function clearExpandedRadarLayout(){
   const stage = $('radarStage');
+  const stack = stage?.querySelector('.radar-map-stack');
   const wrap = stage?.querySelector('.radar-wrap');
   const panes = $('radarPanes');
+  if(stack) stack.style.removeProperty('height');
   if(wrap) wrap.style.removeProperty('height');
   if(panes) panes.style.removeProperty('height');
   ['radar', 'radarB'].forEach(id => {
@@ -306,15 +308,20 @@ function syncExpandedRadarLayout(){
     clearExpandedRadarLayout();
     return;
   }
+  const stack = stage.querySelector('.radar-map-stack');
   const wrap = stage.querySelector('.radar-wrap');
   const panes = $('radarPanes');
+  const legends = stage.querySelector('.radar-legends');
   const ctl = stage.querySelector('.radar-ctl');
-  if(!wrap || !panes) return;
+  if(!stack || !wrap || !panes) return;
   const gap = 8;
   const viewH = window.visualViewport?.height || window.innerHeight;
   const stageRect = stage.getBoundingClientRect();
   const ctlH = ctl ? ctl.offsetHeight : 0;
-  const wrapH = Math.max(180, Math.min(viewH, stageRect.height || viewH) - ctlH - gap);
+  const legendH = legends ? legends.offsetHeight : 0;
+  const stackH = Math.max(220, Math.min(viewH, stageRect.height || viewH) - ctlH - gap);
+  stack.style.height = stackH + 'px';
+  const wrapH = Math.max(160, stackH - legendH);
   wrap.style.height = wrapH + 'px';
   panes.style.height = wrapH + 'px';
   panes.querySelectorAll('.radar-pane:not([hidden]) #radar, .radar-pane:not([hidden]) #radarB').forEach(el => {
