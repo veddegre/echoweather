@@ -5,24 +5,79 @@ let outdoorAir = { aqi: null, pm25: null };
 // smoke event reflect when the plume arrives or clears instead of smearing
 // the current reading across the whole window.
 let outdoorAirHourly = null;
+function nwsSmokeLevelForHour(d, timeIso){
+  if(!d?.hourly?.time?.length || !timeIso) return null;
+  const key = timeIso.slice(0, 13);
+  const i = d.hourly.time.findIndex(t => t.slice(0, 13) === key);
+  if(i < 0) return null;
+  const sf = (d.hourly.shortForecast?.[i] || '').toLowerCase();
+  if(!/\bsmoke\b|\bhaze\b/.test(sf)) return null;
+  let visMi = null;
+  if(d.hourly.visibility?.[i] != null){
+    visMi = state.units === 'F' ? d.hourly.visibility[i] / 1609.34 : d.hourly.visibility[i] / 1000;
+  }
+  if(/dense smoke|heavy smoke/.test(sf) || (visMi != null && visMi < 1)) return 'heavy';
+  if(/areas of smoke|widespread smoke/.test(sf) || (visMi != null && visMi < 3)) return 'moderate';
+  if(/\bsmoke\b/.test(sf)) return 'moderate';
+  return 'light';
+}
 function airExtraForHour(d, extra, timeIso){
   const h = outdoorAirHourly;
-  if(!h?.time?.length || !timeIso) return extra;
-  const key = timeIso.slice(0, 13);
-  const i = h.time.findIndex(t => t.slice(0, 13) === key);
-  if(i < 0) return extra;
-  let aqi = h.aqi?.[i] != null ? Math.round(h.aqi[i]) : null;
-  let pm25 = h.pm25?.[i] ?? null;
-  if(aqi == null && pm25 == null) return extra;
-  // Near the current hour, never read cleaner than the (monitor-preferred)
-  // snapshot — models often underestimate surface smoke that a station sees.
-  const nowIso = d?.hourly?.time?.[nowIndex(d)];
-  const nearNow = nowIso && Math.abs(Date.parse(timeIso) - Date.parse(nowIso)) <= 3 * 3600e3;
-  if(nearNow){
-    if(extra.aqi != null) aqi = Math.max(aqi ?? 0, extra.aqi);
-    if(extra.pm25 != null) pm25 = Math.max(pm25 ?? 0, extra.pm25);
+  let aqi = extra.aqi, pm25 = extra.pm25;
+  if(h?.time?.length && timeIso){
+    const key = timeIso.slice(0, 13);
+    const i = h.time.findIndex(t => t.slice(0, 13) === key);
+    if(i >= 0){
+      if(h.aqi?.[i] != null) aqi = Math.round(h.aqi[i]);
+      if(h.pm25?.[i] != null) pm25 = h.pm25[i];
+      // Near the current hour, never read cleaner than the (monitor-preferred)
+      // snapshot — models often underestimate surface smoke that a station sees.
+      const nowIso = d?.hourly?.time?.[nowIndex(d)];
+      const nearNow = nowIso && Math.abs(Date.parse(timeIso) - Date.parse(nowIso)) <= 3 * 3600e3;
+      if(nearNow){
+        if(extra.aqi != null) aqi = Math.max(aqi ?? 0, extra.aqi);
+        if(extra.pm25 != null) pm25 = Math.max(pm25 ?? 0, extra.pm25);
+      }
+    }
   }
-  return { ...extra, aqi: aqi ?? extra.aqi, pm25: pm25 ?? extra.pm25 };
+  // NWS hourly often calls "Smoke" while modeled AQI still looks mild (Allendale
+  // case). Floor AQI so Smoke & air / outdoor activities don't go green.
+  const smoke = nwsSmokeLevelForHour(d, timeIso);
+  let smokeNote = null;
+  if(smoke === 'heavy'){
+    aqi = Math.max(aqi ?? 0, 160);
+    pm25 = Math.max(pm25 ?? 0, 55);
+    smokeNote = 'NWS smoke / very low visibility';
+  }else if(smoke === 'moderate'){
+    aqi = Math.max(aqi ?? 0, 125);
+    pm25 = Math.max(pm25 ?? 0, 40);
+    smokeNote = 'NWS smoke in the forecast';
+  }else if(smoke === 'light'){
+    aqi = Math.max(aqi ?? 0, 105);
+    pm25 = Math.max(pm25 ?? 0, 35);
+    smokeNote = 'NWS haze / light smoke';
+  }
+  return { ...extra, aqi, pm25, smokeNote };
+}
+function hasActiveSmokeAdvisory(){
+  return (stormState.alertFeatures || []).some(f => {
+    const p = f.properties || {};
+    const ev = (p.event || '').toLowerCase();
+    if(/air quality|smoke|particle pollution|dust/i.test(ev)) return true;
+    if(/special weather statement/i.test(ev)){
+      const blob = ((p.headline || '') + ' ' + (p.description || '')).toLowerCase();
+      return /smoke|air quality|visibility/.test(blob);
+    }
+    return false;
+  });
+}
+function forecastHasSmokeSoon(d){
+  if(!d?.hourly?.time?.length) return false;
+  const i0 = nowIndex(d);
+  for(let j = i0; j < d.hourly.time.length && j < i0 + 18; j++){
+    if(nwsSmokeLevelForHour(d, d.hourly.time[j])) return true;
+  }
+  return false;
 }
 function syncSmokeRadarHint(pm25, aqi){
   const box = $('smokeRadarHint'), text = $('smokeRadarHintText');
@@ -32,19 +87,25 @@ function syncSmokeRadarHint(pm25, aqi){
     box.hidden = true;
     return;
   }
-  const elevated = (pm25 != null && pm25 >= 35) || (aqi != null && aqi >= 101);
+  const elevated = (pm25 != null && pm25 >= 35) || (aqi != null && aqi >= 101)
+    || hasActiveSmokeAdvisory()
+    || forecastHasSmokeSoon(state.data);
   if(!elevated){
     box.hidden = true;
     return;
   }
-  const high = (pm25 != null && pm25 >= 55) || (aqi != null && aqi >= 151);
+  const high = (pm25 != null && pm25 >= 55) || (aqi != null && aqi >= 151)
+    || hasActiveSmokeAdvisory();
   text.textContent = high
-    ? 'High fine particles detected — wildfire smoke may be affecting air quality. View the NOAA HMS smoke analysis on radar.'
-    : 'Elevated fine particles — smoke or haze may be nearby. View the NOAA HMS smoke analysis on radar.';
+    ? 'Wildfire smoke is affecting the area (NWS smoke / air quality alert). View NOAA HMS smoke analysis on radar.'
+    : 'Elevated fine particles or haze may be nearby. View the NOAA HMS smoke analysis on radar.';
   box.hidden = false;
   if(threatLayerOpts.hmsSmoke){
     const btn = $('smokeRadarBtn');
     if(btn) btn.textContent = 'Smoke layer on — open radar';
+  }else{
+    const btn = $('smokeRadarBtn');
+    if(btn) btn.textContent = 'Show NOAA smoke layer on radar';
   }
 }
 function isRainWxCode(c){
@@ -522,6 +583,16 @@ function activityAlertImpact(def, hourIso, timezone, ctx){
       apply(45, ev);
       return;
     }
+    if(/special weather statement/i.test(evL)){
+      const blob = ((f.properties?.headline || '') + ' ' + (f.properties?.description || '')).toLowerCase();
+      if(/smoke|air quality|visibility/.test(blob)){
+        if(actId === 'air'){ apply(40, 'Smoke / reduced visibility'); return; }
+        if(['running', 'hiking', 'cycling', 'dog', 'golf', 'yard', 'beach'].includes(actId)){
+          apply(52, 'Smoke / reduced visibility');
+          return;
+        }
+      }
+    }
     if(actId === 'storms' && /severe thunderstorm|tornado|severe weather/i.test(evL)){
       apply(/warning/.test(evL) ? 20 : 35, ev);
       return;
@@ -834,6 +905,7 @@ const ACTIVITY_SCORERS = {
     if(pm25 != null && pm25 >= 55){ s -= 12; reasons.push('High smoke / PM2.5 (' + Math.round(pm25) + ' \u00B5g/m\u00B3)'); }
     else if(pm25 != null && pm25 >= 35){ s -= 6; reasons.push('Elevated PM2.5 — smoke or haze'); }
     if(ctx.visibility != null && ctx.visibility < 3){ s -= 8; reasons.push('Reduced visibility'); }
+    if(extra.smokeNote && !reasons.includes(extra.smokeNote)) reasons.unshift(extra.smokeNote);
     return { score: clampActScore(s), reasons };
   },
   storms(ctx, extra){
@@ -1484,6 +1556,7 @@ function renderActivityPlanner(d){
     defs: IMPACT_DEFS, pins: impactPins, onPin: toggleImpactPin, d, extra, impact: true,
     emptyMsg: 'Impact hours unavailable.'
   });
+  syncSmokeRadarHint(outdoorAir.pm25, outdoorAir.aqi);
 }
 function todayOutlook(d){
   const periods = d.nwsDaily;

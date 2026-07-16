@@ -17,7 +17,13 @@ const THREAT_LAYER_LABELS = {
 };
 const THREAT_GEO_TTL = 5 * 60 * 1000;
 const WPC_ERO_URL = 'https://mapservices.weather.noaa.gov/vector/rest/services/hazards/wpc_precip_hazards/MapServer/0/query?where=1%3D1&outFields=outlook,valid_time&returnGeometry=true&f=geojson';
-const HMS_SMOKE_URL = 'https://mapservices.weather.noaa.gov/vector/rest/services/hazards/smoke/MapServer/0/query?where=1%3D1&outFields=Density,Label&returnGeometry=true&f=geojson&outSR=4326';
+const HMS_SMOKE_URL = '/api/hms-smoke';
+function hmsSmokeStyle(f){
+  const dens = String(f?.properties?.Density || f?.properties?.Label || '').toLowerCase();
+  if(/heavy|thick/.test(dens)) return { color: '#5c4030', weight: 1, fillColor: '#6b4423', fillOpacity: 0.42 };
+  if(/medium|mod/.test(dens)) return { color: '#8b6914', weight: 1, fillColor: '#b8860b', fillOpacity: 0.32 };
+  return { color: '#8b7355', weight: 1, fillColor: '#c4a574', fillOpacity: 0.22 };
+}
 const THREAT_LAYER_URLS = {
   spcCat: 'https://www.spc.noaa.gov/products/outlook/day1otlk_cat.lyr.geojson',
   spcTorn: 'https://www.spc.noaa.gov/products/outlook/day1otlk_torn.lyr.geojson',
@@ -97,6 +103,11 @@ function applyLocRadarPrefs(loc, opts){
     const k = inp.getAttribute('data-threat');
     if(k in threatLayerOpts) inp.checked = threatLayerOpts[k];
   });
+  const smokeBtn = $('radarSmoke');
+  if(smokeBtn){
+    smokeBtn.classList.toggle('on', !!threatLayerOpts.hmsSmoke);
+    smokeBtn.setAttribute('aria-pressed', threatLayerOpts.hmsSmoke ? 'true' : 'false');
+  }
   radarMode = p.mode;
   if(typeof radarDualOn !== 'undefined') radarDualOn = !!p.dualPane;
   if(typeof mrmsProduct !== 'undefined') mrmsProduct = p.mrmsProduct || 'bref';
@@ -155,9 +166,32 @@ function enableHmsSmokeLayer(){
   threatLayerOpts.hmsSmoke = true;
   const inp = document.querySelector('[data-threat="hmsSmoke"]');
   if(inp) inp.checked = true;
+  const details = $('threatLayers');
+  if(details) details.open = true;
+  const btn = $('radarSmoke');
+  if(btn){
+    btn.classList.add('on');
+    btn.setAttribute('aria-pressed', 'true');
+  }
   saveLocRadarPrefs();
   syncThreatOverlays();
   return true;
+}
+function setHmsSmokeLayer(on){
+  threatLayerOpts.hmsSmoke = !!on;
+  const inp = document.querySelector('[data-threat="hmsSmoke"]');
+  if(inp) inp.checked = !!on;
+  const btn = $('radarSmoke');
+  if(btn){
+    btn.classList.toggle('on', !!on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  if(on){
+    const details = $('threatLayers');
+    if(details) details.open = true;
+  }
+  saveLocRadarPrefs();
+  syncThreatOverlays();
 }
 function filterAlertFeatures(feats){
   return (feats || []).filter(f => {
@@ -427,10 +461,12 @@ async function syncThreatOverlays(){
         clearThreatLayerError('hmsSmoke');
         const grp = L.layerGroup();
         L.geoJSON(geo, {
-          style: () => ({ color: '#8b7355', weight: 1, fillColor: '#a08060', fillOpacity: 0.28 }),
+          style: hmsSmokeStyle,
           onEachFeature(f, layer){
             const p = f.properties || {};
-            layer.bindPopup('<strong>NOAA HMS smoke</strong><br>' + esc(p.Label || p.Density || 'Smoke'));
+            const dens = p.Density || p.Label || 'Smoke';
+            const day = p.date ? ' <small>(' + esc(p.date) + ')</small>' : '';
+            layer.bindPopup('<strong>NOAA HMS smoke</strong><br>' + esc(dens) + day);
           }
         }).eachLayer(l => grp.addLayer(l));
         if(gen !== threatOverlayGen) return;
@@ -529,6 +565,7 @@ async function loadAlerts(loc){
         renderActivityPlanner(state.data);
         renderLight(state.data);
       }
+      syncSmokeRadarHint(outdoorAir?.pm25, outdoorAir?.aqi);
       return feats.length;
     }catch(e){
       stormState.alertFeatures = [];

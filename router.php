@@ -9,6 +9,7 @@ $routes = [
     '/api/airnow' => __DIR__ . '/api/airnow.php',
     '/api/pollen' => __DIR__ . '/api/pollen.php',
     '/api/taf' => __DIR__ . '/api/taf.php',
+    '/api/hms-smoke' => __DIR__ . '/api/hms-smoke.php',
 ];
 
 if (isset($routes[$path])) {

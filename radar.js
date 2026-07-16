@@ -1413,11 +1413,21 @@ $('radarSat').addEventListener('click', () => {
 $('radarLightning').addEventListener('click', () => {
   setLightningOverlay(!radarLightningOn);
 });
+$('radarSmoke')?.addEventListener('click', () => {
+  setHmsSmokeLayer(!threatLayerOpts.hmsSmoke);
+});
 document.querySelectorAll('[data-threat]').forEach(inp => {
   inp.addEventListener('change', () => {
     const k = inp.getAttribute('data-threat');
     if(!(k in threatLayerOpts)) return;
     threatLayerOpts[k] = inp.checked;
+    if(k === 'hmsSmoke'){
+      const btn = $('radarSmoke');
+      if(btn){
+        btn.classList.toggle('on', inp.checked);
+        btn.setAttribute('aria-pressed', inp.checked ? 'true' : 'false');
+      }
+    }
     saveThreatLayerPrefs();
     if(typeof updateRadarHash === 'function') updateRadarHash();
     if(k === 'stormReports'){

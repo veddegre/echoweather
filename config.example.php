@@ -75,6 +75,7 @@ return [
     'rate_limit_pollen' => 60,
     'rate_limit_buoy' => 120,
     'rate_limit_taf' => 120,
+    'rate_limit_hms_smoke' => 60,
 
     // -------------------------------------------------------------------------
     // TAF cache — reduces AviationWeather API load
