@@ -1838,7 +1838,7 @@ function nearestStormReport(){
   return reports.reduce((a, b) => ((a.dist ?? 9999) < (b.dist ?? 9999) ? a : b));
 }
 function buildStormBannerActions(){
-  const parts = ['<button type="button" class="storm-banner-link" data-storm-open-radar>Open radar &rarr;</button>'];
+  const parts = [];
   if(stormState.severeWindow){
     parts.push('<button type="button" class="storm-banner-link" data-storm-radar-window>Severe window on timeline</button>');
   }
@@ -1857,15 +1857,12 @@ function buildStormBannerActions(){
     const dist = watchPoly.dist > 0.5 ? ' (' + Math.round(watchPoly.dist) + ' mi)' : '';
     parts.push('<button type="button" class="storm-banner-link" data-storm-radar-watch>Watch polygon' + esc(dist) + '</button>');
   }
+  if(!parts.length) return '';
   return '<div class="storm-banner-actions">' + parts.join('') + '</div>';
 }
 function bindStormBannerActions(){
   const box = $('stormModeBanner');
   if(!box) return;
-  box.querySelector('[data-storm-open-radar]')?.addEventListener('click', e => {
-    e.preventDefault();
-    setAppTab('radar');
-  });
   box.querySelector('[data-storm-radar-window]')?.addEventListener('click', e => {
     e.preventDefault();
     jumpRadarToSevereWindow();
