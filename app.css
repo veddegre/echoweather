@@ -666,13 +666,13 @@ body.radar-expanded .app-tab-bar{display:none}
 .activity-why .why-good strong{color:var(--good)}
 .activity-why .why-fair strong{color:var(--warm)}
 .activity-why .why-poor strong{color:var(--warn)}
-#activityList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-height:8rem}
-#activityList.is-loading{min-height:28rem}
+#activityList,#impactList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-height:8rem}
+#activityList.is-loading,#impactList.is-loading{min-height:28rem}
 #activityList .activity-card,#impactList .activity-card{margin-top:0}
-.planner-card-list .activity-card + .activity-card{margin-top:10px}
+.planner-card-list .activity-card + .activity-card{margin-top:0}
 .impact-group-plan .panel + .panel{margin-top:16px}
 .activity-bar span.na{background:var(--line);opacity:.45}
-@media (max-width:720px){#activityList{grid-template-columns:1fr}}
+@media (max-width:720px){#activityList,#impactList{grid-template-columns:1fr}}
 footer .app-ver{color:var(--dim);font-variant-numeric:tabular-nums}
 .radar-mode{grid-column:1/-1;width:100%;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 10px;font-size:.8125rem;font-weight:500}
 .radar-mrms-stride{grid-column:1/-1;width:100%;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:7px 10px;font-size:.8125rem;font-weight:500}

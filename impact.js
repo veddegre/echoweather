@@ -217,14 +217,15 @@ function activityPlannerTargets(defs, pins){
 function buildActivityWindowSummary(d, defs, extra, impact){
   const pins = impact ? impactPins : activityPins;
   const targets = activityPlannerTargets(defs, pins);
+  const nowIso = d.hourly.time[nowIndex(d)];
   const windowSort = (a, b) => {
-    const nowIso = d.hourly.time[nowIndex(d)];
     const aNow = nowIso && a.start <= nowIso && a.end >= nowIso;
     const bNow = nowIso && b.start <= nowIso && b.end >= nowIso;
     if(aNow !== bNow) return aNow ? -1 : 1;
     return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
   };
-  let bestGood = null, bestFair = null, worstPoor = null, worstFair = null;
+  let bestGood = null, bestFair = null, worstFair = null;
+  const highHazards = [];
   for(const def of targets){
     const hours = buildActivityHours(d, def, extra);
     const windows = mergeActivityWindows(hours);
@@ -235,13 +236,17 @@ function buildActivityWindowSummary(d, defs, extra, impact){
       const w = poor[0];
       const sample = sampleHourInWindow(w, hours, def);
       const score = sample?.score ?? 0;
-      if(!worstPoor || score < worstPoor.score) worstPoor = { def, window: w, score };
+      const alert = activityAlertImpact(def, sample?.time || w.start, d.timezone, sample || null);
+      highHazards.push({
+        def, window: w, hours, score,
+        alertDriven: alert.cap < 100 && alert.notes.length > 0
+      });
     }
     if(impact && fair.length){
       const w = fair[0];
       const sample = sampleHourInWindow(w, hours, def);
       const score = sample?.score ?? 100;
-      if(!worstFair || score < worstFair.score) worstFair = { def, window: w, score };
+      if(!worstFair || score < worstFair.score) worstFair = { def, window: w, hours, score };
     }
     if(good.length){
       const w = good[0];
@@ -256,13 +261,26 @@ function buildActivityWindowSummary(d, defs, extra, impact){
       if(!bestFair || score > bestFair.score) bestFair = { def, window: w, score };
     }
   }
-  if(impact && worstPoor){
-    return { cls: 'warn', html: 'Peak hazard: <strong>' + esc(worstPoor.def.name)
-      + '</strong> <strong>' + esc(fmtActWindow(worstPoor.window)) + '</strong>.' };
+  if(impact && highHazards.length){
+    // Prefer alert-backed High cards (smoke advisory) over forecast-only
+    // storm chance, then lowest score. List concurrent highs — not just one.
+    highHazards.sort((a, b) => {
+      if(a.alertDriven !== b.alertDriven) return a.alertDriven ? -1 : 1;
+      if(a.score !== b.score) return a.score - b.score;
+      return a.def.name.localeCompare(b.def.name);
+    });
+    const top = highHazards.slice(0, 3);
+    const bits = top.map(h => {
+      const when = fmtImpactWindowLabel(h.window, h.hours);
+      return '<strong>' + esc(h.def.name) + '</strong> <strong>' + esc(when) + '</strong>';
+    });
+    const label = top.length === 1 ? 'Peak hazard' : 'Peak hazards';
+    return { cls: 'warn', html: label + ': ' + bits.join(' \u00B7 ') + '.' };
   }
   if(impact && worstFair){
+    const when = fmtImpactWindowLabel(worstFair.window, worstFair.hours);
     return { cls: 'muted', html: 'Moderate hazard: <strong>' + esc(worstFair.def.name)
-      + '</strong> <strong>' + esc(fmtActWindow(worstFair.window)) + '</strong>.' };
+      + '</strong> <strong>' + esc(when) + '</strong>.' };
   }
   if(bestGood){
     const names = targets.filter(def => {
