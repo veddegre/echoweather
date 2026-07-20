@@ -45,8 +45,12 @@ if grep -q 'const stormState' "$ROOT/app.js" 2>/dev/null; then
   exit 1
 fi
 
-ICON_Q="$(sed -n "s/.*const ICON_Q = '\?v=\([0-9]*\)'.*/\1/p" "$ROOT/sw.js" | head -1)"
-if [[ -n "$ICON_Q" && "$ICON_Q" != "$APP_VER" ]]; then
+ICON_Q="$(sed -n "s/.*const ICON_Q = '?v=\([0-9]*\)'.*/\1/p" "$ROOT/sw.js" | head -1)"
+if [[ -z "$ICON_Q" ]]; then
+  echo "check-versions: could not parse ICON_Q in sw.js" >&2
+  exit 1
+fi
+if [[ "$ICON_Q" != "$APP_VER" ]]; then
   echo "Version mismatch: sw.js ICON_Q=?v=$ICON_Q but APP_VERSION=$APP_VER" >&2
   exit 1
 fi
