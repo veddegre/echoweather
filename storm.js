@@ -1804,12 +1804,24 @@ function buildStormBannerText(){
 function spcCatName(risk){
   return String(risk?.label2 || risk?.label || '').trim().replace(/\s+risk$/i, '').trim();
 }
-function spcCatOutlookNote(dn){
-  if(dn >= 6) return 'SPC outlook suggests a severe weather outbreak is possible';
-  if(dn >= 5) return 'Widespread severe storms are possible in the Day 1 outlook';
-  if(dn >= 4) return 'Numerous severe storms are possible in the Day 1 outlook';
-  if(dn >= 3) return 'Scattered severe storms are possible in the Day 1 outlook';
-  if(dn >= 2) return 'Isolated severe storms are possible in the Day 1 outlook';
+/** SPC categorical DN: 2 TSTM, 3 MRGL, 4 SLGT, 5 ENH, 6 MDT, 8 HIGH. */
+function spcCatOutlookNote(risk){
+  const code = String(risk?.label || '').toUpperCase();
+  const name = spcCatName(risk).toLowerCase();
+  if(code === 'HIGH' || /\bhigh\b/.test(name)) return 'A severe weather outbreak is possible';
+  if(code === 'MDT' || /moderate/.test(name)) return 'Widespread severe storms are possible';
+  if(code === 'ENH' || /enhanced/.test(name)) return 'Numerous severe storms are possible';
+  if(code === 'SLGT' || /slight/.test(name)) return 'Scattered severe storms are possible';
+  if(code === 'MRGL' || /marginal/.test(name)) return 'Isolated severe storms are possible';
+  return null;
+}
+function spcProbPhrase(kind, risk){
+  if(!risk) return null;
+  const raw = String(risk.label2 || risk.label || '');
+  if(/conditional|cig\d/i.test(raw)) return null;
+  const pct = raw.match(/(\d+(?:\.\d+)?)\s*%/);
+  if(pct) return kind + ' ' + pct[1] + '%';
+  if(/sign/i.test(raw) || String(risk.label || '').toUpperCase() === 'SIGN') return kind + ' significant';
   return null;
 }
 function buildThreatNarrative(d){
@@ -1825,21 +1837,22 @@ function buildThreatNarrative(d){
     bits.push('Inside a watch area — storms may develop nearby');
   }
   const day1 = stormState.risks.find(r => r.day === 'day1');
-  if(day1 && day1.dn >= 2){
-    const note = spcCatOutlookNote(day1.dn);
+  if(day1){
+    const note = spcCatOutlookNote(day1);
     if(note) bits.push(note);
   }
   const p = stormState.prob;
-  if(p && (p.torn || p.hail || p.wind)){
-    const haz = [];
-    if(p.torn) haz.push('tornado ' + (p.torn.label2 || p.torn.label));
-    if(p.hail) haz.push('hail ' + (p.hail.label2 || p.hail.label));
-    if(p.wind) haz.push('wind ' + (p.wind.label2 || p.wind.label));
-    if(haz.length) bits.push('Hazard probs ' + haz.join(', '));
+  if(p){
+    const haz = [
+      spcProbPhrase('Tornado', p.torn),
+      spcProbPhrase('Hail', p.hail),
+      spcProbPhrase('Wind', p.wind)
+    ].filter(Boolean);
+    if(haz.length) bits.push(haz.join(' · '));
   }
   if(cape >= 1000) bits.push(cape + ' J/kg CAPE (HRRR) supports strong updrafts');
   else if(cape >= 500) bits.push(cape + ' J/kg CAPE (HRRR)');
-  else if(cape >= 200 && day1 && day1.dn >= 3){
+  else if(cape >= 200 && day1 && day1.dn >= 4){
     bits.push('Limited CAPE (' + cape + ' J/kg) — any severe threat may hinge on lift and shear');
   }
   const shear = windShearNote(d, i);
@@ -1850,13 +1863,14 @@ function buildThreatNarrative(d){
       ? 'SPC mesoscale discussion nearby'
       : 'SPC mesoscale discussion in the region');
   }
-  if(stormState.severeWindow) bits.push('hourly signals peak ' + stormState.severeWindow.label);
+  if(stormState.severeWindow) bits.push('Hourly signals peak ' + stormState.severeWindow.label);
   if(stormState.reports && stormState.reports.length){
     bits.push(stormState.reports.length + ' SPC storm report' + (stormState.reports.length === 1 ? '' : 's') + ' within ~120 mi');
   }
   const day2 = stormState.risks.find(r => r.day === 'day2');
-  if(day2 && day2.dn >= 3 && (!day1 || day2.dn > day1.dn)){
-    bits.push('Day 2 outlook rises to ' + spcCatName(day2).toLowerCase() + ' risk');
+  if(day2 && day2.dn >= 4 && (!day1 || day2.dn > day1.dn)){
+    const n = spcCatName(day2);
+    if(n) bits.push('Day 2 outlook rises to ' + n.toLowerCase() + ' risk');
   }
   return bits.length ? bits.join('. ') + '.' : '';
 }
