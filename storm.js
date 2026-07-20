@@ -1793,10 +1793,24 @@ function buildStormBannerText(){
     parts.push('<strong>' + esc(watches[0].properties.event) + '</strong>');
   }
   const day1 = stormState.risks.find(r => r.day === 'day1');
-  if(day1 && day1.dn >= 2) parts.push('SPC ' + esc(day1.label2 || day1.label));
+  if(day1 && day1.dn >= 2){
+    const name = spcCatName(day1);
+    parts.push('SPC ' + esc(name ? name + ' Risk' : (day1.label2 || day1.label)));
+  }
   if(stormState.mcds.length) parts.push('Mesoscale Discussion overhead');
   if(stormState.severeWindow) parts.push('Best window ' + esc(stormState.severeWindow.label));
   return parts.join(' \u00B7 ');
+}
+function spcCatName(risk){
+  return String(risk?.label2 || risk?.label || '').trim().replace(/\s+risk$/i, '').trim();
+}
+function spcCatOutlookNote(dn){
+  if(dn >= 6) return 'SPC outlook suggests a severe weather outbreak is possible';
+  if(dn >= 5) return 'Widespread severe storms are possible in the Day 1 outlook';
+  if(dn >= 4) return 'Numerous severe storms are possible in the Day 1 outlook';
+  if(dn >= 3) return 'Scattered severe storms are possible in the Day 1 outlook';
+  if(dn >= 2) return 'Isolated severe storms are possible in the Day 1 outlook';
+  return null;
 }
 function buildThreatNarrative(d){
   if(!d || !stormState.stormMode) return '';
@@ -1810,14 +1824,39 @@ function buildThreatNarrative(d){
   }else if(watches.length){
     bits.push('Inside a watch area — storms may develop nearby');
   }
-  if(cape >= 500) bits.push(cape + ' J/kg CAPE (HRRR) supports strong updrafts');
+  const day1 = stormState.risks.find(r => r.day === 'day1');
+  if(day1 && day1.dn >= 2){
+    const note = spcCatOutlookNote(day1.dn);
+    if(note) bits.push(note);
+  }
+  const p = stormState.prob;
+  if(p && (p.torn || p.hail || p.wind)){
+    const haz = [];
+    if(p.torn) haz.push('tornado ' + (p.torn.label2 || p.torn.label));
+    if(p.hail) haz.push('hail ' + (p.hail.label2 || p.hail.label));
+    if(p.wind) haz.push('wind ' + (p.wind.label2 || p.wind.label));
+    if(haz.length) bits.push('Hazard probs ' + haz.join(', '));
+  }
+  if(cape >= 1000) bits.push(cape + ' J/kg CAPE (HRRR) supports strong updrafts');
+  else if(cape >= 500) bits.push(cape + ' J/kg CAPE (HRRR)');
+  else if(cape >= 200 && day1 && day1.dn >= 3){
+    bits.push('Limited CAPE (' + cape + ' J/kg) — any severe threat may hinge on lift and shear');
+  }
   const shear = windShearNote(d, i);
   if(shear && /Strong/i.test(shear)) bits.push('favorable wind shear for organized storms');
-  const day1 = stormState.risks.find(r => r.day === 'day1');
-  if(day1 && day1.dn >= 3) bits.push('SPC places this area in ' + (day1.label2 || day1.label).toLowerCase() + ' risk');
+  if(stormState.mcds.length){
+    const overhead = stormState.mcds.some(m => m.distMi != null && m.distMi < 40);
+    bits.push(overhead
+      ? 'SPC mesoscale discussion nearby'
+      : 'SPC mesoscale discussion in the region');
+  }
   if(stormState.severeWindow) bits.push('hourly signals peak ' + stormState.severeWindow.label);
   if(stormState.reports && stormState.reports.length){
     bits.push(stormState.reports.length + ' SPC storm report' + (stormState.reports.length === 1 ? '' : 's') + ' within ~120 mi');
+  }
+  const day2 = stormState.risks.find(r => r.day === 'day2');
+  if(day2 && day2.dn >= 3 && (!day1 || day2.dn > day1.dn)){
+    bits.push('Day 2 outlook rises to ' + spcCatName(day2).toLowerCase() + ' risk');
   }
   return bits.length ? bits.join('. ') + '.' : '';
 }
