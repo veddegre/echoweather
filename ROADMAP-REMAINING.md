@@ -1,7 +1,7 @@
 # Echo Weather — Roadmap Handoff (Jul 2026)
 
 Portable summary for continuing work in a new chat.  
-**Current version: v268** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=` in `index.html`).
+**Current version: v269** (`APP_VERSION` in `app.js`, `CACHE` in `sw.js`, `?v=` in `index.html`).
 
 **Status: maintenance only.** The enthusiast roadmap (Phases 1–4) is **complete**. No feature batch is assigned. Use this file for orientation, version bumps, and optional upkeep — not as a product backlog.
 

@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '268';
+const APP_VERSION = '269';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2974,6 +2974,7 @@ setInterval(loadAll, 15 * 60 * 1000);
 let deferredInstall = null;
 let swReg = null;
 const SW_RELOAD_KEY = 'sw-reload';
+const SW_JUST_UPDATED = 'sw-just-updated';
 const SW_BG_READY = 'sw-bg-ready';
 
 function isStandalonePwa(){
@@ -3059,12 +3060,17 @@ function consumeBackgroundReady(){
 }
 
 function showSwUpdateBar(reg, msg){
+  if(sessionStorage.getItem(SW_RELOAD_KEY)) return;
   document.querySelectorAll('.sw-update').forEach(bar => {
     const text = bar.querySelector('[data-sw-text]');
     if(text && msg) text.textContent = msg;
     bar.classList.add('show');
     const btn = bar.querySelector('[data-sw-btn]');
-    if(btn) btn.onclick = () => applySwUpdate(reg, true);
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = 'Refresh now';
+      btn.onclick = () => applySwUpdate(reg, true);
+    }
   });
 }
 
@@ -3081,35 +3087,52 @@ function isPageAtTop(){
 }
 
 function onSwUpdateReady(reg){
+  if(sessionStorage.getItem(SW_RELOAD_KEY)) return;
+  if(sessionStorage.getItem(SW_JUST_UPDATED) === APP_VERSION) return;
   prefetchShell();
+  // Auto-apply only while backgrounded, and always pair with SW_RELOAD_KEY so
+  // controllerchange reloads — otherwise an old page keeps prompting.
   if(document.visibilityState === 'hidden'){
+    sessionStorage.setItem(SW_RELOAD_KEY, '1');
     activateWaitingWorker(reg);
     return;
   }
-  showSwUpdateBar(reg, 'Update ready — tap Refresh or switch away briefly');
+  showSwUpdateBar(reg, 'Update ready — tap Refresh now');
 }
 
 function hideSwUpdateBars(){
   document.querySelectorAll('.sw-update').forEach(bar => bar.classList.remove('show'));
 }
 
+let swReloadTimer = 0;
 function applySwUpdate(reg, immediate){
-  if(immediate){
-    hideSwUpdateBars();
-    sessionStorage.setItem(SW_RELOAD_KEY, '1');
-    if(activateWaitingWorker(reg)){
-      setTimeout(() => {
-        if(sessionStorage.getItem(SW_RELOAD_KEY)){
-          sessionStorage.removeItem(SW_RELOAD_KEY);
-          location.reload();
-        }
-      }, 1500);
-      return;
-    }
-    location.reload();
+  if(!immediate){
+    activateWaitingWorker(reg);
     return;
   }
-  activateWaitingWorker(reg);
+  // Ignore double-taps / top+bottom bars firing together.
+  if(sessionStorage.getItem(SW_RELOAD_KEY)) return;
+  hideSwUpdateBars();
+  sessionStorage.setItem(SW_RELOAD_KEY, '1');
+  document.querySelectorAll('[data-sw-btn]').forEach(btn => {
+    btn.disabled = true;
+    btn.textContent = 'Refreshing…';
+  });
+  if(activateWaitingWorker(reg)){
+    // controllerchange should reload; fallback if it never fires.
+    clearTimeout(swReloadTimer);
+    swReloadTimer = setTimeout(() => {
+      if(sessionStorage.getItem(SW_RELOAD_KEY)){
+        sessionStorage.removeItem(SW_RELOAD_KEY);
+        sessionStorage.setItem(SW_JUST_UPDATED, APP_VERSION);
+        location.reload();
+      }
+    }, 2500);
+    return;
+  }
+  sessionStorage.removeItem(SW_RELOAD_KEY);
+  sessionStorage.setItem(SW_JUST_UPDATED, APP_VERSION);
+  location.reload();
 }
 
 async function forceAppUpdate(reg){
@@ -3151,11 +3174,12 @@ async function initServiceWorker(){
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if(sessionStorage.getItem(SW_RELOAD_KEY)){
       sessionStorage.removeItem(SW_RELOAD_KEY);
+      sessionStorage.setItem(SW_JUST_UPDATED, APP_VERSION);
       location.reload();
     }
   });
   try{
-    swReg = await navigator.serviceWorker.register('sw.js?v=' + APP_VERSION);
+    swReg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
     swReg.addEventListener('updatefound', () => {
       const nw = swReg.installing;
       if(!nw) return;
@@ -3164,7 +3188,11 @@ async function initServiceWorker(){
           onSwUpdateReady(swReg);
       });
     });
-    if(swReg.waiting) onSwUpdateReady(swReg);
+    if(sessionStorage.getItem(SW_JUST_UPDATED) === APP_VERSION){
+      sessionStorage.removeItem(SW_JUST_UPDATED);
+    }else if(swReg.waiting){
+      onSwUpdateReady(swReg);
+    }
     const updateBtn = $('updateAppBtn');
     if(updateBtn){
       updateBtn.addEventListener('click', e => {
@@ -3178,9 +3206,13 @@ async function initServiceWorker(){
       if(!swReg) return;
       if(document.visibilityState === 'hidden'){
         lastHiddenAt = Date.now();
-        if(swReg.waiting) activateWaitingWorker(swReg);
+        if(swReg.waiting){
+          sessionStorage.setItem(SW_RELOAD_KEY, '1');
+          activateWaitingWorker(swReg);
+        }
         return;
       }
+      if(sessionStorage.getItem(SW_RELOAD_KEY)) return;
       swReg.update().catch(() => {});
       if(swReg.waiting) onSwUpdateReady(swReg);
     });
