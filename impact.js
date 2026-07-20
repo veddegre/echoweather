@@ -57,6 +57,13 @@ function airExtraForHour(d, extra, timeIso){
     pm25 = Math.max(pm25 ?? 0, 35);
     smokeNote = 'NWS haze / light smoke';
   }
+  // Active air quality / smoke advisories must floor AQI even when monitors
+  // and models still read "moderate" — otherwise Impact cards disagree with alerts.
+  if(hasActiveSmokeAdvisory()){
+    aqi = Math.max(aqi ?? 0, 125);
+    pm25 = Math.max(pm25 ?? 0, 40);
+    if(!smokeNote) smokeNote = 'Active air quality / smoke advisory';
+  }
   return { ...extra, aqi, pm25, smokeNote };
 }
 function hasActiveSmokeAdvisory(){
@@ -547,7 +554,7 @@ function activityAlertImpact(def, hourIso, timezone, ctx){
       return;
     }
     if(['golf', 'beach'].includes(actId) && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
-      apply(48, ev);
+      apply(42, ev);
       return;
     }
     if(['running', 'hiking', 'cycling', 'golf', 'beach', 'dog', 'stars'].includes(actId) && /dense fog|freezing fog|fog advisory|low visibility/i.test(evL)){
@@ -577,7 +584,8 @@ function activityAlertImpact(def, hourIso, timezone, ctx){
       return;
     }
     if(actId === 'air' && /air quality|ozone|particle pollution|smoke|dust/i.test(evL)){
-      apply(45, ev);
+      // Cap below Fair (45) so the Smoke & air card reads High, not Moderate.
+      apply(42, ev);
       return;
     }
     if(/special weather statement/i.test(evL)){

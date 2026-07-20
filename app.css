@@ -746,6 +746,8 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .radar-site-btn{font-size:.75rem;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);cursor:pointer}
 .radar-site-btn[hidden]{display:none}
 .threat-layer-status{margin:6px 0 0;font-size:.6875rem;line-height:1.35}
+.threat-layer-status.empty{color:var(--mut)}
+.threat-layer-status.err{color:var(--warn)}
 .lc-wx-unavail{font-size:.6875rem;color:var(--dim);line-height:1.35}
 .nbm-section{margin-bottom:14px}
 .nbm-section:last-child{margin-bottom:0}
@@ -878,6 +880,7 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .storm-foot a:hover{border-color:var(--accent)}
 .storm-panel-muted{background:var(--panel);border-color:var(--line)}
 .storm-panel-muted .storm-head .lbl{color:var(--mut)}
+.storm-quiet{font-size:.75rem;color:var(--mut);margin:6px 0 2px;line-height:1.4}
 .storm-mode-banner{display:none;margin-bottom:10px;padding:12px 14px;border-radius:10px;border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 12%,var(--panel));font-size:.8125rem;line-height:1.45;color:var(--ink)}
 .storm-mode-banner.visible{display:block}
 .storm-mode-banner strong{color:var(--warn);font-weight:600}

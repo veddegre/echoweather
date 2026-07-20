@@ -277,6 +277,7 @@ function syncThreatLayerStatus(){
   if(!keys.length){
     el.hidden = true;
     el.textContent = '';
+    el.classList.remove('err', 'empty');
     return;
   }
   const parts = keys.map(k => {
@@ -285,7 +286,10 @@ function syncThreatLayerStatus(){
     const msg = PANEL_UNAVAIL_MSG[code] || PANEL_UNAVAIL_MSG.threat_layer_api;
     return lbl + ': ' + msg;
   });
+  const allEmpty = keys.every(k => /_empty$/.test(threatLayerErrors[k] || ''));
   el.hidden = false;
+  el.classList.toggle('empty', allEmpty);
+  el.classList.toggle('err', !allEmpty);
   el.textContent = parts.join(' · ');
 }
 function markThreatLayer(key, code){
@@ -1739,7 +1743,9 @@ function shouldShowStormSetup(d){
   if(!d) return false;
   const i = nowIndex(d);
   const cape = d.hourly.cape[i] ?? 0;
-  return stormState.stormMode || stormState.maxDn >= 2 || cape >= 500 || !!stormState.severeWindow;
+  // Hide on quiet general-thunder days (SPC DN 2 = TSTM). Show for Marginal+,
+  // storm mode, a meaningful CAPE signal, or a scored severe window.
+  return stormState.stormMode || stormState.maxDn >= 3 || cape >= 800 || !!stormState.severeWindow;
 }
 function renderStormSetup(d){
   const wrap = $('stormSetup'), box = $('stormSetupGlance');
@@ -2039,9 +2045,13 @@ function renderStormPanel(box, loc, opts){
   const fcUrl = nwsPointForecastUrl(loc);
   const skywarnUrl = nwsSkywarnUrl(state.data?.nwsPoints?.cwa);
   box.classList.toggle('storm-panel-muted', !!muted);
+  const quietNote = muted
+    ? '<div class="storm-quiet">General thunderstorms only — no organized severe risk at your location right now.</div>'
+    : '';
   box.innerHTML = '<div class="storm-head"><div class="lbl">Convective outlook</div>'
     + '<div class="storm-meta">SPC at your location</div></div>'
     + '<div class="storm-risks">' + riskHtml + '</div>'
+    + quietNote
     + probHtml + windowHtml + lakeHtml + floodHtml + mcdHtml + reportHtml + discHtml
     + '<div class="storm-foot">'
     + '<a href="' + SPC_STORM_LINKS.outlook + '" target="_blank" rel="noopener">SPC outlook maps</a>'

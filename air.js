@@ -830,13 +830,29 @@ async function loadAir(loc){
           ? esc(detail || source)
           : panelUnavail('air_api');
       }else{
-        const cat = AQI_CATS.find(x => aqi <= x[0]) || AQI_CATS[AQI_CATS.length - 1];
-        v.textContent = aqi + ' \u2014 ' + cat[1];
+        let displayAqi = aqi;
+        let alertNote = '';
+        if(typeof hasActiveSmokeAdvisory === 'function' && hasActiveSmokeAdvisory()){
+          displayAqi = Math.max(aqi, 125);
+          alertNote = ' Active air quality / smoke advisory in effect.';
+          if(displayAqi > aqi){
+            detail = (detail ? detail + ' ' : '')
+              + 'Monitor reading ' + aqi + '; advisory floors the app display to unhealthy-for-sensitive.';
+          }
+        }
+        const cat = AQI_CATS.find(x => displayAqi <= x[0]) || AQI_CATS[AQI_CATS.length - 1];
+        v.textContent = displayAqi + ' \u2014 ' + cat[1];
         v.className = 'verdict ' + cat[2];
-        $('aqiDetail').textContent = detail || (source ? 'Source: ' + source + '.' : '');
+        $('aqiDetail').textContent = (detail || (source ? 'Source: ' + source + '.' : '')) + alertNote;
       }
-      if(aqi != null && c && c.pm2_5 != null && c.pm2_5 >= 35){
-        const smokeRow = ['Smoke / haze', (c.pm2_5 >= 55 ? 'High' : 'Moderate') + ' PM2.5 — check local smoke advisories<small></small>'];
+      if((aqi != null && c && c.pm2_5 != null && c.pm2_5 >= 35)
+        || (typeof hasActiveSmokeAdvisory === 'function' && hasActiveSmokeAdvisory())){
+        const highPm = c?.pm2_5 != null && c.pm2_5 >= 55;
+        const smokeRow = ['Smoke / haze',
+          (typeof hasActiveSmokeAdvisory === 'function' && hasActiveSmokeAdvisory()
+            ? 'Air quality / smoke advisory active'
+            : (highPm ? 'High' : 'Moderate') + ' PM2.5 — check local smoke advisories')
+          + '<small></small>'];
         const airSec = sections.find(s => /AirNow|Open-Meteo/i.test(s.title));
         if(airSec) airSec.rows.push(smokeRow);
         else sections.unshift({ title: 'Air quality notes', rows: [smokeRow] });
@@ -844,6 +860,10 @@ async function loadAir(loc){
       $('airMetrics').innerHTML = renderAirMetricSections(sections);
       renderAirnowKey();
       outdoorAir = { aqi: aqi ?? null, pm25: c?.pm2_5 ?? null };
+      if(typeof hasActiveSmokeAdvisory === 'function' && hasActiveSmokeAdvisory()){
+        outdoorAir.aqi = Math.max(outdoorAir.aqi ?? 0, 125);
+        outdoorAir.pm25 = Math.max(outdoorAir.pm25 ?? 0, 40);
+      }
       if(j?.hourly?.time?.length){
         outdoorAirHourly = {
           time: j.hourly.time,

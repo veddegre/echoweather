@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '265';
+const APP_VERSION = '266';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -239,10 +239,10 @@ const PANEL_UNAVAIL_MSG = {
   storm_api: 'SPC outlook or storm reports could not be loaded.',
   mrms_api: 'MRMS frame list could not be loaded — try refresh or another radar source.',
   loc_compare_api: 'Saved location comparison could not be loaded.',
-  threat_layer_api: 'Threat map layer could not be loaded — try refresh.',
-  threat_layer_empty: 'No threat geometry for this layer at the moment.',
+  threat_layer_api: 'Could not load this map layer — check connection and try refresh.',
+  threat_layer_empty: 'No active features in this product right now (layer is on).',
   hms_smoke_api: 'Smoke layer unavailable — server proxy /api/hms-smoke failed.',
-  hms_smoke_empty: 'No HMS smoke polygons in the latest NESDIS product yet.',
+  hms_smoke_empty: 'No smoke polygons in the latest NESDIS analysis (layer is on).',
   lightning_api: 'Live lightning feed could not connect — Blitzortung may be down.',
   alerts_api: 'Active NWS alerts could not be loaded.'
 };
