@@ -23,10 +23,11 @@ const WPC_ERO_URL = '/api/wpc-ero';
 const NHC_STORMS_URL = '/api/nhc-storms';
 const HMS_SMOKE_URL = '/api/hms-smoke';
 function hmsSmokeStyle(f){
+  // Keep fills light — HMS often stacks Light/Medium/Heavy over the same area.
   const dens = String(f?.properties?.Density || f?.properties?.Label || '').toLowerCase();
-  if(/heavy|thick/.test(dens)) return { color: '#3d2512', weight: 2, fillColor: '#8b5a2b', fillOpacity: 0.62 };
-  if(/medium|mod/.test(dens)) return { color: '#6b4a08', weight: 1.5, fillColor: '#c9941a', fillOpacity: 0.52 };
-  return { color: '#7a6348', weight: 1.25, fillColor: '#c9a882', fillOpacity: 0.45 };
+  if(/heavy|thick/.test(dens)) return { color: '#6b4423', weight: 1, fillColor: '#a67c52', fillOpacity: 0.28, opacity: 0.55 };
+  if(/medium|mod/.test(dens)) return { color: '#9a7b2f', weight: 1, fillColor: '#d4b45a', fillOpacity: 0.2, opacity: 0.45 };
+  return { color: '#a89070', weight: 0.75, fillColor: '#dcc9a8', fillOpacity: 0.12, opacity: 0.35 };
 }
 function ensureThreatOverlayPane(m){
   if(!m?.createPane) return;

@@ -50,7 +50,8 @@ const RV_TILE_OPTS = {
 };
 function markerStyle(){
   const c = cssVar('--accent') || '#3c91e6';
-  return { radius: 7, color: c, fillColor: c, fillOpacity: 0.9, weight: 2 };
+  // markerPane (600) sits above threatOverlay (480) so the pin stays visible over smoke.
+  return { radius: 7, color: c, fillColor: c, fillOpacity: 0.9, weight: 2, pane: 'markerPane' };
 }
 function radarMaxZoom(){
   if(radarMode === 'mrms') return RADAR_ZOOM.mrms;
@@ -432,7 +433,8 @@ function initMapB(){
   if(!loc || !radarDualOn || !dualPaneAvailable()) return;
   if(mapB){
     mapB.setView([loc.lat, loc.lon], map ? map.getZoom() : RADAR_ZOOM.default);
-    if(mapBMarker) mapBMarker.setLatLng([loc.lat, loc.lon]);
+    if(mapBMarker && mapB.hasLayer(mapBMarker)) mapB.removeLayer(mapBMarker);
+    mapBMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(mapB);
     syncMapBBasemap();
     showDualPaneFrame(radarIdx);
     if(typeof syncThreatOverlays === 'function') syncThreatOverlays();
@@ -534,8 +536,8 @@ function initMap(loc){
   if(map){
     map.setView([loc.lat, loc.lon], Math.min(map.getZoom(), radarMaxZoom()));
     applyRadarZoomLimits();
-    if(mapMarker) mapMarker.setLatLng([loc.lat, loc.lon]);
-    else mapMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(map);
+    if(mapMarker && map.hasLayer(mapMarker)) map.removeLayer(mapMarker);
+    mapMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(map);
     syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
     if(radarLightningOn) setLightningOverlay(true);
     if(typeof radarWindOn !== 'undefined' && radarWindOn) setWindOverlay(true);
