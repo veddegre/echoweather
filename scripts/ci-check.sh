@@ -7,7 +7,7 @@ cd "$ROOT"
 
 APP_ROOT="$ROOT" bash "$ROOT/scripts/check-versions.sh"
 
-for f in app.js tabs.js nav.js impact.js marine.js air.js forecast-extras.js mesonet.js climo.js obs.js loc-compare.js aviation.js storm.js radar.js boot.js sw.js; do
+for f in app.js tabs.js nav.js impact.js marine.js air.js forecast-extras.js mesonet.js climo.js obs.js loc-compare.js aviation.js storm.js radar.js easter-egg.js boot.js sw.js; do
   node --check "$ROOT/$f"
   echo "OK   $f syntax"
 done

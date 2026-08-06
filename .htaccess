@@ -8,6 +8,7 @@
     RewriteEngine On
     RewriteRule ^lib/ - [F,L]
     RewriteRule ^cache/ - [F,L]
+    RewriteRule ^pooh/cache/ - [F,L]
     RewriteRule ^router\.php$ - [F,L]
     # API routes — backup when api/.htaccess is not applied on the host.
     RewriteRule ^api/hms-smoke$ api/hms-smoke.php [L,QSA]

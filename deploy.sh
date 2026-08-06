@@ -64,15 +64,17 @@ RSYNC_FILES=(
   deploy.sh
   update.sh
   scripts
+  pooh
 )
 
 if [[ "$SMOKE_ONLY" -eq 0 ]]; then
   bash "$ROOT/scripts/check-versions.sh"
   echo "Deploying to $DEPLOY_HOST:$REMOTE_STAGING"
-  echo "Never syncing: config.local.php, cache/"
+  echo "Never syncing: config.local.php, cache/, pooh/cache/"
   rsync -avz --delete \
     --exclude 'config.local.php' \
     --exclude 'cache/' \
+    --exclude 'pooh/cache/' \
     "${RSYNC_FILES[@]/#/$ROOT/}" \
     "$DEPLOY_HOST:$REMOTE_STAGING/"
 

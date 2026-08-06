@@ -2,6 +2,9 @@
 config.local.php
 cache/
 
+# Hundred Acre Weather (easter egg) — runtime cache only
+pooh/cache/*.json
+
 # Icon build temps (scripts/render-icons.sh)
 .render-icon-*.html
 

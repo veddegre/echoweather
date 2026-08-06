@@ -17,8 +17,9 @@ try{ localStorage.removeItem('st_airnow_key'); }catch(e){}
 $('unitF').classList.toggle('on', state.units === 'F');
 $('unitC').classList.toggle('on', state.units === 'C');
 applyTheme(state.theme);
-initPageNav();
-setupInstallHint();
+  initPageNav();
+  initEasterEgg();
+  setupInstallHint();
 migrateAppVersion().then(() => initServiceWorker());
 migrateBadGeoLocations();
 probeServerIntegrations().then(async () => {
