@@ -46,7 +46,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= (int) @filemtime(__DIR__ . '/assets/css/style.css') ?>">
 </head>
 <body class="<?= htmlspecialchars($info['css_class']) ?>" data-location-source="<?= htmlspecialchars($locationSource) ?>">
 
@@ -73,22 +73,25 @@ $echoQs = $echoFrom ? '?from=echo' : '';
     </div>
 </header>
 
-<section class="location-bar card" aria-label="Choose location">
-    <div class="location-bar-row">
-        <div class="location-current">
-            <span class="location-current-label">Forecast for</span>
-            <strong class="location-current-name"><?= $name ?></strong>
-            <span class="location-meta"><?= htmlspecialchars(locationSourceLabel($locationSource)) ?></span>
+<section class="woods-location" aria-label="Choose location">
+    <div class="woods-location-inner">
+        <div class="woods-location-text">
+            <span class="woods-location-name"><?= $name ?></span>
+            <?php if ($locationSource === 'echo'): ?>
+            <span class="woods-location-note">Carried over from Echo Weather</span>
+            <?php else: ?>
+            <span class="woods-location-note"><?= htmlspecialchars(locationSourceLabel($locationSource)) ?></span>
+            <?php endif; ?>
         </div>
-        <div class="location-actions">
-            <button type="button" class="loc-btn loc-btn-primary" id="use-my-location">Where I am</button>
+        <div class="woods-location-controls">
+            <button type="button" class="woods-btn" id="use-my-location">Where I am</button>
+            <form class="woods-search" id="location-search-form" role="search">
+                <label for="location-search-input" class="visually-hidden">Search another place</label>
+                <input type="search" id="location-search-input" name="q" placeholder="Search elsewhere…" autocomplete="off" spellcheck="false">
+                <div class="woods-search-results" id="location-search-results" hidden></div>
+            </form>
         </div>
     </div>
-    <form class="location-search" id="location-search-form" role="search">
-        <label for="location-search-input" class="visually-hidden">Search another place</label>
-        <input type="search" id="location-search-input" name="q" placeholder="Search another place…" autocomplete="off" spellcheck="false">
-        <div class="location-search-results" id="location-search-results" hidden></div>
-    </form>
 </section>
 
 <main class="main-content">
@@ -141,7 +144,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
         <h3>What the woods report now</h3>
         <div class="stats-grid">
             <div class="stat">
-                <span class="stat-value"><?= formatNumber((float) ($current['temperature_2m'] ?? 0)) ?><?= $tempUnit ?></span>
+                <span class="stat-value"><?= formatTempDisplay((float) ($current['temperature_2m'] ?? 0), $config['temperature_unit']) ?></span>
                 <span class="stat-label">Temperature</span>
             </div>
             <div class="stat">
@@ -193,18 +196,24 @@ $echoQs = $echoFrom ? '?from=echo' : '';
     <?php if (!empty($weather['hourly'])): ?>
     <section class="card hourly-card">
         <h3>The next few hours</h3>
-        <div class="hourly-scroll">
-            <?php foreach ($weather['hourly'] as $hour): ?>
-            <article class="hour-pill">
-                <time datetime="<?= htmlspecialchars($hour['time']) ?>">
-                    <?= date('g A', strtotime($hour['time'])) ?>
-                </time>
-                <span class="hour-temp"><?= formatNumber((float) ($hour['temp'] ?? 0)) ?><?= $tempUnit ?></span>
-                <?php if ($hour['precip_prob'] !== null): ?>
-                <span class="hour-rain"><?= (int) $hour['precip_prob'] ?>%</span>
+        <div class="hourly-track" role="list">
+            <div class="hourly-track-inner">
+            <?php foreach (array_slice($weather['hourly'], 0, 12) as $hour):
+                $code = (int) ($hour['weather_code'] ?? 0);
+                $rain = $hour['precip_prob'] !== null ? (int) $hour['precip_prob'] : null;
+            ?>
+            <div class="hour-cell" role="listitem">
+                <span class="hour-cell-time"><?= date('g A', strtotime($hour['time'])) ?></span>
+                <?= weatherIconSvg(weatherCodeIconKey($code), 28) ?>
+                <span class="hour-cell-temp"><?= formatTempDisplay((float) ($hour['temp'] ?? 0), $config['temperature_unit']) ?></span>
+                <?php if ($rain !== null && $rain > 0): ?>
+                <span class="hour-cell-rain"><?= $rain ?>%</span>
+                <?php else: ?>
+                <span class="hour-cell-rain hour-cell-rain--dry">&nbsp;</span>
                 <?php endif; ?>
-            </article>
+            </div>
             <?php endforeach; ?>
+            </div>
         </div>
     </section>
     <?php endif; ?>
@@ -220,7 +229,8 @@ $echoQs = $echoFrom ? '?from=echo' : '';
                 </time>
                 <p class="day-desc"><?= htmlspecialchars($day['description']) ?></p>
                 <p class="day-temps">
-                    <?= formatNumber((float) $day['high']) ?> / <?= formatNumber((float) $day['low']) ?><?= $day['temp_unit'] ?>
+                    <?= formatTempDisplay((float) $day['high'], $config['temperature_unit']) ?>
+                    / <?= formatTempDisplay((float) $day['low'], $config['temperature_unit']) ?>
                 </p>
                 <?php if ($day['sunset']): ?>
                 <p class="day-sunset">Sunset <?= date('g:i A', strtotime($day['sunset'])) ?></p>

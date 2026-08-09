@@ -514,6 +514,27 @@ function formatNumber(float $n): string
     return rtrim(rtrim(number_format($n, 1, '.', ''), '0'), '.');
 }
 
+function formatTempDisplay(float $temp, string $unit): string
+{
+    $suffix = $unit === 'fahrenheit' ? '°' : '°';
+    if ($unit === 'fahrenheit') {
+        return (string) (int) round($temp) . $suffix;
+    }
+    return (string) (int) round($temp) . '°C';
+}
+
+function weatherCodeIconKey(int $code): string
+{
+    return match (true) {
+        in_array($code, [0, 1], true) => 'sun',
+        in_array($code, [2, 3, 45, 48], true) => 'cloud',
+        in_array($code, [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82], true) => 'rain',
+        in_array($code, [71, 73, 75, 77, 85, 86], true) => 'rain',
+        in_array($code, [95, 96, 99], true) => 'storm',
+        default => 'cloud',
+    };
+}
+
 function weatherIconSvg(string $icon, int $size = 48): string
 {
     $icons = [
