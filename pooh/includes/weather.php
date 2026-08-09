@@ -80,7 +80,7 @@ function fetchWeather(array $config, float $lat, float $lon): array
         'spot_character' => pickSpotCharacter($levelResult['level'], $levelResult['reasons']),
     ];
 
-    $result['day_story'] = buildDayStory($result['hourly'], $alerts, $config);
+    $result['day_story'] = buildDayStory($result['hourly'], $alerts, $config, $levelResult['level']);
 
     if ($ttl > 0) {
         if (!is_dir($config['cache_dir'])) {
@@ -575,6 +575,10 @@ function mergeStoryPeriodLabels(array $labels): string
         return $labels[0];
     }
 
+    if (count($labels) >= 3) {
+        return 'The rest of the day';
+    }
+
     if (count($labels) === 2) {
         $second = lcfirst(str_replace('This ', 'this ', $labels[1]));
         return $labels[0] . ' and ' . $second;
@@ -586,19 +590,31 @@ function mergeStoryPeriodLabels(array $labels): string
     return implode(', ', $labels) . ', and ' . $last;
 }
 
-function storyTransitionPhrase(int $previousLevel, int $level, bool $isFirst): string
+function storyBeatPeriodLabel(array $periodKeys, array $periodLabels, ?string $nowPeriod, bool $isFirst): string
 {
-    if ($isFirst) {
-        return 'Begins as a';
-    }
-    if ($level > $previousLevel) {
-        return 'May become a';
-    }
-    if ($level < $previousLevel) {
-        return 'Eases into a';
+    if ($isFirst && $nowPeriod !== null && count($periodKeys) === 1 && $periodKeys[0] === $nowPeriod) {
+        return 'Right now';
     }
 
-    return 'Continues as a';
+    return mergeStoryPeriodLabels($periodLabels);
+}
+
+function storyTransitionPhrase(int $previousLevel, int $level, bool $isFirst, bool $soloBeat): string
+{
+    if ($soloBeat && $isFirst) {
+        return 'Remains';
+    }
+    if ($isFirst) {
+        return 'Begins as';
+    }
+    if ($level > $previousLevel) {
+        return 'May become';
+    }
+    if ($level < $previousLevel) {
+        return 'Eases into';
+    }
+
+    return 'Continues as';
 }
 
 function storyCharacterAside(string $character, int $level): string
@@ -615,7 +631,7 @@ function storyCharacterAside(string $character, int $level): string
         'Piglet'            => [2 => 'finds it rather blustery', 3 => 'wishes he were somewhere smaller and drier'],
         'Rabbit'            => [2 => 'is already thinking about the garden chairs', 3 => 'has begun reorganizing the afternoon'],
         'Owl'               => [3 => 'consults the map with growing seriousness', 4 => 'considers this beneath his dignity and the clouds\''],
-        'Eeyore'            => [1 => 'is not surprised', 2 => ' suspected the wind would get ideas'],
+        'Eeyore'            => [1 => 'is not surprised', 2 => 'suspected the wind would get ideas'],
         'Christopher Robin' => [4 => 'would like everyone nearer the house', 5 => ' means now, not after one more adventure'],
     ];
 
@@ -675,16 +691,18 @@ function pickStoryFootnote(array $alerts): ?array
     ];
 }
 
-function buildDayStory(array $hourly, array $alerts, array $config): array
+function buildDayStory(array $hourly, array $alerts, array $config, int $currentLevel = 0): array
 {
     if (empty($hourly)) {
         return ['beats' => [], 'footnote' => null];
     }
 
     $today = date('Y-m-d');
+    $hourCutoff = strtotime(date('Y-m-d H:00:00'));
     $todayHours = array_values(array_filter(
         $hourly,
         static fn(array $hour): bool => str_starts_with($hour['time'], $today)
+            && strtotime($hour['time']) >= $hourCutoff
     ));
 
     if (empty($todayHours)) {
@@ -692,6 +710,11 @@ function buildDayStory(array $hourly, array $alerts, array $config): array
     }
 
     $periodOrder = ['morning', 'afternoon', 'evening', 'tonight'];
+    $nowPeriod = storyPeriodKey((int) date('G'));
+    $startIndex = $nowPeriod !== null
+        ? (int) array_search($nowPeriod, $periodOrder, true)
+        : 0;
+
     $levels = getWeatherLevels();
     $periodLevels = [];
 
@@ -704,13 +727,21 @@ function buildDayStory(array $hourly, array $alerts, array $config): array
         if ($key === null) {
             continue;
         }
+        $keyIndex = array_search($key, $periodOrder, true);
+        if ($keyIndex === false || $keyIndex < $startIndex) {
+            continue;
+        }
         $hourLevel = determineHourLevel($hour, $config);
         $periodLevels[$key] = max($periodLevels[$key] ?? 0, $hourLevel);
     }
 
+    if ($nowPeriod !== null && $periodLevels[$nowPeriod] !== null) {
+        $periodLevels[$nowPeriod] = $currentLevel;
+    }
+
     $rawBeats = [];
-    foreach ($periodOrder as $key) {
-        if ($periodLevels[$key] === null) {
+    foreach ($periodOrder as $index => $key) {
+        if ($index < $startIndex || $periodLevels[$key] === null) {
             continue;
         }
         $rawBeats[] = [
@@ -740,6 +771,7 @@ function buildDayStory(array $hourly, array $alerts, array $config): array
         ];
     }
 
+    $soloBeat = count($merged) === 1;
     $beats = [];
     $previousLevel = null;
     foreach ($merged as $index => $chunk) {
@@ -751,8 +783,18 @@ function buildDayStory(array $hourly, array $alerts, array $config): array
         }
 
         $beats[] = [
-            'period_label' => mergeStoryPeriodLabels($chunk['period_labels']),
-            'transition'   => storyTransitionPhrase($previousLevel ?? $level, $level, $index === 0),
+            'period_label' => storyBeatPeriodLabel(
+                $chunk['period_keys'],
+                $chunk['period_labels'],
+                $nowPeriod,
+                $index === 0
+            ),
+            'transition'   => storyTransitionPhrase(
+                $previousLevel ?? $level,
+                $level,
+                $index === 0,
+                $soloBeat
+            ),
             'level'        => $level,
             'level_name'   => $info['name'],
             'character'    => $character,
