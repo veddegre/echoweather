@@ -11,7 +11,14 @@ A PHP weather display inspired by A. A. Milne's 1926 public-domain *Winnie-the-P
 - Watches, warnings, and advisories grouped with official details
 - Six-level Hundred Acre Weather Scale (Fine → Emergency)
 - Progressive visual styling — calm at low levels, stark at Level 5
+- **Today's story** — narrative day outlook with character asides
+- Location search (Open-Meteo geocoding + server proxy), GPS, and Echo handoff
+- **°F / °C** unit toggle (remembered in a cookie)
+- **Use this place in Echo Weather** — sync location back to the main app
+- Open Graph meta for sharing links
 - 14-slide educational guide with keyboard and touch navigation
+- First-visit guide nudge (dismissible)
+- Level-specific Pooh illustrations (fine day, clouds, rain, fog)
 - Configurable location via query parameters
 
 ## Requirements
@@ -56,6 +63,8 @@ Edit `config.php`:
 | `nws_alerts` | true | Fetch US NWS alerts |
 | `auto_browser_location` | true | Try device GPS after IP estimate |
 
+Post-deploy smoke tests include `/pooh/index.php`, `/pooh/slides.php`, and `/pooh/api/geocode.php` (see root `scripts/smoke.sh`).
+
 ## Manual location override
 
 ```
@@ -88,7 +97,9 @@ Original **E. H. Shepard** pen-and-ink illustrations from *Winnie-the-Pooh* (192
 | Character | Gutenberg file | Scene |
 |-----------|----------------|-------|
 | Pooh (Level 0) | `illus3.jpg` | At the door of Mr. Sanders |
-| Pooh (Level 1) | `illus4.jpg` | Peering up at the sky |
+| Pooh (Level 1, clouds) | `illus4.jpg` | Peering up at the sky |
+| Pooh (Level 1, rain) | `illus10.jpg` | Beside a muddy puddle |
+| Pooh (Level 1, fog) | `illus1.jpg` | Puzzled before the bath mat |
 | Piglet | [Wikimedia: Piglet EHShepard.jpg](https://commons.wikimedia.org/wiki/File:Piglet_EHShepard.jpg) | Getting ready for the party (1500×1212 scan) |
 | Rabbit | `illus69.jpg` | Discussing plans, Chapter VII |
 | Owl | `illus63.jpg` | Writing at his desk, Chapter VI |

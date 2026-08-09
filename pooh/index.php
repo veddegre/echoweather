@@ -8,6 +8,9 @@ require_once __DIR__ . '/includes/weather.php';
 require_once __DIR__ . '/includes/images.php';
 require_once __DIR__ . '/includes/location.php';
 require_once __DIR__ . '/includes/alerts.php';
+require_once __DIR__ . '/includes/preferences.php';
+
+$config = applyUnitPreferences($config);
 
 $location = resolveLocation($config);
 $lat = $location['lat'];
@@ -31,25 +34,28 @@ $info = $weather['level_info'] ?? $levels[0];
 $displayCharacter = $weather['spot_character'] ?? $info['character'];
 $advisor = $weather['advisor'] ?? ['character' => 'Owl', 'verb' => 'says', 'quote' => 'Stay aware.', 'full' => 'Owl says: “Stay aware.”'];
 $current = $weather['current'] ?? [];
-$tempUnit = $config['temperature_unit'] === 'fahrenheit' ? '°F' : '°C';
 $windUnit = $config['wind_unit'] ?? 'mph';
 $updated = isset($weather['fetched_at']) ? date('g:i A', $weather['fetched_at']) : '';
 $echoFrom = isset($_GET['from']) && $_GET['from'] === 'echo';
 $echoQs = $echoFrom ? '?from=echo' : '';
+$isFahrenheit = ($config['temperature_unit'] ?? 'fahrenheit') === 'fahrenheit';
+$echoSyncUrl = buildEchoWeatherUrl($lat, $lon, $location['name']);
+$charContext = [
+    'reasons'      => $weather['level_reasons'] ?? [],
+    'weather_code' => (int) ($current['weather_code'] ?? 0),
+];
+$pageDescription = htmlspecialchars($info['message'] ?? 'A storybook reading of the sky.', ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hundred Acre Weather — <?= htmlspecialchars($info['name']) ?></title>
-    <link rel="icon" href="assets/favicon.svg?v=<?= (int) @filemtime(__DIR__ . '/assets/favicon.svg') ?>" type="image/svg+xml">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css?v=<?= (int) @filemtime(__DIR__ . '/assets/css/style.css') ?>">
+    <?= renderWoodsHead([
+        'title'       => 'Hundred Acre Weather — ' . $info['name'],
+        'description' => $pageDescription,
+        'level'       => $level,
+    ]) ?>
 </head>
-<body class="<?= htmlspecialchars($info['css_class']) ?>" data-location-source="<?= htmlspecialchars($locationSource) ?>">
+<body class="<?= htmlspecialchars($info['css_class']) ?> woods-page" data-location-source="<?= htmlspecialchars($locationSource) ?>">
 
 <div class="sky-layer" aria-hidden="true">
     <div class="cloud cloud-a"></div>
@@ -83,6 +89,10 @@ $echoQs = $echoFrom ? '?from=echo' : '';
             <?php endif; ?>
         </div>
         <div class="woods-location-controls">
+            <div class="woods-unit-toggle" id="woods-unit-toggle" role="group" aria-label="Temperature units">
+                <button type="button" class="woods-unit<?= $isFahrenheit ? ' is-on' : '' ?>" data-units="f" aria-pressed="<?= $isFahrenheit ? 'true' : 'false' ?>">°F</button>
+                <button type="button" class="woods-unit<?= !$isFahrenheit ? ' is-on' : '' ?>" data-units="c" aria-pressed="<?= !$isFahrenheit ? 'true' : 'false' ?>">°C</button>
+            </div>
             <button type="button" class="woods-btn" id="use-my-location">Where I am</button>
             <form class="woods-search" id="location-search-form" role="search">
                 <label for="location-search-input" class="visually-hidden">Search another place</label>
@@ -92,6 +102,11 @@ $echoQs = $echoFrom ? '?from=echo' : '';
         </div>
     </div>
 </section>
+
+<div class="woods-guide-nudge card" id="woods-guide-nudge" hidden>
+    <p><strong>First time in the woods?</strong> The <a href="slides.php<?= $echoQs ?>">weather guide</a> explains the six levels and what the characters notice.</p>
+    <button type="button" class="woods-btn woods-btn-quiet" id="woods-guide-dismiss">Very well then</button>
+</div>
 
 <main class="main-content">
 
@@ -125,7 +140,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
                 <?= weatherIconSvg($info['icon'], 80) ?>
                 <?php if ($displayCharacter): ?>
                 <div class="character-spot" data-character="<?= htmlspecialchars(strtolower(str_replace(' ', '-', $displayCharacter))) ?>">
-                    <?= renderCharacterImage($displayCharacter, 'char-image', $level) ?>
+                    <?= renderCharacterImage($displayCharacter, 'char-image', $level, $charContext) ?>
                     <span class="character-label"><?= htmlspecialchars($displayCharacter) ?></span>
                 </div>
                 <?php endif; ?>
@@ -256,6 +271,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
             <?php endif; ?>
             Updated <?= htmlspecialchars($updated) ?>.
         </p>
+        <p class="woods-accuracy">The woods read a simpler forecast than <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Echo Weather</a> — Open-Meteo model data here, not live METAR or radar. Good for the story; check Echo for precision.</p>
     </section>
 
 <?php endif; ?>
@@ -266,6 +282,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
     <?= renderAttributionFooter() ?>
     <p class="footer-links">
         <a href="slides.php<?= $echoQs ?>">View the weather guide</a>
+        &middot; <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Use this place in Echo Weather</a>
         <?php if ($echoFrom): ?>
         &middot; <a href="../" class="echo-back">← Back to Echo Weather</a>
         <?php endif; ?>
@@ -274,7 +291,8 @@ $echoQs = $echoFrom ? '?from=echo' : '';
 
 <div class="woodland-border bottom" aria-hidden="true"></div>
 
-<script src="assets/js/location.js?v=<?= (int) @filemtime(__DIR__ . '/assets/js/location.js') ?>"></script>
+<script src="assets/js/location.js?v=<?= woodsAssetVersion('assets/js/location.js') ?>"></script>
+<script src="assets/js/woods.js?v=<?= woodsAssetVersion('assets/js/woods.js') ?>"></script>
 
 </body>
 </html>

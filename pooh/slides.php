@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/includes/levels.php';
 require_once __DIR__ . '/includes/images.php';
+require_once __DIR__ . '/includes/preferences.php';
 
 $levels = getWeatherLevels();
 $characters = getCharacterGuide();
@@ -18,16 +19,13 @@ $exampleQuotes = getAdvisorQuotes();
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hundred Acre Weather Guide</title>
-    <link rel="icon" href="assets/favicon.svg?v=<?= (int) @filemtime(__DIR__ . '/assets/favicon.svg') ?>" type="image/svg+xml">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/slides.css">
+    <?= renderWoodsHead([
+        'title'       => 'Hundred Acre Weather Guide',
+        'description' => 'A fourteen-page guide to the Hundred Acre Weather scale — from a fine day for a walk to a Hundred Acre emergency.',
+        'css'         => 'assets/css/slides.css',
+    ]) ?>
 </head>
-<body>
+<body class="woods-page">
 
 <div class="slide-deck" id="deck">
 
@@ -253,6 +251,6 @@ $exampleQuotes = getAdvisorQuotes();
     <?php endif; ?>
 </div>
 
-<script src="assets/js/slides.js"></script>
+<script src="assets/js/slides.js?v=<?= woodsAssetVersion('assets/js/slides.js') ?>"></script>
 </body>
 </html>

@@ -24,6 +24,16 @@ html, body {
     background: var(--paper);
 }
 
+body.woods-page::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url('../images/characters/hundred-acre-wood.jpg') center 15% / min(640px, 90vw) no-repeat;
+    opacity: 0.045;
+    pointer-events: none;
+    z-index: -1;
+}
+
 .top-nav {
     position: fixed;
     top: 1rem;

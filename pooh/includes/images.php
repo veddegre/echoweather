@@ -26,6 +26,18 @@ function getCharacterImages(): array
                     'gutenberg' => 'illus4.jpg',
                     'scene'     => 'Pooh and the bees, Chapter I',
                 ],
+                'rain' => [
+                    'file'      => 'pooh-rain.jpg',
+                    'alt'       => 'Winnie-the-Pooh beside a muddy puddle, illustration by E. H. Shepard (1926)',
+                    'gutenberg' => 'illus10.jpg',
+                    'scene'     => 'Pooh and the muddy puddle, Chapter I',
+                ],
+                'fog' => [
+                    'file'      => 'pooh-fog.jpg',
+                    'alt'       => 'Winnie-the-Pooh puzzled before a bath mat, illustration by E. H. Shepard (1926)',
+                    'gutenberg' => 'illus1.jpg',
+                    'scene'     => 'Pooh and the bath mat, Chapter I',
+                ],
             ],
         ],
         'Piglet' => [
@@ -76,7 +88,28 @@ function getDecorativeImages(): array
     ];
 }
 
-function resolveCharacterImageMeta(string $character, ?int $level = null): ?array
+function pickPoohImageVariant(int $level, array $reasons, int $weatherCode): string|int|null
+{
+    if ($level === 0) {
+        return null;
+    }
+    if ($level !== 1) {
+        return $level;
+    }
+
+    $blob = strtolower(implode(' ', $reasons));
+    if (str_contains($blob, 'fog') || in_array($weatherCode, [45, 48], true)) {
+        return 'fog';
+    }
+    if (str_contains($blob, 'rain') || str_contains($blob, 'drizzle')
+        || in_array($weatherCode, [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82], true)) {
+        return 'rain';
+    }
+
+    return 1;
+}
+
+function resolveCharacterImageMeta(string $character, ?int $level = null, string|int|null $variant = null): ?array
 {
     $images = getCharacterImages();
     if (!isset($images[$character])) {
@@ -84,8 +117,9 @@ function resolveCharacterImageMeta(string $character, ?int $level = null): ?arra
     }
 
     $meta = $images[$character];
-    if ($level !== null && isset($meta['variants'][$level])) {
-        $meta = array_merge($meta, $meta['variants'][$level]);
+    $key = $variant ?? $level;
+    if ($key !== null && isset($meta['variants'][$key])) {
+        $meta = array_merge($meta, $meta['variants'][$key]);
     }
 
     unset($meta['variants']);
@@ -93,9 +127,9 @@ function resolveCharacterImageMeta(string $character, ?int $level = null): ?arra
     return $meta;
 }
 
-function characterImagePath(string $character, ?int $level = null): ?string
+function characterImagePath(string $character, ?int $level = null, string|int|null $variant = null): ?string
 {
-    $meta = resolveCharacterImageMeta($character, $level);
+    $meta = resolveCharacterImageMeta($character, $level, $variant);
     if ($meta === null) {
         return null;
     }
@@ -106,14 +140,23 @@ function characterImagePath(string $character, ?int $level = null): ?string
     return is_file($absolute) ? $relative : null;
 }
 
-function renderCharacterImage(string $character, string $class = 'char-image', ?int $level = null): string
+function renderCharacterImage(string $character, string $class = 'char-image', ?int $level = null, array $context = []): string
 {
-    $meta = resolveCharacterImageMeta($character, $level);
+    $variant = null;
+    if ($character === 'Pooh' && $level !== null) {
+        $variant = pickPoohImageVariant(
+            $level,
+            $context['reasons'] ?? [],
+            (int) ($context['weather_code'] ?? 0)
+        );
+    }
+
+    $meta = resolveCharacterImageMeta($character, $level, $variant);
     if ($meta === null) {
         return '';
     }
 
-    $path = characterImagePath($character, $level);
+    $path = characterImagePath($character, $level, $variant);
 
     if ($path === null) {
         return '';

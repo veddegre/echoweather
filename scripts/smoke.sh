@@ -156,3 +156,15 @@ for path in /api/wpc-ero /api/nhc-storms; do
   fi
   echo "OK   ${path} — HTTP ${code}"
 done
+
+echo ""
+echo "Hundred Acre Weather (pooh/)"
+curl_smoke "/pooh/index.php"
+curl_smoke "/pooh/slides.php"
+pooh_geo_code="$(curl_code "/pooh/api/geocode.php?q=Chicago" /tmp/echoweather-pooh-geocode.json)"
+if [[ "$pooh_geo_code" == "200" ]] && grep -q '"results"' /tmp/echoweather-pooh-geocode.json; then
+  echo "OK   /pooh/api/geocode.php?q=Chicago — HTTP 200 with results"
+else
+  echo "FAIL /pooh/api/geocode.php?q=Chicago — HTTP ${pooh_geo_code}" >&2
+  exit 1
+fi
