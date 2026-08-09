@@ -132,6 +132,8 @@ $echoQs = $echoFrom ? '?from=echo' : '';
         </div>
     </section>
 
+    <?= renderDayStorySection($weather['day_story'] ?? ['beats' => [], 'footnote' => null]) ?>
+
     <?= renderNwsAlertsSection(
         $weather['alerts'] ?? [],
         !empty($weather['nws_available']),

@@ -10,6 +10,10 @@ $levels = getWeatherLevels();
 $characters = getCharacterGuide();
 $echoFrom = isset($_GET['from']) && $_GET['from'] === 'echo';
 $echoQs = $echoFrom ? '?from=echo' : '';
+
+$exampleLevel = 2;
+$example = $levels[$exampleLevel];
+$exampleQuotes = getAdvisorQuotes();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -70,7 +74,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
                 <?php if ($num < 5): ?><span class="path-arrow">→</span><?php endif; ?>
                 <?php endforeach; ?>
             </div>
-            <p class="intro">Each level includes a number, weather icon, plain-language condition, and required action.</p>
+            <p class="intro">Each level shows a number, icon, plain-language summary, story, character note, recommended action, and official equivalents — plus live conditions, alerts, hourly outlook, and a three-day look ahead.</p>
         </div>
     </section>
 
@@ -175,20 +179,45 @@ $echoQs = $echoFrom ? '?from=echo' : '';
     <!-- Slide 13 -->
     <section class="slide" data-slide="13">
         <div class="slide-inner">
-            <h2>Example daily forecast</h2>
+            <h2>What the live forecast shows</h2>
+            <p class="intro">The forecast opens with the current level, then <strong>Today&rsquo;s story</strong> narrates how the day may unfold — morning, afternoon, evening — with character asides when official alerts apply.</p>
             <div class="sample-forecast">
-                <p><strong>Today:</strong> Begins as a <em>Fine Day for a Walk</em> (Level 0). Pooh approves.</p>
-                <p><strong>This afternoon:</strong> May become a <em>Rather Blustery Day</em> (Level 2). Piglet is concerned.</p>
-                <p><strong>Rabbit insists:</strong> Bring the garden chairs inside before lunch — organization is kindness.</p>
+                <div class="sample-section">
+                    <p class="sample-label">Today&rsquo;s story</p>
+                    <p><strong>This morning:</strong> Begins as a <em>Fine Day for a Walk</em> (Level 0). <em>Pooh</em> &mdash; considers whether it is a good day for doing Nothing.</p>
+                    <p><strong>This afternoon:</strong> May become a <em><?= htmlspecialchars($example['name']) ?></em> (Level <?= $exampleLevel ?>). <em><?= htmlspecialchars($example['character']) ?></em> &mdash; <?= htmlspecialchars($example['character_role']) ?>.</p>
+                    <p class="sample-quote"><strong>Rabbit insists:</strong> <?= htmlspecialchars($exampleQuotes['Rabbit'][2][0] ?? 'Bring the garden chairs in.') ?></p>
+                </div>
+                <div class="sample-section">
+                    <p class="sample-label">Level summary (right now)</p>
+                    <p><span class="sample-badge">Level <?= $exampleLevel ?></span></p>
+                    <p class="sample-level-name"><?= htmlspecialchars($example['name']) ?></p>
+                    <p><?= htmlspecialchars($example['message']) ?></p>
+                </div>
+                <div class="sample-section">
+                    <p class="sample-label">National Weather Service alerts</p>
+                    <p>Active watches, warnings, and advisories when they apply — grouped by type with full details and links.</p>
+                </div>
+                <div class="sample-section">
+                    <p class="sample-label">What the woods report now</p>
+                    <div class="sample-data">
+                        <span>Now 58&deg;</span>
+                        <span>Wind 12 mph</span>
+                        <span>Gusts 28 mph</span>
+                        <span>Humidity 71%</span>
+                    </div>
+                </div>
+                <div class="sample-section">
+                    <p class="sample-label">The next few hours &amp; looking ahead</p>
+                    <p>An hourly strip (time, icon, temperature, rain chance) and three daily cards with high/low, sky description, and sunset.</p>
+                </div>
             </div>
-            <div class="sample-data">
-                <span>High 72°F</span>
-                <span>Wind 12 mph, gusts 28 mph</span>
-                <span>Precip 60%</span>
-                <span>Alert: Wind Advisory</span>
+            <div class="sample-data sample-data-foot">
+                <span>Example: Wind Advisory</span>
+                <span>High 72&deg; / Low 54&deg;</span>
                 <span>Sunset 7:42 p.m.</span>
             </div>
-            <p class="intro"><a href="index.php<?= $echoQs ?>">View the live forecast →</a></p>
+            <p class="intro"><a href="index.php<?= $echoQs ?>">View the live forecast &rarr;</a></p>
         </div>
     </section>
 

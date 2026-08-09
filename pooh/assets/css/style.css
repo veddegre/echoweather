@@ -490,6 +490,67 @@ body.level-5 .level-badge {
     margin: 0 0 0.5rem;
 }
 
+/* Today's story */
+.day-story-card {
+    background: rgba(255, 252, 245, 0.97);
+    border-color: rgba(139, 105, 20, 0.35);
+}
+
+.day-story-card h3 {
+    font-style: italic;
+}
+
+.day-story {
+    font-family: var(--display);
+    font-size: 1.08rem;
+    line-height: 1.75;
+    color: var(--ink);
+}
+
+.day-story-beat {
+    margin: 0 0 1rem;
+    padding: 0 0 1rem;
+    border-bottom: 1px dashed rgba(139, 105, 20, 0.22);
+}
+
+.day-story-beat:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.day-story-beat strong {
+    font-weight: 700;
+    color: var(--green-dark);
+}
+
+.day-story-beat em {
+    font-style: italic;
+}
+
+.day-story-aside {
+    display: block;
+    margin-top: 0.45rem;
+    font-family: var(--serif);
+    font-size: 0.92rem;
+    color: var(--ink-light);
+    font-style: normal;
+}
+
+.day-story-footnote {
+    margin: 1.15rem 0 0;
+    padding: 0.85rem 1rem;
+    background: var(--paper);
+    border-left: 3px solid var(--honey);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--ink);
+}
+
+.day-story-footnote strong {
+    color: var(--green-dark);
+}
+
 .character-role {
     font-size: 0.88rem;
     font-style: italic;
