@@ -176,7 +176,7 @@ body.level-4 .wind-layer {
     margin: 0 auto;
     padding: 0 1.5rem 0.75rem;
     position: relative;
-    z-index: 5;
+    z-index: 20;
 }
 
 .woods-location-inner {
@@ -292,6 +292,14 @@ body.level-4 .wind-layer {
 }
 
 .woods-search-results button:hover { background: var(--paper); }
+
+.woods-search-empty {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--ink-light);
+    line-height: 1.45;
+}
 
 .visually-hidden {
     position: absolute;

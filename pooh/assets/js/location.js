@@ -55,17 +55,32 @@
     }
 
     var source = body ? body.dataset.locationSource : '';
+    var geoTimer = 0;
     if (source === 'ip' || source === 'default') {
-        requestBrowserLocation(null);
+        geoTimer = setTimeout(function () {
+            requestBrowserLocation(null);
+        }, 1200);
     }
 
     if (!searchForm || !searchInput || !searchResults) return;
 
     var searchTimer = 0;
+    var searchSeq = 0;
 
     function clearResults() {
         searchResults.innerHTML = '';
         searchResults.hidden = true;
+        searchResults.removeAttribute('data-status');
+    }
+
+    function showMessage(msg) {
+        searchResults.innerHTML = '';
+        var note = document.createElement('div');
+        note.className = 'woods-search-empty';
+        note.textContent = msg;
+        searchResults.appendChild(note);
+        searchResults.hidden = false;
+        searchResults.dataset.status = 'message';
     }
 
     function pickResult(r) {
@@ -74,39 +89,114 @@
         navigateTo(r.lat, r.lon, r.label, 'search');
     }
 
+    function parseCoordinates(q) {
+        var m = q.match(/^\s*(-?\d{1,2}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)\s*$/);
+        if (!m) return null;
+        var lat = parseFloat(m[1]);
+        var lon = parseFloat(m[2]);
+        if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+        return {
+            lat: lat,
+            lon: lon,
+            label: lat.toFixed(4) + ', ' + lon.toFixed(4)
+        };
+    }
+
+    function renderResults(rows) {
+        searchResults.innerHTML = '';
+        rows.forEach(function (row) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = row.label;
+            btn.addEventListener('click', function () {
+                pickResult(row);
+            });
+            searchResults.appendChild(btn);
+        });
+        searchResults.hidden = false;
+        searchResults.dataset.status = 'results';
+    }
+
+    async function fetchGeocode(q) {
+        var urls = [
+            'api/geocode.php?q=' + encodeURIComponent(q),
+            'https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&name=' + encodeURIComponent(q)
+        ];
+        var lastErr = null;
+        for (var i = 0; i < urls.length; i++) {
+            try {
+                var res = await fetch(urls[i]);
+                if (!res.ok) {
+                    lastErr = new Error('HTTP ' + res.status);
+                    continue;
+                }
+                return await res.json();
+            } catch (e) {
+                lastErr = e;
+            }
+        }
+        throw lastErr || new Error('unavailable');
+    }
+
     async function runSearch(q) {
         if (q.length < 2) {
             clearResults();
             return;
         }
+
+        var coords = parseCoordinates(q);
+        if (coords) {
+            renderResults([coords]);
+            return;
+        }
+
+        var seq = ++searchSeq;
+        searchResults.dataset.status = 'loading';
+        searchResults.innerHTML = '<div class="woods-search-empty">Searching…</div>';
+        searchResults.hidden = false;
+
         try {
-            var url = 'https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&name='
-                + encodeURIComponent(q);
-            var res = await fetch(url);
-            if (!res.ok) return;
-            var data = await res.json();
-            var rows = data.results || [];
-            searchResults.innerHTML = '';
-            if (!rows.length) {
-                searchResults.hidden = true;
-                return;
-            }
-            rows.forEach(function (row) {
+            var data = await fetchGeocode(q);
+            if (seq !== searchSeq) return;
+
+            var rows = (data.results || []).map(function (row) {
                 var parts = [row.name];
                 if (row.admin1) parts.push(row.admin1);
                 if (row.country) parts.push(row.country);
-                var label = parts.join(', ');
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.textContent = label;
-                btn.addEventListener('click', function () {
-                    pickResult({ lat: row.latitude, lon: row.longitude, label: label });
-                });
-                searchResults.appendChild(btn);
+                return {
+                    lat: row.latitude,
+                    lon: row.longitude,
+                    label: parts.join(', ')
+                };
             });
-            searchResults.hidden = false;
-        } catch (e) { /* ignore */ }
+
+            if (!rows.length) {
+                showMessage('No matches — try a nearby city or enter coordinates as 42.97, -85.95');
+                return;
+            }
+
+            renderResults(rows);
+        } catch (e) {
+            if (seq !== searchSeq) return;
+            showMessage('Search unavailable — try coordinates as 42.97, -85.95');
+        }
     }
+
+    function pickFirstResult() {
+        var first = searchResults.querySelector('button');
+        if (first) {
+            first.click();
+            return true;
+        }
+        return false;
+    }
+
+    searchInput.addEventListener('focus', function () {
+        if (geoTimer) {
+            clearTimeout(geoTimer);
+            geoTimer = 0;
+        }
+    });
 
     searchInput.addEventListener('input', function () {
         clearTimeout(searchTimer);
@@ -114,9 +204,35 @@
         searchTimer = setTimeout(function () { runSearch(q); }, 280);
     });
 
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(searchTimer);
+            var q = searchInput.value.trim();
+            if (pickFirstResult()) return;
+            runSearch(q).then(function () {
+                pickFirstResult();
+            });
+        } else if (e.key === 'Escape') {
+            clearResults();
+            searchInput.blur();
+        }
+    });
+
     searchForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        runSearch(searchInput.value.trim());
+        clearTimeout(searchTimer);
+        var q = searchInput.value.trim();
+        if (pickFirstResult()) return;
+        runSearch(q).then(function () {
+            pickFirstResult();
+        });
+    });
+
+    searchResults.addEventListener('mousedown', function (e) {
+        if (e.target.closest('button')) {
+            e.preventDefault();
+        }
     });
 
     document.addEventListener('click', function (e) {

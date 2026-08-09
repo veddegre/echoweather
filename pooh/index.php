@@ -274,7 +274,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
 
 <div class="woodland-border bottom" aria-hidden="true"></div>
 
-<script src="assets/js/location.js"></script>
+<script src="assets/js/location.js?v=<?= (int) @filemtime(__DIR__ . '/assets/js/location.js') ?>"></script>
 
 </body>
 </html>
