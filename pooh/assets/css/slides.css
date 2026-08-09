@@ -69,7 +69,7 @@ body.woods-page::after {
     position: absolute;
     inset: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 3rem 2rem 5rem;
     padding-top: max(3rem, calc(env(safe-area-inset-top, 0px) + 2.5rem));
@@ -80,6 +80,7 @@ body.woods-page::after {
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     background: var(--paper);
 }
 
@@ -94,10 +95,12 @@ body.woods-page::after {
     width: 100%;
     border: 2px solid var(--paper-dark);
     padding: 2.5rem 3rem;
+    margin: 0 auto 1rem;
     background: rgba(255, 252, 245, 0.95);
     box-shadow: 0 4px 24px rgba(61, 46, 31, 0.1);
     position: relative;
     overflow-wrap: anywhere;
+    flex-shrink: 0;
 }
 
 .slide-inner::before {
@@ -152,6 +155,11 @@ h3 {
 }
 
 /* Title slide */
+/* Title slide — short enough to stay centered */
+.slide.slide-title {
+    align-items: center;
+}
+
 .slide-title .slide-inner {
     text-align: center;
     padding-top: 3rem;
