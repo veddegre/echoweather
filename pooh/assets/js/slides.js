@@ -14,7 +14,7 @@
         slides[current].classList.remove('active');
         current = index;
         slides[current].classList.add('active');
-        slides[current].scrollTop = 0;
+        window.scrollTo(0, 0);
 
         counter.textContent = (current + 1) + ' / ' + total;
         prevBtn.disabled = current === 0;
