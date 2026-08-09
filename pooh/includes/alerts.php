@@ -103,6 +103,17 @@ function trimAlertText(string $text, int $max = 600): string
     return rtrim(substr($text, 0, $max)) . '…';
 }
 
+function nwsPublicUrl(): string
+{
+    return 'https://www.weather.gov/';
+}
+
+function renderNwsSourceLine(): string
+{
+    return '<p class="nws-source">Source: <a href="' . htmlspecialchars(nwsPublicUrl(), ENT_QUOTES, 'UTF-8')
+        . '" target="_blank" rel="noopener">National Weather Service</a></p>';
+}
+
 function renderNwsAlertsSection(array $alerts, bool $nwsAvailable, bool $nwsEnabled): string
 {
     ob_start();
@@ -126,7 +137,7 @@ function renderNwsAlertsSection(array $alerts, bool $nwsAvailable, bool $nwsEnab
         <section class="card nws-card nws-clear" aria-labelledby="nws-heading">
             <h3 id="nws-heading">National Weather Service alerts</h3>
             <p class="nws-status nws-status-clear">No active watches, warnings, or advisories for your area.</p>
-            <p class="nws-intro">Source: <a href="https://www.weather.gov/" target="_blank" rel="noopener">weather.gov</a></p>
+            <?= renderNwsSourceLine() ?>
         </section>
         <?php
         return ob_get_clean();
@@ -201,7 +212,7 @@ function renderNwsAlertsSection(array $alerts, bool $nwsAvailable, bool $nwsEnab
 
                 <?php if (!empty($alert['url'])): ?>
                 <p class="nws-alert-link">
-                    <a href="<?= htmlspecialchars($alert['url']) ?>" target="_blank" rel="noopener">View on weather.gov</a>
+                    <a href="<?= htmlspecialchars($alert['url']) ?>" target="_blank" rel="noopener">Read full alert at the National Weather Service</a>
                 </p>
                 <?php endif; ?>
             </article>
@@ -209,7 +220,7 @@ function renderNwsAlertsSection(array $alerts, bool $nwsAvailable, bool $nwsEnab
         </div>
         <?php endforeach; ?>
 
-        <p class="nws-source">Source: <a href="https://api.weather.gov/" target="_blank" rel="noopener">National Weather Service</a></p>
+        <?= renderNwsSourceLine() ?>
     </section>
     <?php
 

@@ -248,8 +248,8 @@ $echoQs = $echoFrom ? '?from=echo' : '';
         </ul>
         <p class="disclaimer">
             Data from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.
-            <?php if (!empty($weather['alerts'])): ?>
-            Alerts from <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>.
+            <?php if (!empty($weather['nws_available'])): ?>
+            Alerts from <a href="<?= htmlspecialchars(nwsPublicUrl(), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">National Weather Service</a>.
             <?php endif; ?>
             Updated <?= htmlspecialchars($updated) ?>.
         </p>
@@ -264,7 +264,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
     <p class="footer-links">
         <a href="slides.php<?= $echoQs ?>">View the weather guide</a>
         <?php if ($echoFrom): ?>
-        &middot; <a href="../">← Back to Echo Weather</a>
+        &middot; <a href="../" class="echo-back">← Back to Echo Weather</a>
         <?php endif; ?>
     </p>
 </footer>

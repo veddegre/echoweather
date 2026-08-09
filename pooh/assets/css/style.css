@@ -380,6 +380,23 @@ body.level-4 .wind-layer {
 
 .site-header nav a:hover { text-decoration: underline; }
 
+/* In-content and footer links */
+.main-content a,
+.site-footer a,
+.nws-card a {
+    color: var(--green-dark);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--green-dark) 35%, transparent);
+    text-underline-offset: 0.15em;
+}
+
+.main-content a:hover,
+.site-footer a:hover,
+.nws-card a:hover {
+    color: var(--ink);
+    text-decoration-color: currentColor;
+}
+
 /* Main layout */
 .main-content {
     max-width: 960px;
@@ -861,8 +878,6 @@ body.level-5 .advisor-name { color: #c0392b; }
     font-size: 0.85rem;
 }
 
-.nws-alert-link a { color: var(--green-dark); }
-
 .nws-source {
     margin: 1rem 0 0;
     padding-top: 0.75rem;
@@ -870,8 +885,6 @@ body.level-5 .advisor-name { color: #c0392b; }
     font-size: 0.8rem;
     color: var(--ink-light);
 }
-
-.nws-source a { color: var(--green-dark); }
 
 /* Scale path */
 .scale-path {
@@ -947,11 +960,10 @@ body.level-5 .advisor-name { color: #c0392b; }
 
 .disclaimer {
     margin: 1rem 0 0;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--ink-light);
+    font-style: italic;
 }
-
-.disclaimer a { color: var(--green-dark); }
 
 /* Error */
 .error-card h2 {
@@ -971,8 +983,6 @@ body.level-5 .advisor-name { color: #c0392b; }
     color: var(--ink-light);
 }
 
-.footer-links a { color: var(--green-dark); }
-
 .attribution {
     font-size: 0.8rem;
     color: var(--ink-light);
@@ -980,8 +990,6 @@ body.level-5 .advisor-name { color: #c0392b; }
     margin: 0 auto 0.75rem;
     line-height: 1.5;
 }
-
-.attribution a { color: var(--green-dark); }
 
 .attribution cite { font-style: italic; }
 
@@ -1166,11 +1174,20 @@ body.level-5 .advisor-name { color: #c0392b; }
 
 @media (hover: none) and (pointer: coarse) {
     .site-header nav a,
-    .nws-alert-link a,
-    .disclaimer a,
-    .attribution a {
+    .main-content a,
+    .site-footer a {
         padding: 0.15rem 0;
     }
+}
+
+.site-footer .echo-back {
+    color: var(--accent);
+    font-weight: 700;
+    text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.site-footer .echo-back:hover {
+    color: var(--ink);
 }
 
 .echo-back {
