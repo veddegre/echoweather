@@ -387,11 +387,17 @@ function pickSpotCharacter(int $level, array $reasons): ?string
         return null;
     }
 
-    $advisor = pickAdvisorCharacter($level, $reasons);
     $levels = getWeatherLevels();
     $default = $levels[$level]['character'] ?? null;
 
-    // Prefer context-specific character when it adds flavor (Eeyore/Rabbit/Owl)
+    // Levels 0–1 keep Pooh in the hero (level-specific art); advisors speak elsewhere.
+    if ($level <= 1) {
+        return $default;
+    }
+
+    $advisor = pickAdvisorCharacter($level, $reasons);
+
+    // Prefer context-specific character when it adds flavor (Eeyore/Rabbit/Piglet)
     if (in_array($advisor, ['Eeyore', 'Rabbit', 'Piglet'], true) && $advisor !== $default) {
         return $advisor;
     }
@@ -823,7 +829,7 @@ function renderDayStorySection(array $story): string
             <?php foreach ($story['beats'] as $beat): ?>
             <p class="day-story-beat">
                 <strong><?= htmlspecialchars($beat['period_label']) ?>:</strong>
-                <?= htmlspecialchars($beat['transition']) ?> a
+                <?= htmlspecialchars($beat['transition']) ?>
                 <em><?= htmlspecialchars($beat['level_name']) ?></em>
                 (Level <?= (int) $beat['level'] ?>).
                 <span class="day-story-aside"><em><?= htmlspecialchars($beat['character']) ?></em>
