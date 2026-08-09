@@ -61,6 +61,11 @@ body.woods-page::after {
     min-height: 44px;
 }
 
+.top-nav a.echo-back {
+    font-weight: 700;
+    color: var(--accent);
+}
+
 .top-nav a:hover { text-decoration: underline; }
 
 .slide-deck {
@@ -1173,9 +1178,4 @@ h3 {
         font-size: 0.9rem;
         min-width: 52px;
     }
-}
-
-.top-nav .echo-back {
-    font-weight: 700;
-    color: var(--accent, #8b6914);
 }

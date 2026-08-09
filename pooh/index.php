@@ -76,9 +76,7 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A storybook reading of 
         <nav>
             <a href="index.php<?= $echoQs ?>">Forecast</a>
             <a href="slides.php<?= $echoQs ?>">Guide</a>
-            <?php if ($echoFrom): ?>
-            <a href="../" class="echo-back">← Echo Weather</a>
-            <?php endif; ?>
+            <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>" class="echo-back">← Echo Weather</a>
         </nav>
     </div>
 </header>

@@ -99,7 +99,7 @@ function getWeatherLevels(): array
             'name'        => 'The Hundred Acre Emergency',
             'short'       => 'Emergency',
             'character'   => 'Christopher Robin',
-            'character_role' => 'leads the way up the stairs — bump, bump, bump — and will not wait',
+            'character_role' => 'leads the way down the stairs — bump, bump, bump — and will not wait',
             'message'     => 'Christopher Robin is calling everyone inside. At once.',
             'story'       => 'There was no time for stories, or honey, or even a small smackerel — only for the sturdiest walls in the Wood, and staying exactly where you were told.',
             'action'      => 'Come to the lowest floor, the innermost room, far from windows. Do precisely what the officials say — as Christopher Robin would insist, without argument.',

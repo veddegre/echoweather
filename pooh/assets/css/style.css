@@ -488,6 +488,11 @@ body.level-4 .wind-layer {
     font-size: 0.95rem;
 }
 
+.site-header nav a.echo-back {
+    font-weight: 700;
+    color: var(--accent);
+}
+
 .site-header nav a:hover { text-decoration: underline; }
 
 /* In-content and footer links */

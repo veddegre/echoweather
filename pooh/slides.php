@@ -12,6 +12,14 @@ $levels = getWeatherLevels();
 $characters = getCharacterGuide();
 $echoFrom = isset($_GET['from']) && $_GET['from'] === 'echo';
 $echoQs = $echoFrom ? '?from=echo' : '';
+$echoReturnUrl = '../';
+if (isset($_GET['lat'], $_GET['lon'])) {
+    $echoReturnUrl = buildEchoWeatherUrl(
+        (float) $_GET['lat'],
+        (float) $_GET['lon'],
+        trim((string) ($_GET['name'] ?? 'Your location'))
+    );
+}
 
 $exampleLevel = 2;
 $example = $levels[$exampleLevel];
@@ -369,9 +377,7 @@ $sampleDaily = [
 
 <div class="top-nav">
     <a href="index.php<?= $echoQs ?>">Live Forecast</a>
-    <?php if ($echoFrom): ?>
-    <a href="../" class="echo-back">← Echo Weather</a>
-    <?php endif; ?>
+    <a href="<?= htmlspecialchars($echoReturnUrl, ENT_QUOTES, 'UTF-8') ?>" class="echo-back">← Echo Weather</a>
 </div>
 
 <script src="assets/js/slides.js?v=<?= woodsAssetVersion('assets/js/slides.js') ?>"></script>
