@@ -44,6 +44,9 @@ $charContext = [
     'reasons'      => $weather['level_reasons'] ?? [],
     'weather_code' => (int) ($current['weather_code'] ?? 0),
 ];
+$forecastSource = $weather['forecast_source'] ?? 'open-meteo';
+$currentSource = $weather['current_source'] ?? 'open-meteo';
+$usingNwsForecast = ($forecastSource === 'nws') && !empty($weather['nws_available']);
 $pageDescription = htmlspecialchars($info['message'] ?? 'A storybook reading of the sky.', ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
@@ -265,13 +268,18 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A storybook reading of 
             <?php endforeach; ?>
         </ul>
         <p class="disclaimer">
-            Data from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.
-            <?php if (!empty($weather['nws_available'])): ?>
-            Alerts from <a href="<?= htmlspecialchars(nwsPublicUrl(), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">National Weather Service</a>.
+            <?php if ($usingNwsForecast): ?>
+            Forecast from <a href="<?= htmlspecialchars(nwsPublicUrl(), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">National Weather Service</a><?php if ($currentSource === 'metar'): ?>; current conditions from the nearest weather station<?php endif; ?>.
+            <?php else: ?>
+            Data from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a><?php if (!empty($weather['nws_available'])): ?>; alerts from <a href="<?= htmlspecialchars(nwsPublicUrl(), ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">National Weather Service</a><?php endif; ?>.
             <?php endif; ?>
             Updated <?= htmlspecialchars($updated) ?>.
         </p>
-        <p class="woods-accuracy">The woods read a simpler forecast than <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Echo Weather</a> — Open-Meteo model data here, not live METAR or radar. Good for the story; check Echo for precision.</p>
+        <?php if ($usingNwsForecast): ?>
+        <p class="woods-accuracy">For US locations the woods read the same official NWS forecast Echo Weather uses for its text outlook<?= $currentSource === 'metar' ? ', with live station observations when available' : '' ?>. Echo still has radar, METAR history, and the rest of the toolkit — worth a visit when precision matters.</p>
+        <?php else: ?>
+        <p class="woods-accuracy">Outside the United States the woods rely on Open-Meteo model data. For the full precision stack — METAR, radar, NWS — try <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Echo Weather</a>.</p>
+        <?php endif; ?>
     </section>
 
 <?php endif; ?>

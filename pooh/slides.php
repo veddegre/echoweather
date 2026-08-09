@@ -169,7 +169,7 @@ $exampleQuotes = getAdvisorQuotes();
                     <tr><td>2</td><td>Gray-blue</td><td>Swaying branches</td><td>Piglet with scarf</td><td>Active care</td></tr>
                     <tr><td>3</td><td>Dark clouds, rain</td><td>Rain strokes</td><td>Owl with map</td><td>Serious, planned</td></tr>
                     <tr><td>4</td><td>Storm palette</td><td>Heavy weather</td><td>Group at doorway</td><td>Protective</td></tr>
-                    <tr><td>5</td><td>Minimal art</td><td>None</td><td>None</td><td><strong>Bold alert only</strong></td></tr>
+                    <tr><td>5</td><td>Storm over the Wood</td><td>Heavy rain</td><td>Christopher Robin at the door</td><td>Urgent, still storybook</td></tr>
                 </tbody>
             </table>
         </div>

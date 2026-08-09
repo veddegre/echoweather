@@ -23,16 +23,22 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { font-size: 18px; }
+html {
+    font-size: 18px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
 
 body {
     margin: 0;
     min-height: 100vh;
+    min-height: 100dvh;
     font-family: var(--serif);
     color: var(--ink);
     background: var(--paper);
     line-height: 1.6;
     transition: background 1s ease;
+    overflow-x: clip;
 }
 
 body.woods-page::after {
@@ -65,18 +71,47 @@ body.level-1 { --current-sky: var(--sky-1); }
 body.level-2 { --current-sky: var(--sky-2); }
 body.level-3 { --current-sky: var(--sky-3); color: #f0ebe0; }
 body.level-4 { --current-sky: var(--sky-4); color: #f0ebe0; }
-body.level-5 { --current-sky: var(--sky-5); color: #fff; background: #1a1a1e; }
+body.level-5 {
+    --current-sky: var(--sky-5);
+    color: var(--ink);
+    background: var(--paper);
+}
 
 body.level-3 .card,
 body.level-4 .card { background: rgba(245, 240, 230, 0.95); color: var(--ink); }
 
-body.level-5 .card {
-    background: #fff;
-    color: #1a1a1e;
-    border: 3px solid #c0392b;
+body.level-5 .sky-layer {
+    background: linear-gradient(
+        to bottom,
+        var(--sky-5) 0%,
+        #3a3540 40%,
+        var(--paper) 82%
+    );
 }
 
-body.level-5 .level-name { color: #c0392b; font-size: 2rem; }
+body.level-5 .cloud { opacity: 0.4; }
+
+body.level-5 .card {
+    background: rgba(255, 252, 245, 0.97);
+    color: var(--ink);
+    border: 1px solid rgba(139, 105, 20, 0.28);
+}
+
+body.level-5 .hero-card {
+    border-top: 3px double rgba(146, 43, 33, 0.55);
+    border-bottom: 3px double rgba(146, 43, 33, 0.55);
+    background: rgba(255, 252, 247, 0.98);
+}
+
+body.level-5 .level-name {
+    color: #7a2418;
+    font-size: 2rem;
+}
+
+body.level-5 .level-message {
+    font-weight: 700;
+    color: var(--ink);
+}
 
 /* Sky animation layer */
 .sky-layer {
@@ -113,7 +148,8 @@ body.level-4 .cloud { opacity: 1; }
 }
 
 body.level-3 .rain-layer,
-body.level-4 .rain-layer {
+body.level-4 .rain-layer,
+body.level-5 .rain-layer {
     opacity: 1;
     background: repeating-linear-gradient(
         180deg,
@@ -160,6 +196,7 @@ body.level-4 .wind-layer {
 /* Header */
 .site-header {
     padding: 1.35rem 2rem 1.1rem;
+    padding-top: max(1.35rem, env(safe-area-inset-top, 0px));
     border-bottom: 1px solid rgba(139, 105, 20, 0.22);
     background: rgba(247, 241, 227, 0.88);
     backdrop-filter: blur(4px);
@@ -220,6 +257,8 @@ body.level-4 .wind-layer {
     font-weight: 600;
     line-height: 1.25;
     color: var(--ink);
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .woods-location-note {
@@ -368,6 +407,8 @@ body.level-4 .wind-layer {
     margin: 0 -0.25rem;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 0.5rem;
     scrollbar-width: thin;
     scrollbar-color: var(--paper-dark) transparent;
 }
@@ -394,6 +435,7 @@ body.level-4 .wind-layer {
     border: 1px solid var(--paper-dark);
     border-radius: 4px;
     text-align: center;
+    scroll-snap-align: start;
 }
 
 .hour-cell-time {
@@ -540,9 +582,10 @@ body.level-4 .wind-layer {
 }
 
 body.level-5 .level-badge {
-    background: #c0392b;
-    color: #fff;
+    background: var(--honey);
+    color: var(--ink);
     border-color: #922b21;
+    box-shadow: 0 0 0 1px rgba(146, 43, 33, 0.35);
 }
 
 .hero-grid {
@@ -570,6 +613,7 @@ body.level-5 .level-badge {
     font-weight: 700;
     margin: 0 0 0.5rem;
     line-height: 1.2;
+    overflow-wrap: anywhere;
 }
 
 .level-message {
@@ -832,11 +876,21 @@ body.level-1 .character-spot {
 
 body.level-4 .advisor-quote,
 body.level-5 .advisor-quote {
-    border-left-color: #c0392b;
-    background: #fff;
+    border-left-color: #922b21;
+    background: rgba(255, 252, 247, 0.98);
 }
 
-body.level-5 .advisor-name { color: #c0392b; }
+body.level-5 .advisor-name { color: #7a2418; }
+
+body.level-5 .character-role {
+    border-left-color: #922b21;
+    color: #7a2418;
+    font-weight: 700;
+}
+
+body.level-5 .day-story-footnote {
+    border-left-color: #922b21;
+}
 
 /* Alerts — legacy removed; see NWS section below */
 
@@ -1128,7 +1182,7 @@ body.level-5 .advisor-name { color: #c0392b; }
 .site-footer {
     max-width: 960px;
     margin: 0 auto;
-    padding: 0 1.5rem 2rem;
+    padding: 0 1.5rem max(2rem, env(safe-area-inset-bottom, 0px));
     text-align: center;
     font-size: 0.8rem;
     color: var(--ink-light);
@@ -1156,7 +1210,8 @@ body.level-5 .advisor-name { color: #c0392b; }
     html { font-size: 16px; }
 
     .site-header {
-        padding: 1rem 1rem;
+        padding: 0.85rem 1rem;
+        padding-top: max(0.85rem, env(safe-area-inset-top, 0px));
     }
 
     .site-title {
@@ -1171,47 +1226,103 @@ body.level-5 .advisor-name { color: #c0392b; }
         display: inline-block;
     }
 
-    .woods-location { padding: 0 1rem 0.5rem; }
+    .woods-location {
+        padding: 0 0.75rem 0.5rem;
+    }
 
     .woods-location-inner {
         flex-direction: column;
         align-items: stretch;
+        padding: 0.75rem 0.85rem;
+        gap: 0.65rem;
     }
 
     .woods-location-controls {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.5rem;
+        align-items: center;
         justify-content: stretch;
     }
 
-    .woods-search { max-width: none; flex: 1 1 auto; }
+    .woods-unit-toggle {
+        grid-column: 1;
+    }
 
-    .hour-cell { width: 3.75rem; }
+    .woods-location-controls .woods-btn#use-my-location {
+        grid-column: 2;
+        justify-self: stretch;
+        text-align: center;
+    }
+
+    .woods-search {
+        grid-column: 1 / -1;
+        max-width: none;
+        min-width: 0;
+        flex: none;
+    }
+
+    .woods-guide-nudge {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.85rem;
+        padding: 0.85rem 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .woods-guide-nudge-text {
+        flex: none;
+    }
+
+    .woods-guide-nudge .woods-btn-quiet {
+        width: 100%;
+        text-align: center;
+    }
 
     .main-content {
-        padding: 1.25rem 1rem 2rem;
+        padding: 1rem 0.75rem 1.75rem;
     }
 
     .card {
-        padding: 1.25rem 1rem;
-        margin-bottom: 1.25rem;
+        padding: 1.15rem 0.95rem;
+        margin-bottom: 1.1rem;
+    }
+
+    .card h3 {
+        font-size: 1.2rem;
+    }
+
+    .hero-card {
+        padding-top: 1.85rem;
+        overflow: visible;
+    }
+
+    .hero-text .location {
+        display: none;
     }
 
     .level-badge {
-        left: 1rem;
-        font-size: 0.8rem;
+        left: 0.85rem;
+        top: -12px;
+        font-size: 0.78rem;
+        padding: 0.2rem 0.75rem;
     }
 
     .level-name {
         font-size: 1.65rem;
     }
 
+    .level-message {
+        font-size: 1rem;
+    }
+
     .hero-grid {
-        gap: 1.25rem;
+        gap: 1rem;
     }
 
     .hero-visual {
-        flex-direction: row;
-        justify-content: center;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 0.65rem;
     }
 
     .char-image {
@@ -1219,33 +1330,75 @@ body.level-5 .advisor-name { color: #c0392b; }
         max-width: 130px;
     }
 
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.65rem;
+    .day-story {
+        font-size: 1rem;
+        line-height: 1.65;
     }
 
-    .stat-value { font-size: 1.25rem; }
+    .day-story-aside {
+        font-size: 0.88rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.55rem;
+    }
+
+    .stat {
+        padding: 0.6rem 0.45rem;
+    }
+
+    .stat-value {
+        font-size: 1.2rem;
+    }
+
+    .advisor-quote {
+        margin-top: 1rem;
+        padding: 1rem 0.95rem 1rem 1.1rem;
+        font-size: 0.95rem;
+    }
+
+    .hour-cell {
+        width: 3.65rem;
+        padding: 0.55rem 0.35rem 0.5rem;
+    }
 
     .scale-path {
         flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        padding-bottom: 0.5rem;
-        margin: 0 -0.25rem;
         scroll-snap-type: x proximity;
+        padding-bottom: 0.5rem;
+        margin: 0 -0.15rem;
+        scroll-padding-inline: 0.5rem;
     }
 
     .scale-step {
         flex-shrink: 0;
         scroll-snap-align: start;
-        min-width: 64px;
-        padding: 0.45rem 0.55rem;
+        min-width: 62px;
+        padding: 0.45rem 0.5rem;
     }
 
-    .scale-arrow { flex-shrink: 0; }
+    .scale-arrow {
+        flex-shrink: 0;
+    }
 
     .daily-grid {
         grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .nws-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .nws-alert-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
     }
 
     .nws-alert-meta {
@@ -1256,6 +1409,16 @@ body.level-5 .advisor-name { color: #c0392b; }
         font-size: 1.05rem;
     }
 
+    .disclaimer,
+    .woods-accuracy {
+        font-size: 0.8rem;
+    }
+
+    .site-footer {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
     .footer-links {
         display: flex;
         flex-direction: column;
@@ -1263,9 +1426,8 @@ body.level-5 .advisor-name { color: #c0392b; }
         align-items: center;
     }
 
-    .link-button {
-        min-height: 44px;
-        padding: 0.5rem 0.25rem;
+    .attribution {
+        font-size: 0.75rem;
     }
 }
 
@@ -1281,23 +1443,37 @@ body.level-5 .advisor-name { color: #c0392b; }
     .site-header nav {
         width: 100%;
         display: flex;
-        gap: 1rem;
+        flex-wrap: wrap;
+        gap: 0.65rem 1rem;
     }
 
     .site-header nav a {
         margin-left: 0;
     }
 
+    .woods-location-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .woods-unit-toggle {
+        justify-self: start;
+    }
+
+    .woods-location-controls .woods-btn#use-my-location {
+        grid-column: 1;
+        width: 100%;
+    }
+
     .level-name {
-        font-size: 1.45rem;
+        font-size: 1.4rem;
     }
 
     body.level-5 .level-name {
-        font-size: 1.35rem;
+        font-size: 1.3rem;
     }
 
-    .hero-visual {
-        flex-direction: column;
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
     }
 
     .nws-summary-chips {
@@ -1327,7 +1503,39 @@ body.level-5 .advisor-name { color: #c0392b; }
     .site-header nav a,
     .main-content a,
     .site-footer a {
-        padding: 0.15rem 0;
+        padding: 0.2rem 0;
+    }
+
+    .woods-btn,
+    .woods-unit,
+    .woods-search input,
+    .woods-guide-nudge .woods-btn-quiet {
+        min-height: 44px;
+    }
+
+    .woods-unit {
+        min-width: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .woods-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .woods-search input {
+        padding-top: 0.55rem;
+        padding-bottom: 0.55rem;
+    }
+
+    .link-button {
+        min-height: 44px;
+        padding: 0.5rem 0.25rem;
+        display: inline-flex;
+        align-items: center;
     }
 }
 

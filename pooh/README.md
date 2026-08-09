@@ -7,6 +7,7 @@ A PHP weather display inspired by A. A. Milne's 1926 public-domain *Winnie-the-P
 ## Features
 
 - Live weather from [Open-Meteo](https://open-meteo.com/) (no API key required)
+- **US locations:** NWS forecast and METAR observations when available (same sources as Echo Weather)
 - Optional [NWS active alerts](https://www.weather.gov/documentation/services-web-api) for US locations
 - Watches, warnings, and advisories grouped with official details
 - Six-level Hundred Acre Weather Scale (Fine → Emergency)
@@ -61,6 +62,7 @@ Edit `config.php`:
 | `temperature_unit` | fahrenheit | `fahrenheit` or `celsius` |
 | `wind_unit` | mph | `mph`, `kmh`, or `ms` |
 | `nws_alerts` | true | Fetch US NWS alerts |
+| `nws_forecast` | true | Use NWS forecast + METAR for US locations (Open-Meteo fallback) |
 | `auto_browser_location` | true | Try device GPS after IP estimate |
 
 Post-deploy smoke tests include `/pooh/index.php`, `/pooh/slides.php`, and `/pooh/api/geocode.php` (see root `scripts/smoke.sh`).
@@ -80,9 +82,9 @@ http://localhost:8080/index.php?lat=51.5074&lon=-0.1278&name=London
 | 2 | A Rather Blustery Day |
 | 3 | A Very Wet and Worrisome Day |
 | 4 | Everyone to Christopher Robin's House |
-| 5 | The Hundred Acre Emergency |
+| 5 | The Hundred Acre Emergency | Christopher Robin |
 
-Level is determined from the highest of: weather code, wind, temperature extremes, precipitation, and active NWS alerts.
+Level is determined from the highest of: weather code, wind, temperature extremes, precipitation, and active NWS alerts. For US locations, forecast and current conditions prefer NWS/METAR over raw model output.
 
 ## Slide navigation
 

@@ -18,6 +18,9 @@ return [
     // Enable NWS active alerts for US coordinates (requires network)
     'nws_alerts' => true,
 
+    // Use NWS forecast + METAR for US locations (Open-Meteo fallback)
+    'nws_forecast' => true,
+
     // Try browser geolocation automatically when IP/default was used
     'auto_browser_location' => true,
 

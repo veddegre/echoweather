@@ -98,11 +98,11 @@ function getWeatherLevels(): array
         5 => [
             'name'        => 'The Hundred Acre Emergency',
             'short'       => 'Emergency',
-            'character'   => null,
-            'character_role' => null,
-            'message'     => 'No time for poetry. Shelter. Now.',
-            'story'       => 'There was no time for anything but finding the sturdiest place available and staying there.',
-            'action'      => 'Lowest floor, interior room, away from windows. Follow every official instruction immediately.',
+            'character'   => 'Christopher Robin',
+            'character_role' => 'is at the door of his house, and he means it',
+            'message'     => 'Christopher Robin is calling everyone inside. At once.',
+            'story'       => 'There was no time for stories, or honey, or even a small smackerel — only for the sturdiest walls in the Wood, and staying exactly where you were told.',
+            'action'      => 'Come to the lowest floor, the innermost room, far from windows. Do precisely what the officials say — as Christopher Robin would insist, without argument.',
             'conditions'  => [
                 'Tornado warning',
                 'Flash flood emergency',
@@ -111,7 +111,7 @@ function getWeatherLevels(): array
             ],
             'official'    => ['Tornado Warning', 'Flash Flood Emergency', 'Hurricane Warning (landfall)', 'Life-threatening event'],
             'css_class'   => 'level-5',
-            'icon'        => 'emergency',
+            'icon'        => 'house',
         ],
     ];
 }
@@ -223,8 +223,9 @@ function getAdvisorQuotes(): array
                 'The woods can wait. You cannot. Come to the house.',
             ],
             5 => [
-                'Shelter. Immediately. I will explain why afterward, if there is an afterward.',
-                'This is serious. Do exactly what the officials say, and do it now.',
+                'The house. Now. I shall count to three, and I do not intend to reach four.',
+                'Everyone inside — Pooh, Piglet, all of you. The officials know what they are talking about.',
+                'This is not a day for the middle of the woods. Come where the walls are.',
             ],
             'any' => [
                 'Stay where it is safe until someone sensible gives the all-clear.',

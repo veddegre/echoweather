@@ -5,10 +5,11 @@
 
 require_once __DIR__ . '/levels.php';
 require_once __DIR__ . '/alerts.php';
+require_once __DIR__ . '/nws.php';
 
 function fetchWeather(array $config, float $lat, float $lon): array
 {
-    $cacheKey = sprintf('weather_%.4f_%.4f', $lat, $lon);
+    $cacheKey = sprintf('weather2_%.4f_%.4f', $lat, $lon);
     $cacheFile = rtrim($config['cache_dir'], '/') . '/' . md5($cacheKey) . '.json';
     $ttl = (int) ($config['cache_ttl'] ?? 0);
 
@@ -50,9 +51,23 @@ function fetchWeather(array $config, float $lat, float $lon): array
         throw new RuntimeException('Weather API returned an unexpected response.');
     }
 
+    $forecastSource = 'open-meteo';
+    $currentSource = 'open-meteo';
+    $nwsAvailable = isUsLocation($lat, $lon);
+    $nwsForecastEnabled = !empty($config['nws_forecast']) && $nwsAvailable;
+
+    if ($nwsForecastEnabled) {
+        $nws = fetchNwsForecasts($lat, $lon, true);
+        if ($nws !== null) {
+            $merged = applyNwsForecastToOpenMeteo($data, $nws, $config);
+            $data = $merged['data'];
+            $forecastSource = $merged['forecast_source'];
+            $currentSource = $merged['current_source'];
+        }
+    }
+
     $alerts = [];
-    $nwsAvailable = !empty($config['nws_alerts']) && isUsLocation($lat, $lon);
-    if ($nwsAvailable) {
+    if (!empty($config['nws_alerts']) && $nwsAvailable) {
         $alerts = fetchNwsAlerts($lat, $lon);
     }
 
@@ -73,6 +88,8 @@ function fetchWeather(array $config, float $lat, float $lon): array
         'alerts'       => $alerts,
         'nws_available'=> $nwsAvailable,
         'nws_enabled'  => !empty($config['nws_alerts']),
+        'forecast_source' => $forecastSource,
+        'current_source'  => $currentSource,
         'level'        => $levelResult['level'],
         'level_info'   => $levels[$levelResult['level']],
         'level_reasons'=> formatWoodsReasons($levelResult['reasons']),
@@ -121,64 +138,6 @@ function httpGet(string $url): ?string
 function isUsLocation(float $lat, float $lon): bool
 {
     return $lat >= 24.0 && $lat <= 50.0 && $lon >= -125.0 && $lon <= -66.0;
-}
-
-function fetchNwsAlerts(float $lat, float $lon): array
-{
-    $url = sprintf(
-        'https://api.weather.gov/alerts/active?point=%.4f,%.4f',
-        $lat,
-        $lon
-    );
-
-    if (!function_exists('curl_init')) {
-        return [];
-    }
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_TIMEOUT        => 10,
-        CURLOPT_HTTPHEADER     => ['Accept: application/geo+json', 'User-Agent: HundredAcreWeather/1.0 (educational)'],
-    ]);
-    $body = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($code !== 200 || $body === false) {
-        return [];
-    }
-
-    $data = json_decode($body, true);
-    if (!isset($data['features']) || !is_array($data['features'])) {
-        return [];
-    }
-
-    $alerts = [];
-    foreach ($data['features'] as $feature) {
-        $props = $feature['properties'] ?? [];
-        $event = $props['event'] ?? 'Alert';
-        $alerts[] = [
-            'event'       => $event,
-            'type'        => classifyAlertType($event),
-            'headline'    => $props['headline'] ?? '',
-            'severity'    => $props['severity'] ?? '',
-            'urgency'     => $props['urgency'] ?? '',
-            'certainty'   => $props['certainty'] ?? '',
-            'description' => $props['description'] ?? '',
-            'instruction' => $props['instruction'] ?? '',
-            'effective'   => $props['effective'] ?? '',
-            'expires'     => $props['expires'] ?? '',
-            'onset'       => $props['onset'] ?? '',
-            'ends'        => $props['ends'] ?? '',
-            'areaDesc'    => $props['areaDesc'] ?? '',
-            'senderName'  => $props['senderName'] ?? '',
-            'url'         => $props['@id'] ?? ($feature['id'] ?? ''),
-        ];
-    }
-
-    return $alerts;
 }
 
 function determineLevel(array $data, array $alerts, array $config): array
@@ -383,11 +342,12 @@ function pickAdvisorCharacter(int $level, array $reasons): string
 
 function pickSpotCharacter(int $level, array $reasons): ?string
 {
+    $levels = getWeatherLevels();
+
     if ($level >= 5) {
-        return null;
+        return $levels[5]['character'] ?? 'Christopher Robin';
     }
 
-    $levels = getWeatherLevels();
     $default = $levels[$level]['character'] ?? null;
 
     // Levels 0–1 keep Pooh in the hero (level-specific art); advisors speak elsewhere.
@@ -638,7 +598,7 @@ function storyCharacterAside(string $character, int $level): string
         'Rabbit'            => [2 => 'is already thinking about the garden chairs', 3 => 'has begun reorganizing the afternoon'],
         'Owl'               => [3 => 'consults the map with growing seriousness', 4 => 'considers this beneath his dignity and the clouds\''],
         'Eeyore'            => [1 => 'is not surprised', 2 => 'suspected the wind would get ideas'],
-        'Christopher Robin' => [4 => 'would like everyone nearer the house', 5 => ' means now, not after one more adventure'],
+        'Christopher Robin' => [4 => 'would like everyone nearer the house', 5 => 'has opened the door and will not take no for an answer'],
     ];
 
     return $short[$character][$level]
@@ -876,6 +836,15 @@ function weatherCodeIconKey(int $code): string
     };
 }
 
+function levelIconKey(int $level, int $weatherCode): string
+{
+    if ($level >= 5) {
+        return 'house';
+    }
+
+    return weatherCodeIconKey($weatherCode);
+}
+
 function weatherIconSvg(string $icon, int $size = 48): string
 {
     $icons = [
@@ -884,6 +853,7 @@ function weatherIconSvg(string $icon, int $size = 48): string
         'wind' => '<path d="M8 20h28M8 28h20M8 36h24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M36 28c4 0 6-2 6-4s-2-4-6-4" fill="none" stroke="currentColor" stroke-width="2"/>',
         'rain' => '<path d="M14 18h28a6 6 0 0 0 0-12 8 8 0 0 0-15.5 2A5 5 0 0 0 14 18z" fill="none" stroke="currentColor" stroke-width="2"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="26" x2="16" y2="32"/><line x1="26" y1="26" x2="24" y2="34"/><line x1="34" y1="26" x2="32" y2="32"/></g>',
         'storm' => '<path d="M12 16h30a7 7 0 0 0 0-14 9 9 0 0 0-17 2.5A6 6 0 0 0 12 16z" fill="none" stroke="currentColor" stroke-width="2"/><polygon points="26,22 20,34 25,34 22,44 32,30 27,30 30,22" fill="currentColor"/>',
+        'house' => '<path d="M10 22 L24 10 L38 22 V38 H10 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="18" y="28" width="12" height="10" fill="none" stroke="currentColor" stroke-width="2"/><line x1="24" y1="18" x2="24" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
         'emergency' => '<polygon points="24,6 42,40 6,40" fill="none" stroke="currentColor" stroke-width="2"/><line x1="24" y1="16" x2="24" y2="28" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="34" r="1.5" fill="currentColor"/>',
     ];
 
