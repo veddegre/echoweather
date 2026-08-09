@@ -85,7 +85,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
             <div class="level-intro">
                 <?php if ($lvl['character']): ?>
                 <div class="level-character-img">
-                    <?= renderCharacterImage($lvl['character'], 'slide-char-image') ?>
+                    <?= renderCharacterImage($lvl['character'], 'slide-char-image', $num) ?>
                 </div>
                 <p class="character-note"><em><?= htmlspecialchars($lvl['character']) ?></em> — <?= htmlspecialchars($lvl['character_role']) ?></p>
                 <?php endif; ?>

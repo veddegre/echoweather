@@ -87,7 +87,8 @@ Original **E. H. Shepard** pen-and-ink illustrations from *Winnie-the-Pooh* (192
 
 | Character | Gutenberg file | Scene |
 |-----------|----------------|-------|
-| Pooh | `illus3.jpg` | At the door of Mr. Sanders |
+| Pooh (Level 0) | `illus3.jpg` | At the door of Mr. Sanders |
+| Pooh (Level 1) | `illus4.jpg` | Peering up at the sky |
 | Piglet | [Wikimedia: Piglet EHShepard.jpg](https://commons.wikimedia.org/wiki/File:Piglet_EHShepard.jpg) | Getting ready for the party (1500×1212 scan) |
 | Rabbit | `illus69.jpg` | Discussing plans, Chapter VII |
 | Owl | `illus63.jpg` | Writing at his desk, Chapter VI |

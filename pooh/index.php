@@ -126,7 +126,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
                 <?= weatherIconSvg($info['icon'], 80) ?>
                 <?php if ($displayCharacter): ?>
                 <div class="character-spot" data-character="<?= htmlspecialchars(strtolower(str_replace(' ', '-', $displayCharacter))) ?>">
-                    <?= renderCharacterImage($displayCharacter) ?>
+                    <?= renderCharacterImage($displayCharacter, 'char-image', $level) ?>
                     <span class="character-label"><?= htmlspecialchars($displayCharacter) ?></span>
                 </div>
                 <?php endif; ?>

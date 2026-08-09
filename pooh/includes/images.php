@@ -19,6 +19,14 @@ function getCharacterImages(): array
             'alt'        => 'Winnie-the-Pooh sitting by his campfire, illustration by E. H. Shepard (1926)',
             'gutenberg'  => 'illus3.jpg',
             'scene'      => 'Pooh at the door of Mr. Sanders, Chapter I',
+            'variants'   => [
+                1 => [
+                    'file'      => 'pooh-bothersome.jpg',
+                    'alt'       => 'Winnie-the-Pooh peering up at the sky, illustration by E. H. Shepard (1926)',
+                    'gutenberg' => 'illus4.jpg',
+                    'scene'     => 'Pooh and the bees, Chapter I',
+                ],
+            ],
         ],
         'Piglet' => [
             'file'       => 'piglet.jpg',
@@ -68,28 +76,44 @@ function getDecorativeImages(): array
     ];
 }
 
-function characterImagePath(string $character): ?string
+function resolveCharacterImageMeta(string $character, ?int $level = null): ?array
 {
     $images = getCharacterImages();
     if (!isset($images[$character])) {
         return null;
     }
 
-    $relative = 'assets/images/characters/' . $images[$character]['file'];
+    $meta = $images[$character];
+    if ($level !== null && isset($meta['variants'][$level])) {
+        $meta = array_merge($meta, $meta['variants'][$level]);
+    }
+
+    unset($meta['variants']);
+
+    return $meta;
+}
+
+function characterImagePath(string $character, ?int $level = null): ?string
+{
+    $meta = resolveCharacterImageMeta($character, $level);
+    if ($meta === null) {
+        return null;
+    }
+
+    $relative = 'assets/images/characters/' . $meta['file'];
     $absolute = __DIR__ . '/../' . $relative;
 
     return is_file($absolute) ? $relative : null;
 }
 
-function renderCharacterImage(string $character, string $class = 'char-image'): string
+function renderCharacterImage(string $character, string $class = 'char-image', ?int $level = null): string
 {
-    $images = getCharacterImages();
-    if (!isset($images[$character])) {
+    $meta = resolveCharacterImageMeta($character, $level);
+    if ($meta === null) {
         return '';
     }
 
-    $meta = $images[$character];
-    $path = characterImagePath($character);
+    $path = characterImagePath($character, $level);
 
     if ($path === null) {
         return '';
