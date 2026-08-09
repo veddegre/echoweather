@@ -92,11 +92,13 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A storybook reading of 
             <?php endif; ?>
         </div>
         <div class="woods-location-controls">
-            <div class="woods-unit-toggle" id="woods-unit-toggle" role="group" aria-label="Temperature units">
-                <button type="button" class="woods-unit<?= $isFahrenheit ? ' is-on' : '' ?>" data-units="f" aria-pressed="<?= $isFahrenheit ? 'true' : 'false' ?>">°F</button>
-                <button type="button" class="woods-unit<?= !$isFahrenheit ? ' is-on' : '' ?>" data-units="c" aria-pressed="<?= !$isFahrenheit ? 'true' : 'false' ?>">°C</button>
+            <div class="woods-location-actions">
+                <div class="woods-unit-toggle" id="woods-unit-toggle" role="group" aria-label="Temperature units">
+                    <button type="button" class="woods-unit<?= $isFahrenheit ? ' is-on' : '' ?>" data-units="f" aria-pressed="<?= $isFahrenheit ? 'true' : 'false' ?>">°F</button>
+                    <button type="button" class="woods-unit<?= !$isFahrenheit ? ' is-on' : '' ?>" data-units="c" aria-pressed="<?= !$isFahrenheit ? 'true' : 'false' ?>">°C</button>
+                </div>
+                <button type="button" class="woods-btn" id="use-my-location">Where I am</button>
             </div>
-            <button type="button" class="woods-btn" id="use-my-location">Where I am</button>
             <form class="woods-search" id="location-search-form" role="search">
                 <label for="location-search-input" class="visually-hidden">Search another place</label>
                 <input type="search" id="location-search-input" name="q" placeholder="Search elsewhere…" autocomplete="off" spellcheck="false">
@@ -104,14 +106,14 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A storybook reading of 
             </form>
         </div>
     </div>
+
+    <aside class="woods-guide-nudge" id="woods-guide-nudge" hidden aria-live="polite">
+        <p class="woods-guide-nudge-text"><strong>First time in the woods?</strong> The <a href="slides.php<?= $echoQs ?>">weather guide</a> explains the six levels and what the characters notice.</p>
+        <button type="button" class="woods-btn woods-btn-quiet" id="woods-guide-dismiss">Very well then</button>
+    </aside>
 </section>
 
 <main class="main-content">
-
-<aside class="woods-guide-nudge" id="woods-guide-nudge" hidden aria-live="polite">
-    <p class="woods-guide-nudge-text"><strong>First time in the woods?</strong> The <a href="slides.php<?= $echoQs ?>">weather guide</a> explains the six levels and what the characters notice.</p>
-    <button type="button" class="woods-btn woods-btn-quiet" id="woods-guide-dismiss">Very well then</button>
-</aside>
 
 <?php if ($error): ?>
     <section class="card error-card">

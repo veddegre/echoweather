@@ -121,17 +121,18 @@ $exampleQuotes = getAdvisorQuotes();
     <!-- Slide 10 -->
     <section class="slide" data-slide="10">
         <div class="slide-inner">
-            <h2>What the characters might notice</h2>
+            <h2>Who speaks when</h2>
+            <p class="intro">This is not the six levels. Each level has its own hero illustration (see the level slides and the live forecast). These characters are <strong>advisors</strong> — the woods picks one to quote based on what is actually happening: wind, rain, clouds, official alerts, and the like.</p>
             <div class="character-grid">
                 <?php foreach ($characters as $name => $info): ?>
                 <div class="character-card">
                     <?= renderCharacterImage($name, 'slide-char-image small') ?>
                     <strong><?= htmlspecialchars($name) ?></strong>
-                    <span>notices <?= htmlspecialchars($info['notices']) ?></span>
+                    <span>may speak when the forecast mentions <?= htmlspecialchars($info['notices']) ?></span>
                 </div>
                 <?php endforeach; ?>
             </div>
-            <p class="intro">Characters are information guides — not permanent symbols of danger.</p>
+            <p class="intro">The quote under &ldquo;What you should do&rdquo; follows these cues. The large illustration at the top follows the level.</p>
         </div>
     </section>
 
@@ -167,9 +168,9 @@ $exampleQuotes = getAdvisorQuotes();
                     <tr><td>0</td><td>Pale blue</td><td>Still leaves</td><td>Pooh walking</td><td>Warm, open</td></tr>
                     <tr><td>1</td><td>Soft gray clouds</td><td>Light drift</td><td>Pooh or Eeyore</td><td>Mild caution</td></tr>
                     <tr><td>2</td><td>Gray-blue</td><td>Swaying branches</td><td>Piglet with scarf</td><td>Active care</td></tr>
-                    <tr><td>3</td><td>Dark clouds, rain</td><td>Rain strokes</td><td>Owl with map</td><td>Serious, planned</td></tr>
-                    <tr><td>4</td><td>Storm palette</td><td>Heavy weather</td><td>Group at doorway</td><td>Protective</td></tr>
-                    <tr><td>5</td><td>Storm over the Wood</td><td>Heavy rain</td><td>Christopher Robin at the door</td><td>Urgent, still storybook</td></tr>
+                    <tr><td>3</td><td>Dark clouds, rain</td><td>Rain on the paths</td><td>Owl</td><td>Serious, planned</td></tr>
+                    <tr><td>4</td><td>Storm-dark sky</td><td>Rain and wind</td><td>Christopher Robin at the green door</td><td>Come to the house</td></tr>
+                    <tr><td>5</td><td>Storm over the Wood</td><td>Heavy rain</td><td>Christopher Robin on the stairs</td><td>Inside, now</td></tr>
                 </tbody>
             </table>
         </div>
