@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $q = trim((string) ($_GET['q'] ?? $_GET['name'] ?? ''));
-if (mb_strlen($q) < 2) {
+if (strlen($q) < 2) {
     http_response_code(400);
     echo json_encode(['error' => 'Query too short']);
     exit;
