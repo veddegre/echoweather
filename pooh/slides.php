@@ -6,6 +6,7 @@
 require_once __DIR__ . '/includes/levels.php';
 require_once __DIR__ . '/includes/images.php';
 require_once __DIR__ . '/includes/preferences.php';
+require_once __DIR__ . '/includes/weather.php';
 
 $levels = getWeatherLevels();
 $characters = getCharacterGuide();
@@ -15,6 +16,20 @@ $echoQs = $echoFrom ? '?from=echo' : '';
 $exampleLevel = 2;
 $example = $levels[$exampleLevel];
 $exampleQuotes = getAdvisorQuotes();
+$exampleAdvisor = pickAdvisor($exampleLevel, ['Wind gusts above 25 mph']);
+$sampleHourly = [
+    ['time' => '2 PM', 'icon' => 'cloud', 'temp' => '62°', 'rain' => 15],
+    ['time' => '3 PM', 'icon' => 'cloud', 'temp' => '61°', 'rain' => 20],
+    ['time' => '4 PM', 'icon' => 'rain', 'temp' => '59°', 'rain' => 45],
+    ['time' => '5 PM', 'icon' => 'rain', 'temp' => '58°', 'rain' => 55],
+    ['time' => '6 PM', 'icon' => 'rain', 'temp' => '57°', 'rain' => 60],
+    ['time' => '7 PM', 'icon' => 'cloud', 'temp' => '56°', 'rain' => 30],
+];
+$sampleDaily = [
+    ['day' => 'Sat', 'desc' => 'Partly cloudy', 'high' => '72°', 'low' => '54°', 'sunset' => '7:42 PM'],
+    ['day' => 'Sun', 'desc' => 'Showers likely', 'high' => '68°', 'low' => '52°', 'sunset' => '7:40 PM'],
+    ['day' => 'Mon', 'desc' => 'Breezy', 'high' => '65°', 'low' => '48°', 'sunset' => '7:38 PM'],
+];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -178,44 +193,151 @@ $exampleQuotes = getAdvisorQuotes();
 
     <!-- Slide 13 -->
     <section class="slide" data-slide="13">
-        <div class="slide-inner">
+        <div class="slide-inner slide-inner-wide">
             <h2>What the live forecast shows</h2>
-            <p class="intro">The forecast opens with the current level, then <strong>Today&rsquo;s story</strong> narrates how the day may unfold — morning, afternoon, evening — with character asides when official alerts apply.</p>
-            <div class="sample-forecast">
-                <div class="sample-section">
-                    <p class="sample-label">Today&rsquo;s story</p>
-                    <p><strong>This morning:</strong> Begins as a <em>Fine Day for a Walk</em> (Level 0). <em>Pooh</em> &mdash; considers whether it is a good day for doing Nothing.</p>
-                    <p><strong>This afternoon:</strong> May become a <em><?= htmlspecialchars($example['name']) ?></em> (Level <?= $exampleLevel ?>). <em><?= htmlspecialchars($example['character']) ?></em> &mdash; <?= htmlspecialchars($example['character_role']) ?>.</p>
-                    <p class="sample-quote"><strong>Rabbit insists:</strong> <?= htmlspecialchars($exampleQuotes['Rabbit'][2][0] ?? 'Bring the garden chairs in.') ?></p>
-                </div>
-                <div class="sample-section">
-                    <p class="sample-label">Level summary (right now)</p>
-                    <p><span class="sample-badge">Level <?= $exampleLevel ?></span></p>
-                    <p class="sample-level-name"><?= htmlspecialchars($example['name']) ?></p>
-                    <p><?= htmlspecialchars($example['message']) ?></p>
-                </div>
-                <div class="sample-section">
-                    <p class="sample-label">National Weather Service alerts</p>
-                    <p>Active watches, warnings, and advisories when they apply — grouped by type with full details and links.</p>
-                </div>
-                <div class="sample-section">
-                    <p class="sample-label">What the woods report now</p>
-                    <div class="sample-data">
-                        <span>Now 58&deg;</span>
-                        <span>Wind 12 mph</span>
-                        <span>Gusts 28 mph</span>
-                        <span>Humidity 71%</span>
+            <p class="intro">The live page uses the same cards and headings below, in this order. Illustrations and numbers change with your location; this is a static example at Level <?= $exampleLevel ?>.</p>
+            <div class="sample-live-forecast" aria-label="Example forecast layout">
+                <section class="sample-card sample-hero-card">
+                    <div class="sample-level-badge">Level <?= $exampleLevel ?></div>
+                    <div class="sample-hero-grid">
+                        <div class="sample-hero-text">
+                            <p class="sample-location">Hundred Acre Wood</p>
+                            <h3 class="sample-level-name"><?= htmlspecialchars($example['name']) ?></h3>
+                            <p class="sample-level-message"><?= htmlspecialchars($example['message']) ?></p>
+                            <p class="sample-story-line"><em><?= htmlspecialchars($example['story']) ?></em></p>
+                            <p class="sample-character-role"><?= htmlspecialchars($example['character']) ?> &mdash; <?= htmlspecialchars($example['character_role']) ?></p>
+                        </div>
+                        <div class="sample-hero-visual">
+                            <?= weatherIconSvg($example['icon'], 56) ?>
+                            <?= renderCharacterImage($example['character'], 'slide-char-image sample-hero-char', $exampleLevel) ?>
+                        </div>
                     </div>
-                </div>
-                <div class="sample-section">
-                    <p class="sample-label">The next few hours &amp; looking ahead</p>
-                    <p>An hourly strip (time, icon, temperature, rain chance) and three daily cards with high/low, sky description, and sunset.</p>
-                </div>
-            </div>
-            <div class="sample-data sample-data-foot">
-                <span>Example: Wind Advisory</span>
-                <span>High 72&deg; / Low 54&deg;</span>
-                <span>Sunset 7:42 p.m.</span>
+                </section>
+
+                <section class="sample-card">
+                    <h3>Today&rsquo;s story</h3>
+                    <div class="sample-day-story">
+                        <p class="sample-day-story-beat">
+                            <strong>This morning:</strong>
+                            Begins as a <em>Fine Day for a Walk</em> (Level 0).
+                            <span class="sample-day-story-aside"><em>Pooh</em> &mdash; considers whether it is a good day for doing Nothing.</span>
+                        </p>
+                        <p class="sample-day-story-beat">
+                            <strong>This afternoon:</strong>
+                            May become a <em><?= htmlspecialchars($example['name']) ?></em> (Level <?= $exampleLevel ?>).
+                            <span class="sample-day-story-aside"><em><?= htmlspecialchars($example['character']) ?></em> &mdash; <?= htmlspecialchars($example['character_role']) ?>.</span>
+                        </p>
+                    </div>
+                    <p class="sample-day-story-footnote">
+                        <strong>Rabbit insists:</strong>
+                        <?= htmlspecialchars($exampleQuotes['Rabbit'][$exampleLevel][0] ?? 'Bring the garden chairs in.') ?>
+                    </p>
+                </section>
+
+                <section class="sample-card sample-nws-card">
+                    <h3>National Weather Service alerts</h3>
+                    <p class="sample-nws-count">1 active</p>
+                    <div class="sample-nws-chips">
+                        <span class="sample-nws-chip">1 Advisory</span>
+                    </div>
+                    <article class="sample-nws-alert">
+                        <span class="sample-nws-badge">ADVISORY</span>
+                        <p class="sample-nws-event">Wind Advisory</p>
+                        <p class="sample-nws-headline">Southwest winds 15 to 25 mph with gusts up to 35 mph this afternoon.</p>
+                    </article>
+                </section>
+
+                <section class="sample-card">
+                    <h3>What the woods report now</h3>
+                    <div class="sample-stats-grid">
+                        <div class="sample-stat">
+                            <span class="sample-stat-value">58&deg;</span>
+                            <span class="sample-stat-label">Temperature</span>
+                        </div>
+                        <div class="sample-stat">
+                            <span class="sample-stat-value">12 mph</span>
+                            <span class="sample-stat-label">Wind</span>
+                        </div>
+                        <div class="sample-stat">
+                            <span class="sample-stat-value">28 mph</span>
+                            <span class="sample-stat-label">Gusts</span>
+                        </div>
+                        <div class="sample-stat">
+                            <span class="sample-stat-value">71%</span>
+                            <span class="sample-stat-label">Humidity</span>
+                        </div>
+                    </div>
+                    <p class="sample-condition-desc">Partly cloudy</p>
+                    <ul class="sample-reasons-list">
+                        <li>Wind gusts above 25 mph</li>
+                    </ul>
+                </section>
+
+                <section class="sample-card">
+                    <h3>What you should do</h3>
+                    <p class="sample-action-text"><?= htmlspecialchars($example['action']) ?></p>
+                    <blockquote class="sample-advisor-quote">
+                        <span class="sample-advisor-name"><?= htmlspecialchars($exampleAdvisor['character']) ?></span>
+                        <span class="sample-advisor-verb"><?= htmlspecialchars($exampleAdvisor['verb']) ?>:</span>
+                        <span class="sample-advisor-text">&ldquo;<?= htmlspecialchars($exampleAdvisor['quote']) ?>&rdquo;</span>
+                    </blockquote>
+                </section>
+
+                <section class="sample-card">
+                    <h3>The path through the woods</h3>
+                    <div class="sample-scale-path">
+                        <?php foreach ($levels as $num => $lvl): ?>
+                        <div class="sample-scale-step<?= $num === $exampleLevel ? ' is-active' : '' ?><?= $num <= $exampleLevel ? ' is-reached' : '' ?>">
+                            <span class="sample-scale-num"><?= $num ?></span>
+                            <span class="sample-scale-short"><?= htmlspecialchars($lvl['short']) ?></span>
+                        </div>
+                        <?php if ($num < 5): ?><span class="sample-scale-arrow">&rarr;</span><?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+
+                <section class="sample-card">
+                    <h3>The next few hours</h3>
+                    <div class="sample-hourly-track">
+                        <div class="sample-hourly-track-inner">
+                            <?php foreach ($sampleHourly as $hour): ?>
+                            <div class="sample-hour-cell">
+                                <span class="sample-hour-time"><?= htmlspecialchars($hour['time']) ?></span>
+                                <?= weatherIconSvg($hour['icon'], 28) ?>
+                                <span class="sample-hour-temp"><?= htmlspecialchars($hour['temp']) ?></span>
+                                <?php if ($hour['rain'] > 0): ?>
+                                <span class="sample-hour-rain"><?= (int) $hour['rain'] ?>%</span>
+                                <?php else: ?>
+                                <span class="sample-hour-rain sample-hour-rain--dry">&nbsp;</span>
+                                <?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="sample-card">
+                    <h3>Looking ahead</h3>
+                    <div class="sample-daily-grid">
+                        <?php foreach ($sampleDaily as $day): ?>
+                        <article class="sample-day-card">
+                            <p class="sample-day-name"><?= htmlspecialchars($day['day']) ?></p>
+                            <p class="sample-day-desc"><?= htmlspecialchars($day['desc']) ?></p>
+                            <p class="sample-day-temps"><?= htmlspecialchars($day['high']) ?> / <?= htmlspecialchars($day['low']) ?></p>
+                            <p class="sample-day-sunset">Sunset <?= htmlspecialchars($day['sunset']) ?></p>
+                        </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+
+                <section class="sample-card">
+                    <h3>Official equivalents for this level</h3>
+                    <ul class="sample-official-list">
+                        <?php foreach ($example['official'] as $off): ?>
+                        <li><?= htmlspecialchars($off) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </section>
             </div>
             <p class="intro"><a href="index.php<?= $echoQs ?>">View the live forecast &rarr;</a></p>
         </div>
