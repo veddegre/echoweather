@@ -23,28 +23,44 @@
             + '; path=/; max-age=' + maxAge + '; SameSite=Lax';
     }
 
-    var nudge = document.getElementById('woods-guide-nudge');
-    if (nudge && !readCookie(GUIDE_COOKIE)) {
-        nudge.hidden = false;
+    function hideNudge(nudge) {
+        nudge.hidden = true;
+        nudge.setAttribute('aria-hidden', 'true');
+        nudge.style.display = 'none';
     }
 
-    var dismiss = document.getElementById('woods-guide-dismiss');
-    if (dismiss && nudge) {
-        dismiss.addEventListener('click', function () {
-            writeCookie(GUIDE_COOKIE, '1', 60 * 60 * 24 * 365);
-            nudge.hidden = true;
-        });
+    function init() {
+        var nudge = document.getElementById('woods-guide-nudge');
+        if (nudge && !readCookie(GUIDE_COOKIE)) {
+            nudge.hidden = false;
+            nudge.removeAttribute('aria-hidden');
+            nudge.style.display = '';
+        }
+
+        var dismiss = document.getElementById('woods-guide-dismiss');
+        if (dismiss && nudge) {
+            dismiss.addEventListener('click', function () {
+                writeCookie(GUIDE_COOKIE, '1', 60 * 60 * 24 * 365);
+                hideNudge(nudge);
+            });
+        }
+
+        var unitToggle = document.getElementById('woods-unit-toggle');
+        if (unitToggle) {
+            unitToggle.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-units]');
+                if (!btn) return;
+                var units = btn.getAttribute('data-units');
+                if (!units || units === readCookie(UNITS_COOKIE)) return;
+                writeCookie(UNITS_COOKIE, units, 60 * 60 * 24 * 365);
+                window.location.reload();
+            });
+        }
     }
 
-    var unitToggle = document.getElementById('woods-unit-toggle');
-    if (unitToggle) {
-        unitToggle.addEventListener('click', function (e) {
-            var btn = e.target.closest('[data-units]');
-            if (!btn) return;
-            var units = btn.getAttribute('data-units');
-            if (!units || units === readCookie(UNITS_COOKIE)) return;
-            writeCookie(UNITS_COOKIE, units, 60 * 60 * 24 * 365);
-            window.location.reload();
-        });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
 })();

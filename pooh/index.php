@@ -103,12 +103,12 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A storybook reading of 
     </div>
 </section>
 
-<div class="woods-guide-nudge card" id="woods-guide-nudge" hidden>
-    <p><strong>First time in the woods?</strong> The <a href="slides.php<?= $echoQs ?>">weather guide</a> explains the six levels and what the characters notice.</p>
-    <button type="button" class="woods-btn woods-btn-quiet" id="woods-guide-dismiss">Very well then</button>
-</div>
-
 <main class="main-content">
+
+<aside class="woods-guide-nudge" id="woods-guide-nudge" hidden aria-live="polite">
+    <p class="woods-guide-nudge-text"><strong>First time in the woods?</strong> The <a href="slides.php<?= $echoQs ?>">weather guide</a> explains the six levels and what the characters notice.</p>
+    <button type="button" class="woods-btn woods-btn-quiet" id="woods-guide-dismiss">Very well then</button>
+</aside>
 
 <?php if ($error): ?>
     <section class="card error-card">
