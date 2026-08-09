@@ -162,7 +162,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
                 </thead>
                 <tbody>
                     <tr><td>0</td><td>Pale blue</td><td>Still leaves</td><td>Pooh walking</td><td>Warm, open</td></tr>
-                    <tr><td>1</td><td>Soft gray clouds</td><td>Light drift</td><td>Pooh pausing</td><td>Mild caution</td></tr>
+                    <tr><td>1</td><td>Soft gray clouds</td><td>Light drift</td><td>Pooh or Eeyore</td><td>Mild caution</td></tr>
                     <tr><td>2</td><td>Gray-blue</td><td>Swaying branches</td><td>Piglet with scarf</td><td>Active care</td></tr>
                     <tr><td>3</td><td>Dark clouds, rain</td><td>Rain strokes</td><td>Owl with map</td><td>Serious, planned</td></tr>
                     <tr><td>4</td><td>Storm palette</td><td>Heavy weather</td><td>Group at doorway</td><td>Protective</td></tr>
@@ -177,9 +177,9 @@ $echoQs = $echoFrom ? '?from=echo' : '';
         <div class="slide-inner">
             <h2>Example daily forecast</h2>
             <div class="sample-forecast">
-                <p><strong>Today:</strong> Begins as a <em>Fine Day for a Walk</em> (Level 0).</p>
-                <p><strong>This afternoon:</strong> May become a <em>Rather Blustery Day</em> (Level 2), with thunderstorms possible after 4:00&nbsp;p.m.</p>
-                <p><strong>Rabbit recommends:</strong> Bring outdoor items inside before lunch.</p>
+                <p><strong>Today:</strong> Begins as a <em>Fine Day for a Walk</em> (Level 0). Pooh approves.</p>
+                <p><strong>This afternoon:</strong> May become a <em>Rather Blustery Day</em> (Level 2). Piglet is concerned.</p>
+                <p><strong>Rabbit insists:</strong> Bring the garden chairs inside before lunch — organization is kindness.</p>
             </div>
             <div class="sample-data">
                 <span>High 72°F</span>

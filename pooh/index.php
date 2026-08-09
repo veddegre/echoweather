@@ -28,6 +28,8 @@ try {
 $levels = getWeatherLevels();
 $level = $weather['level'] ?? 0;
 $info = $weather['level_info'] ?? $levels[0];
+$displayCharacter = $weather['spot_character'] ?? $info['character'];
+$advisor = $weather['advisor'] ?? ['character' => 'Owl', 'verb' => 'says', 'quote' => 'Stay aware.', 'full' => 'Owl says: “Stay aware.”'];
 $current = $weather['current'] ?? [];
 $tempUnit = $config['temperature_unit'] === 'fahrenheit' ? '°F' : '°C';
 $windUnit = $config['wind_unit'] ?? 'mph';
@@ -71,6 +73,24 @@ $echoQs = $echoFrom ? '?from=echo' : '';
     </div>
 </header>
 
+<section class="location-bar card" aria-label="Choose location">
+    <div class="location-bar-row">
+        <div class="location-current">
+            <span class="location-current-label">Forecast for</span>
+            <strong class="location-current-name"><?= $name ?></strong>
+            <span class="location-meta"><?= htmlspecialchars(locationSourceLabel($locationSource)) ?></span>
+        </div>
+        <div class="location-actions">
+            <button type="button" class="loc-btn loc-btn-primary" id="use-my-location">Where I am</button>
+        </div>
+    </div>
+    <form class="location-search" id="location-search-form" role="search">
+        <label for="location-search-input" class="visually-hidden">Search another place</label>
+        <input type="search" id="location-search-input" name="q" placeholder="Search another place…" autocomplete="off" spellcheck="false">
+        <div class="location-search-results" id="location-search-results" hidden></div>
+    </form>
+</section>
+
 <main class="main-content">
 
 <?php if ($error): ?>
@@ -86,17 +106,25 @@ $echoQs = $echoFrom ? '?from=echo' : '';
         <div class="hero-grid">
             <div class="hero-text">
                 <p class="location"><?= $name ?></p>
-                <p class="location-meta"><?= htmlspecialchars(locationSourceLabel($locationSource)) ?></p>
                 <h2 class="level-name"><?= htmlspecialchars($info['name']) ?></h2>
                 <p class="level-message"><?= htmlspecialchars($info['message']) ?></p>
                 <p class="story-line"><em><?= htmlspecialchars($info['story']) ?></em></p>
+                <?php if ($displayCharacter && ($info['character_role'] || ($advisor['character'] ?? '') === $displayCharacter)): ?>
+                <p class="character-role">
+                    <?php if (($advisor['character'] ?? '') === $displayCharacter && $displayCharacter !== ($info['character'] ?? null)): ?>
+                    <?= htmlspecialchars($displayCharacter) ?> — <?= htmlspecialchars(getCharacterGuide()[$displayCharacter]['notices'] ?? 'has thoughts about today') ?>
+                    <?php else: ?>
+                    <?= htmlspecialchars($displayCharacter) ?> — <?= htmlspecialchars($info['character_role']) ?>
+                    <?php endif; ?>
+                </p>
+                <?php endif; ?>
             </div>
             <div class="hero-visual">
                 <?= weatherIconSvg($info['icon'], 80) ?>
-                <?php if ($info['character']): ?>
-                <div class="character-spot" data-character="<?= htmlspecialchars(strtolower(str_replace(' ', '-', $info['character']))) ?>">
-                    <?= renderCharacterImage($info['character']) ?>
-                    <span class="character-label"><?= htmlspecialchars($info['character']) ?></span>
+                <?php if ($displayCharacter): ?>
+                <div class="character-spot" data-character="<?= htmlspecialchars(strtolower(str_replace(' ', '-', $displayCharacter))) ?>">
+                    <?= renderCharacterImage($displayCharacter) ?>
+                    <span class="character-label"><?= htmlspecialchars($displayCharacter) ?></span>
                 </div>
                 <?php endif; ?>
             </div>
@@ -141,10 +169,11 @@ $echoQs = $echoFrom ? '?from=echo' : '';
 
     <section class="card action-card">
         <h3>What you should do</h3>
-        <p><?= htmlspecialchars($info['action']) ?></p>
-        <blockquote class="advisor-quote">
-            <strong><?= htmlspecialchars(explode(' ', $weather['advisor'])[0]) ?></strong>
-            <?= htmlspecialchars(substr($weather['advisor'], strlen(explode(' ', $weather['advisor'])[0]))) ?>
+        <p class="action-text"><?= htmlspecialchars($info['action']) ?></p>
+        <blockquote class="advisor-quote" cite="">
+            <span class="advisor-name"><?= htmlspecialchars($advisor['character']) ?></span>
+            <span class="advisor-verb"><?= htmlspecialchars($advisor['verb']) ?>:</span>
+            <span class="advisor-text">&ldquo;<?= htmlspecialchars($advisor['quote']) ?>&rdquo;</span>
         </blockquote>
     </section>
 
@@ -160,6 +189,25 @@ $echoQs = $echoFrom ? '?from=echo' : '';
             <?php endforeach; ?>
         </div>
     </section>
+
+    <?php if (!empty($weather['hourly'])): ?>
+    <section class="card hourly-card">
+        <h3>The next few hours</h3>
+        <div class="hourly-scroll">
+            <?php foreach ($weather['hourly'] as $hour): ?>
+            <article class="hour-pill">
+                <time datetime="<?= htmlspecialchars($hour['time']) ?>">
+                    <?= date('g A', strtotime($hour['time'])) ?>
+                </time>
+                <span class="hour-temp"><?= formatNumber((float) ($hour['temp'] ?? 0)) ?><?= $tempUnit ?></span>
+                <?php if ($hour['precip_prob'] !== null): ?>
+                <span class="hour-rain"><?= (int) $hour['precip_prob'] ?>%</span>
+                <?php endif; ?>
+            </article>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
 
     <?php if (!empty($weather['daily'])): ?>
     <section class="card forecast-card">
@@ -207,16 +255,15 @@ $echoQs = $echoFrom ? '?from=echo' : '';
     <?= renderAttributionFooter() ?>
     <p class="footer-links">
         <a href="slides.php<?= $echoQs ?>">View the weather guide</a>
-        &middot;
-        <button type="button" class="link-button" id="use-my-location">Use my precise location</button>
+        <?php if ($echoFrom): ?>
+        &middot; <a href="../">← Back to Echo Weather</a>
+        <?php endif; ?>
     </p>
 </footer>
 
 <div class="woodland-border bottom" aria-hidden="true"></div>
 
-<?php if (!empty($config['auto_browser_location'])): ?>
 <script src="assets/js/location.js"></script>
-<?php endif; ?>
 
 </body>
 </html>

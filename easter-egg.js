@@ -2,6 +2,13 @@
 const POOH_BASE = './pooh/';
 const EGG_STORAGE = 'st_woods_unlocked';
 
+const WOODS_TOASTS = [
+  'Off to the Hundred Acre Wood…',
+  'Pooh is checking the sky for you…',
+  'Owl has been consulted. Reluctantly.',
+  'The woods have their own forecast now.',
+];
+
 function hundredAcreLocation(){
   const loc = state?.locations?.[state?.active];
   if(!loc || loc.lat == null || loc.lon == null) return null;
@@ -15,7 +22,7 @@ function hundredAcreLocation(){
 function openHundredAcreWeather(){
   const loc = hundredAcreLocation();
   if(!loc){
-    showLocToast('Set a location first, then try again.');
+    showLocToast('Set a location first — even the woods need coordinates.');
     return;
   }
   try{ store.set(EGG_STORAGE, '1'); }catch(e){}
@@ -43,7 +50,7 @@ function waitForLocationThen(fn, attempts){
   const left = attempts ?? 40;
   if(hundredAcreLocation()){ fn(); return; }
   if(left <= 0){
-    showLocToast('Still waiting on a location — try again in a moment.');
+    showLocToast('Still waiting on a location — the woods are patient, but not forever.');
     return;
   }
   setTimeout(() => waitForLocationThen(fn, left - 1), 150);
@@ -69,6 +76,11 @@ function woodsTriggerFromHash(){
   return true;
 }
 
+function woodsToast(){
+  const i = Math.floor(Math.random() * WOODS_TOASTS.length);
+  showLocToast(WOODS_TOASTS[i]);
+}
+
 function initEasterEgg(){
   if(woodsTriggerFromUrl()) return;
 
@@ -90,7 +102,7 @@ function initEasterEgg(){
     if(taps >= 5){
       taps = 0;
       e.preventDefault();
-      showLocToast('Off to the Hundred Acre Wood…');
+      woodsToast();
       setTimeout(openHundredAcreWeather, 450);
       return;
     }

@@ -1,14 +1,14 @@
 /* Hundred Acre Weather — main styles */
 
 :root {
-    --paper: #f5f0e6;
-    --paper-dark: #e8e0d0;
-    --ink: #3d2e1f;
-    --ink-light: #5c4a38;
-    --green: #6b7f5e;
-    --green-dark: #4a5a40;
-    --honey: #c9a227;
-    --sky-0: #b8d4e8;
+    --paper: #f7f1e3;
+    --paper-dark: #e5dcc8;
+    --ink: #2c2416;
+    --ink-light: #5a4a36;
+    --green: #5c7350;
+    --green-dark: #3d4f34;
+    --honey: #d4a017;
+    --sky-0: #c5dce8;
     --sky-1: #a8bcc8;
     --sky-2: #8898a8;
     --sky-3: #607080;
@@ -156,10 +156,165 @@ body.level-4 .wind-layer {
 
 .site-title {
     font-family: var(--display);
-    font-size: 1.6rem;
+    font-size: 1.75rem;
     font-weight: 700;
+    font-style: italic;
     margin: 0;
     color: var(--ink);
+}
+
+/* Location bar */
+.location-bar {
+    max-width: 960px;
+    margin: 0 auto 0;
+    padding: 1rem 1.5rem;
+    position: relative;
+    z-index: 5;
+}
+
+.location-bar-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.location-current-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-light);
+}
+
+.location-current-name {
+    display: block;
+    font-family: var(--display);
+    font-size: 1.25rem;
+    color: var(--ink);
+}
+
+.location-bar .location-meta {
+    display: block;
+    font-size: 0.78rem;
+    font-style: italic;
+    color: var(--ink-light);
+    margin-top: 0.2rem;
+}
+
+.loc-btn {
+    font-family: var(--serif);
+    font-size: 0.88rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--green-dark);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--green-dark);
+    cursor: pointer;
+}
+
+.loc-btn-primary {
+    background: var(--green-dark);
+    color: #fff;
+}
+
+.loc-btn:disabled { opacity: 0.65; cursor: wait; }
+
+.location-search {
+    position: relative;
+}
+
+.location-search input {
+    width: 100%;
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--paper-dark);
+    border-radius: 2px;
+    background: #fff;
+    color: var(--ink);
+}
+
+.location-search-results {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: #fff;
+    border: 2px solid var(--paper-dark);
+    border-radius: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.location-search-results button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border: none;
+    background: none;
+    font-family: var(--serif);
+    font-size: 0.88rem;
+    cursor: pointer;
+    color: var(--ink);
+}
+
+.location-search-results button:hover {
+    background: var(--paper);
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* Hourly strip */
+.hourly-scroll {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+}
+
+.hour-pill {
+    flex: 0 0 auto;
+    min-width: 4.5rem;
+    text-align: center;
+    padding: 0.6rem 0.5rem;
+    background: var(--paper);
+    border: 1px solid var(--paper-dark);
+    border-radius: 2px;
+    font-size: 0.8rem;
+}
+
+.hour-pill time {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--ink-light);
+}
+
+.hour-temp {
+    display: block;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.hour-rain {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--green-dark);
 }
 
 .site-header nav a {
@@ -175,16 +330,16 @@ body.level-4 .wind-layer {
 .main-content {
     max-width: 960px;
     margin: 0 auto;
-    padding: 2rem 1.5rem 3rem;
+    padding: 1rem 1.5rem 3rem;
 }
 
 .card {
-    background: rgba(255, 252, 245, 0.92);
+    background: rgba(255, 250, 240, 0.94);
     border: 2px solid var(--paper-dark);
-    border-radius: var(--radius);
+    border-radius: 2px;
     padding: 1.75rem 2rem;
     margin-bottom: 1.5rem;
-    box-shadow: var(--shadow);
+    box-shadow: 2px 3px 0 rgba(61, 46, 31, 0.06);
     position: relative;
 }
 
@@ -261,7 +416,16 @@ body.level-5 .level-badge {
 
 .story-line {
     color: var(--ink-light);
-    margin: 0;
+    margin: 0 0 0.5rem;
+}
+
+.character-role {
+    font-size: 0.88rem;
+    font-style: italic;
+    color: var(--green-dark);
+    margin: 0.75rem 0 0;
+    padding-left: 0.75rem;
+    border-left: 3px solid var(--honey);
 }
 
 .hero-visual {
@@ -274,6 +438,23 @@ body.level-5 .level-badge {
 .weather-icon { color: var(--accent); }
 
 .character-spot { text-align: center; }
+
+body.level-0 .character-spot .char-image-frame {
+    box-shadow:
+        inset 0 0 0 1px rgba(139, 105, 20, 0.18),
+        0 2px 10px rgba(61, 46, 31, 0.1),
+        0 0 24px rgba(201, 162, 39, 0.25);
+}
+
+@keyframes gentle-sway {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+body.level-0 .character-spot,
+body.level-1 .character-spot {
+    animation: gentle-sway 4s ease-in-out infinite;
+}
 
 .char-image-frame {
     display: inline-block;
@@ -378,13 +559,62 @@ body.level-5 .level-badge {
 }
 
 /* Advisor quote */
-.advisor-quote {
-    margin: 1rem 0 0;
-    padding: 1rem 1.25rem;
-    background: var(--paper);
-    border-left: 4px solid var(--honey);
-    font-style: italic;
+.action-text {
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
 }
+
+.advisor-quote {
+    margin: 1.25rem 0 0;
+    padding: 1.1rem 1.35rem 1.1rem 1.5rem;
+    background: var(--paper);
+    border: 2px solid var(--paper-dark);
+    border-left: 5px solid var(--honey);
+    border-radius: var(--radius);
+    font-style: italic;
+    position: relative;
+    line-height: 1.55;
+}
+
+.advisor-quote::before {
+    content: '';
+    position: absolute;
+    left: 1.25rem;
+    top: -10px;
+    width: 18px;
+    height: 18px;
+    background: var(--paper);
+    border-left: 2px solid var(--paper-dark);
+    border-top: 2px solid var(--paper-dark);
+    transform: rotate(45deg);
+}
+
+.advisor-name {
+    font-style: normal;
+    font-weight: 700;
+    font-family: var(--display);
+    color: var(--green-dark);
+}
+
+.advisor-verb {
+    font-style: normal;
+    color: var(--ink-light);
+    margin-right: 0.25rem;
+}
+
+.advisor-text {
+    display: block;
+    margin-top: 0.35rem;
+    color: var(--ink);
+}
+
+body.level-4 .advisor-quote,
+body.level-5 .advisor-quote {
+    border-left-color: #c0392b;
+    background: #fff;
+}
+
+body.level-5 .advisor-name { color: #c0392b; }
 
 /* Alerts — legacy removed; see NWS section below */
 

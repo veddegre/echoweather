@@ -75,8 +75,9 @@ function fetchWeather(array $config, float $lat, float $lon): array
         'nws_enabled'  => !empty($config['nws_alerts']),
         'level'        => $levelResult['level'],
         'level_info'   => $levels[$levelResult['level']],
-        'level_reasons'=> $levelResult['reasons'],
+        'level_reasons'=> formatWoodsReasons($levelResult['reasons']),
         'advisor'      => pickAdvisor($levelResult['level'], $levelResult['reasons']),
+        'spot_character' => pickSpotCharacter($levelResult['level'], $levelResult['reasons']),
     ];
 
     if ($ttl > 0) {
@@ -290,8 +291,8 @@ function temperatureLevel(float $temp, string $unit): int
         $f <= -15 || $f >= 110 => 5,
         $f <= 0 || $f >= 100  => 4,
         $f <= 10 || $f >= 95   => 3,
-        $f <= 20 || $f >= 90   => 2,
-        $f <= 32 || $f >= 85   => 1,
+        $f <= 20 || $f >= 92   => 2,
+        $f <= 28 || $f >= 88   => 1,
         default                => 0,
     };
 }
@@ -332,38 +333,125 @@ function alertLevel(array $alert): int
     return 1;
 }
 
-function pickAdvisor(int $level, array $reasons): string
+function pickAdvisorCharacter(int $level, array $reasons): string
 {
-    $guide = [
-        0 => 'Pooh',
-        1 => 'Pooh',
-        2 => 'Piglet',
-        3 => 'Owl',
-        4 => 'Christopher Robin',
-        5 => 'Christopher Robin',
-    ];
+    $blob = strtolower(implode(' ', $reasons));
 
-    $name = $guide[$level] ?? 'Owl';
+    if ($level >= 5) {
+        return 'Christopher Robin';
+    }
+    if ($level >= 4) {
+        return 'Christopher Robin';
+    }
+
+    if ($level >= 3) {
+        if (str_contains($blob, 'alert') || str_contains($blob, 'watch') || str_contains($blob, 'warning')) {
+            return 'Owl';
+        }
+        return 'Owl';
+    }
+
+    if ($level >= 2) {
+        if (str_contains($blob, 'wind') || str_contains($blob, 'gust')) {
+            return 'Piglet';
+        }
+        if (str_contains($blob, 'alert') || str_contains($blob, 'advisory')) {
+            return 'Rabbit';
+        }
+        if (str_contains($blob, 'rain') || str_contains($blob, 'drizzle') || str_contains($blob, 'snow')) {
+            return 'Eeyore';
+        }
+        return 'Piglet';
+    }
+
+    if ($level >= 1) {
+        if (str_contains($blob, 'rain') || str_contains($blob, 'drizzle')
+            || str_contains($blob, 'fog') || str_contains($blob, 'cloud')
+            || str_contains($blob, 'overcast')) {
+            return 'Eeyore';
+        }
+        if (str_contains($blob, 'wind') || str_contains($blob, 'gust')) {
+            return 'Piglet';
+        }
+        return 'Pooh';
+    }
+
+    return 'Pooh';
+}
+
+function pickSpotCharacter(int $level, array $reasons): ?string
+{
+    if ($level >= 5) {
+        return null;
+    }
+
+    $advisor = pickAdvisorCharacter($level, $reasons);
     $levels = getWeatherLevels();
-    $levelName = $levels[$level]['short'] ?? 'conditions';
+    $default = $levels[$level]['character'] ?? null;
+
+    // Prefer context-specific character when it adds flavor (Eeyore/Rabbit/Owl)
+    if (in_array($advisor, ['Eeyore', 'Rabbit', 'Piglet'], true) && $advisor !== $default) {
+        return $advisor;
+    }
+
+    return $default;
+}
+
+function pickAdvisor(int $level, array $reasons): array
+{
+    $character = pickAdvisorCharacter($level, $reasons);
+    $quotes = getAdvisorQuotes();
+    $pool = $quotes[$character][$level]
+        ?? $quotes[$character]['any']
+        ?? ['Stay aware of changing conditions.'];
+
+    $seed = crc32($character . '|' . $level . '|' . implode(';', $reasons));
+    $quote = $pool[$seed % count($pool)];
 
     $verbs = [
-        'Pooh' => ' notices',
-        'Piglet' => ' recommends',
-        'Owl' => ' advises',
-        'Christopher Robin' => ' suggests',
+        'Pooh'              => 'says',
+        'Piglet'            => 'adds, quietly',
+        'Rabbit'            => 'insists',
+        'Owl'               => 'declares',
+        'Eeyore'            => 'mutters',
+        'Christopher Robin' => 'calls out',
     ];
 
-    $recommendations = [
-        0 => 'a walk through the woods would be just the thing.',
-        1 => 'bringing a light coat might be wise.',
-        2 => 'securing outdoor items before lunch.',
-        3 => 'checking the forecast and reconsidering travel plans.',
-        4 => 'everyone stay indoors until conditions improve.',
-        5 => 'taking shelter immediately.',
-    ];
+    $verb = $verbs[$character] ?? 'says';
 
-    return $name . ($verbs[$name] ?? ' says') . ' ' . ($recommendations[$level] ?? 'staying aware of changing conditions.');
+    return [
+        'character' => $character,
+        'verb'      => $verb,
+        'quote'     => $quote,
+        'full'      => $character . ' ' . $verb . ': “' . $quote . '”',
+    ];
+}
+
+function formatWoodsReasons(array $reasons): array
+{
+    $out = [];
+    foreach ($reasons as $reason) {
+        $r = $reason;
+        if (str_starts_with($r, 'Active alert:')) {
+            $event = trim(substr($r, strlen('Active alert:')));
+            $out[] = 'Official word from beyond the woods: ' . $event;
+            continue;
+        }
+        if (str_starts_with($r, 'Wind ')) {
+            $out[] = 'The trees report ' . lcfirst($r);
+            continue;
+        }
+        if (str_starts_with($r, 'Temperature ')) {
+            $out[] = 'Thermometer reading: ' . substr($r, strlen('Temperature '));
+            continue;
+        }
+        if (str_starts_with($r, 'Precipitation ')) {
+            $out[] = 'Sky is dropping water at ' . substr($r, strlen('Precipitation '));
+            continue;
+        }
+        $out[] = $r;
+    }
+    return $out;
 }
 
 function formatDaily(array $daily, array $config): array

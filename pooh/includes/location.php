@@ -6,7 +6,15 @@
 function resolveLocation(array $config): array
 {
     if (isset($_GET['lat'], $_GET['lon'])) {
-        $source = (isset($_GET['detected']) && $_GET['detected'] === 'browser') ? 'browser' : 'manual';
+        if (isset($_GET['from']) && $_GET['from'] === 'echo') {
+            $source = 'echo';
+        } elseif (isset($_GET['detected']) && $_GET['detected'] === 'browser') {
+            $source = 'browser';
+        } elseif (isset($_GET['source']) && $_GET['source'] === 'search') {
+            $source = 'search';
+        } else {
+            $source = 'manual';
+        }
         $location = normalizeLocation(
             (float) $_GET['lat'],
             (float) $_GET['lon'],
@@ -192,10 +200,12 @@ function readLocationCookie(): ?array
 function locationSourceLabel(string $source): string
 {
     return match ($source) {
+        'echo'    => 'From Echo Weather — tap “Where I am” to use your device instead',
         'browser' => 'Using your device location',
         'ip'      => 'Estimated from your network',
         'cookie'  => 'Remembered location',
         'manual'  => 'Custom location',
+        'search'  => 'Searched location',
         default   => 'Default location',
     };
 }
