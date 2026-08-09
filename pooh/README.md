@@ -106,7 +106,8 @@ Original **E. H. Shepard** pen-and-ink illustrations from *Winnie-the-Pooh* (192
 | Rabbit | `illus69.jpg` | Discussing plans, Chapter VII |
 | Owl | `illus63.jpg` | Writing at his desk, Chapter VI |
 | Eeyore | [Wikimedia: Winnie-the-Pooh 166-1.png](https://commons.wikimedia.org/wiki/File:Winnie-the-Pooh_166-1.png) | Eeyore with his tail bow, Chapter X |
-| Christopher Robin | `illus2.jpg` | On the stairs, Chapter I |
+| Christopher Robin (Level 4) | `illus8.jpg` | At the green door, Chapter I |
+| Christopher Robin (Level 5) | `illus2.jpg` | On the stairs, Chapter I |
 | Hundred Acre Wood map | `map.jpg` | Endpaper map |
 
 These works are in the **public domain in the United States**. Shepard's illustrations may remain under copyright in other countries until 2046 — verify rules for your jurisdiction. These are **not** Disney designs.

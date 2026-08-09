@@ -73,6 +73,14 @@ function getCharacterImages(): array
             'alt'        => 'Christopher Robin and Winnie-the-Pooh on the stairs, illustration by E. H. Shepard (1926)',
             'gutenberg'  => 'illus2.jpg',
             'scene'      => 'Coming downstairs, Chapter I',
+            'variants'   => [
+                4 => [
+                    'file'      => 'christopher-robin-door.jpg',
+                    'alt'       => 'Christopher Robin\'s house behind a green door in the forest, illustration by E. H. Shepard (1926)',
+                    'gutenberg' => 'illus8.jpg',
+                    'scene'     => 'Pooh visits Christopher Robin behind the green door, Chapter I',
+                ],
+            ],
         ],
     ];
 }
