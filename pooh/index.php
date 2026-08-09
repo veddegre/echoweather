@@ -77,9 +77,7 @@ $echoQs = $echoFrom ? '?from=echo' : '';
     <div class="woods-location-inner">
         <div class="woods-location-text">
             <span class="woods-location-name"><?= $name ?></span>
-            <?php if ($locationSource === 'echo'): ?>
-            <span class="woods-location-note">Carried over from Echo Weather</span>
-            <?php else: ?>
+            <?php if ($locationSource !== 'echo'): ?>
             <span class="woods-location-note"><?= htmlspecialchars(locationSourceLabel($locationSource)) ?></span>
             <?php endif; ?>
         </div>

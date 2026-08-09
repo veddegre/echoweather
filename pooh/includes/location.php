@@ -200,7 +200,6 @@ function readLocationCookie(): ?array
 function locationSourceLabel(string $source): string
 {
     return match ($source) {
-        'echo'    => 'From Echo Weather — tap “Where I am” to use your device instead',
         'browser' => 'Using your device location',
         'ip'      => 'Estimated from your network',
         'cookie'  => 'Remembered location',
