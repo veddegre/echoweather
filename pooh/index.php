@@ -29,6 +29,9 @@ try {
 }
 
 $levels = getWeatherLevels();
+if ($weather) {
+    $weather = applyWoodsPageCopy($weather, woodsCopyContextFromWeather($weather, $config));
+}
 $level = $weather['level'] ?? 0;
 $info = $weather['level_info'] ?? $levels[0];
 $displayCharacter = $weather['spot_character'] ?? $info['character'];

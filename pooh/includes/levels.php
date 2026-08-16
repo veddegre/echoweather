@@ -403,10 +403,9 @@ function woodsCopyDay(?string $timezone = null): string
 function woodsCopySeed(int $level, string $kind, array $context = []): string
 {
     return implode('|', [
-        woodsCopyDay($context['timezone'] ?? null),
+        (string) ($context['visit'] ?? woodsCopyDay($context['timezone'] ?? null)),
         (string) $level,
         $kind,
-        (string) ($context['location'] ?? ''),
         (string) ($context['weather_code'] ?? ''),
         implode(';', $context['reasons'] ?? []),
     ]);

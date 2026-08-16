@@ -51,6 +51,52 @@ function saveUnitCookie(string $temperatureUnit): void
     ]);
 }
 
+/**
+ * A visit salt so the same place does not keep the same lines forever.
+ * Stable on reload for 30 minutes, then a new set is chosen.
+ */
+function resolveWoodsSayingVisit(?string $timezone = null): string
+{
+    $ttl = 30 * 60;
+    $now = time();
+    $cookie = (string) ($_COOKIE['hundred_acre_saying'] ?? '');
+    $salt = null;
+    $issued = 0;
+
+    if (preg_match('/^([a-f0-9]{8})\.(\d+)$/', $cookie, $match)) {
+        $salt = $match[1];
+        $issued = (int) $match[2];
+    }
+
+    $stale = $salt === null || ($now - $issued) >= $ttl;
+    if (!$stale && $timezone) {
+        try {
+            $tz = new DateTimeZone($timezone);
+            $issuedDay = (new DateTimeImmutable('@' . $issued))->setTimezone($tz)->format('Y-m-d');
+            $today = (new DateTimeImmutable('now', $tz))->format('Y-m-d');
+            $stale = $issuedDay !== $today;
+        } catch (Exception $e) {
+            // Keep the current salt if timezone parsing fails.
+        }
+    }
+
+    if ($stale) {
+        $salt = bin2hex(random_bytes(4));
+        $issued = $now;
+        if (!headers_sent()) {
+            setcookie('hundred_acre_saying', $salt . '.' . $issued, [
+                'expires'  => $now + 60 * 60 * 24,
+                'path'     => '/',
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ]);
+        }
+        $_COOKIE['hundred_acre_saying'] = $salt . '.' . $issued;
+    }
+
+    return $salt;
+}
+
 function applyUnitPreferences(array $config): array
 {
     $units = resolveUnitPreferences($config);

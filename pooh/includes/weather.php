@@ -6,6 +6,7 @@
 require_once __DIR__ . '/levels.php';
 require_once __DIR__ . '/alerts.php';
 require_once __DIR__ . '/nws.php';
+require_once __DIR__ . '/preferences.php';
 
 function fetchWeather(array $config, float $lat, float $lon): array
 {
@@ -104,8 +105,10 @@ function fetchWeather(array $config, float $lat, float $lon): array
         'forecast_source' => $forecastSource,
         'current_source'  => $currentSource,
         'level'        => $levelResult['level'],
-        'level_info'   => applyLevelSayings($levels[$levelResult['level']], $levelResult['level'], $copyContext),
+        'level_info'   => $levels[$levelResult['level']],
         'level_reasons'=> formatWoodsReasons($levelResult['reasons']),
+        'level_reasons_raw' => $levelResult['reasons'],
+        'copy_context' => $copyContext,
         'advisor'      => pickAdvisor($levelResult['level'], $levelResult['reasons'], $copyContext),
         'spot_character' => pickSpotCharacter($levelResult['level'], $levelResult['reasons']),
     ];
@@ -375,6 +378,62 @@ function pickSpotCharacter(int $level, array $reasons): ?string
     }
 
     return $default;
+}
+
+function woodsCopyContextFromWeather(array $weather, array $config = []): array
+{
+    $current = $weather['current'] ?? [];
+    $location = $weather['location']['name'] ?? ($config['location_name'] ?? '');
+    $ctx = $weather['copy_context'] ?? [];
+
+    $ctx['timezone'] = $ctx['timezone'] ?? ($weather['timezone'] ?? 'UTC');
+    $ctx['location'] = $ctx['location'] ?? $location;
+    $ctx['weather_code'] = $ctx['weather_code'] ?? (int) ($current['weather_code'] ?? 0);
+    $ctx['reasons'] = $ctx['reasons'] ?? ($weather['level_reasons_raw'] ?? []);
+    $ctx['wind'] = $ctx['wind'] ?? (float) ($current['wind_speed_10m'] ?? 0);
+    $ctx['gusts'] = $ctx['gusts'] ?? (float) ($current['wind_gusts_10m'] ?? 0);
+    $ctx['wind_unit'] = $ctx['wind_unit'] ?? ($config['wind_unit'] ?? 'mph');
+    if (!array_key_exists('temperature', $ctx) && isset($current['temperature_2m'])) {
+        $ctx['temperature'] = (float) $current['temperature_2m'];
+        $ctx['temperature_unit'] = $config['temperature_unit'] ?? 'fahrenheit';
+    }
+    $ctx['visit'] = resolveWoodsSayingVisit($ctx['timezone'] ?? null);
+
+    return $ctx;
+}
+
+function applyWoodsPageCopy(array $weather, array $copyContext): array
+{
+    $levels = getWeatherLevels();
+    $level = (int) ($weather['level'] ?? 0);
+    $canonical = $levels[$level] ?? $levels[0];
+    $weather['level_info'] = applyLevelSayings($canonical, $level, $copyContext);
+
+    $rawReasons = $weather['level_reasons_raw']
+        ?? $copyContext['reasons']
+        ?? [];
+    $weather['advisor'] = pickAdvisor($level, $rawReasons, $copyContext);
+
+    if (!empty($weather['day_story']['beats']) && is_array($weather['day_story']['beats'])) {
+        foreach ($weather['day_story']['beats'] as $index => $beat) {
+            $character = (string) ($beat['character'] ?? $canonical['character'] ?? 'Pooh');
+            $beatLevel = (int) ($beat['level'] ?? $level);
+            $weather['day_story']['beats'][$index]['aside'] = storyCharacterAside(
+                $character,
+                $beatLevel,
+                $copyContext
+            );
+        }
+    }
+
+    if (!empty($weather['alerts'])) {
+        $footnote = pickStoryFootnote($weather['alerts'], $copyContext);
+        if ($footnote !== null) {
+            $weather['day_story']['footnote'] = $footnote;
+        }
+    }
+
+    return $weather;
 }
 
 function pickAdvisor(int $level, array $reasons, array $context = []): array
