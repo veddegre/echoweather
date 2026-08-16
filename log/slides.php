@@ -7,6 +7,7 @@ require_once __DIR__ . '/../pooh/includes/weather.php';
 require_once __DIR__ . '/../pooh/includes/preferences.php';
 require_once __DIR__ . '/includes/levels.php';
 require_once __DIR__ . '/includes/log.php';
+require_once __DIR__ . '/includes/images.php';
 
 $levels = getLakeLogLevels();
 $characters = getLakeCharacterGuide();
@@ -90,7 +91,7 @@ $slideCount = 15;
                 <?php if ($num < 5): ?><span class="path-arrow">→</span><?php endif; ?>
                 <?php endforeach; ?>
             </div>
-            <p class="intro">Each mark carries a number, a name, a remark from the keeper or captain, orders for the watch, and the official NWS language it stands in for.</p>
+            <p class="intro">Each mark carries a number, a name, a plate in the log, a remark from the keeper or captain, orders for the watch, and the official NWS language it stands in for.</p>
         </div>
     </section>
 
@@ -102,6 +103,9 @@ $slideCount = 15;
                 <h2><?= htmlspecialchars($lvl['name']) ?></h2>
             </div>
             <div class="level-intro">
+                <div class="level-character-img">
+                    <?= renderLakeLevelImage($num, 'slide-char-image') ?>
+                </div>
                 <p class="character-note"><em><?= htmlspecialchars($lvl['character']) ?></em> — <?= htmlspecialchars($lvl['character_role']) ?></p>
             </div>
             <div class="level-columns">
@@ -132,7 +136,7 @@ $slideCount = 15;
     <section class="slide" data-slide="10">
         <div class="slide-inner">
             <h2>Who keeps the book</h2>
-            <p class="intro">The large remark at the top of the live log follows the <strong>level</strong>. The quote under orders follows the weather itself — wind, rain, and notices on the board.</p>
+            <p class="intro">The large remark and the illustration at the top of the live log follow the <strong>level</strong>. The quote under orders follows the weather itself — wind, rain, and notices on the board.</p>
             <div class="character-grid">
                 <?php foreach ($characters as $name => $info): ?>
                 <div class="character-card">
@@ -219,6 +223,7 @@ $slideCount = 15;
                         </div>
                         <div class="sample-hero-visual">
                             <?= weatherIconSvg($example['icon'], 56) ?>
+                            <?= renderLakeLevelImage($exampleLevel, 'slide-char-image sample-hero-char') ?>
                         </div>
                     </div>
                 </section>

@@ -13,6 +13,7 @@ require_once __DIR__ . '/../pooh/includes/preferences.php';
 require_once __DIR__ . '/includes/lakes.php';
 require_once __DIR__ . '/includes/levels.php';
 require_once __DIR__ . '/includes/log.php';
+require_once __DIR__ . '/includes/images.php';
 
 $config = applyUnitPreferences($config);
 
@@ -145,7 +146,10 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
             </div>
             <div class="hero-visual">
                 <?= weatherIconSvg($info['icon'], 72) ?>
-                <?= lighthouseSvg(88) ?>
+                <div class="character-spot">
+                    <?= renderLakeLevelImage($level, 'char-image') ?>
+                    <span class="character-label"><?= htmlspecialchars($info['character']) ?></span>
+                </div>
             </div>
         </div>
     </section>
@@ -298,6 +302,7 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
 
 <footer class="site-footer">
     <p>A Great Lakes reading of the same official weather Echo uses. Not affiliated with NOAA or the National Weather Service.</p>
+    <p class="attribution">Original illustrations for the Lakes Log — one plate for each mark on the glass.</p>
     <p class="footer-links">
         <a href="slides.php<?= $echoQs ?>">Standing orders</a>
         &middot; <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Use this place in Echo Weather</a>
