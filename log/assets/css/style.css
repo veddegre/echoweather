@@ -1,0 +1,398 @@
+/* The Lakes Log — ship’s-log weather */
+
+:root {
+    --paper: #efe6d4;
+    --paper-dark: #e2d4bb;
+    --ink: #1b2433;
+    --ink-light: #4a5568;
+    --navy: #1e3a5f;
+    --brass: #b08d57;
+    --signal: #8b3a2a;
+    --sky-0: #c5d4e0;
+    --sky-1: #9eb0c2;
+    --sky-2: #7a8fa3;
+    --sky-3: #4d6278;
+    --sky-4: #2f3f52;
+    --sky-5: #1a2330;
+    --serif: 'Libre Baskerville', Georgia, serif;
+    --label: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --radius: 2px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+    font-size: 18px;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    font-family: var(--serif);
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.6;
+}
+
+body.log-page {
+    background-image:
+        linear-gradient(var(--paper-dark) 1px, transparent 1px);
+    background-size: 100% 2rem;
+    background-attachment: fixed;
+}
+
+.wave-layer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 48px;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 20% 100%, rgba(30, 58, 95, 0.18), transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(30, 58, 95, 0.14), transparent 50%);
+    z-index: 0;
+}
+
+body.level-0 { --current-sky: var(--sky-0); }
+body.level-1 { --current-sky: var(--sky-1); }
+body.level-2 { --current-sky: var(--sky-2); }
+body.level-3 { --current-sky: var(--sky-3); color: #f3eee4; }
+body.level-4 { --current-sky: var(--sky-4); color: #f3eee4; }
+body.level-5 { --current-sky: var(--sky-5); color: #f3eee4; }
+
+body.level-0,
+body.level-1,
+body.level-2 {
+    background-color: var(--current-sky);
+}
+
+body.level-3,
+body.level-4,
+body.level-5 {
+    background-color: var(--current-sky);
+    background-image: none;
+}
+
+.site-header {
+    position: relative;
+    z-index: 1;
+    border-bottom: 2px solid var(--navy);
+    background: var(--paper);
+}
+
+.header-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+}
+
+.site-title {
+    margin: 0;
+    font-family: var(--label);
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--navy);
+}
+
+nav a {
+    color: var(--navy);
+    text-decoration: none;
+    font-family: var(--label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    margin-left: 0.85rem;
+}
+
+nav a:hover { text-decoration: underline; }
+
+.log-location {
+    position: relative;
+    z-index: 1;
+    background: var(--paper);
+    border-bottom: 1px solid rgba(30, 58, 95, 0.2);
+}
+
+.log-location-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+}
+
+.log-location-name {
+    display: block;
+    font-family: var(--label);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.82rem;
+    color: var(--signal);
+}
+
+.log-location-meta {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--ink-light);
+}
+
+.woods-unit-toggle {
+    display: flex;
+    border: 1px solid var(--navy);
+}
+
+.woods-unit {
+    background: transparent;
+    border: 0;
+    padding: 0.25rem 0.6rem;
+    font-family: var(--label);
+    letter-spacing: 0.06em;
+    cursor: pointer;
+}
+
+.woods-unit.is-on {
+    background: var(--navy);
+    color: var(--paper);
+}
+
+.main-content {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1.25rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.card {
+    background: var(--paper);
+    border: 1px solid rgba(30, 58, 95, 0.22);
+    padding: 1.15rem 1.25rem;
+}
+
+body.level-3 .card,
+body.level-4 .card,
+body.level-5 .card {
+    background: rgba(18, 24, 32, 0.55);
+    border-color: rgba(243, 238, 228, 0.18);
+}
+
+.hero-card { position: relative; }
+
+.level-badge {
+    position: absolute;
+    top: 0;
+    left: 1.25rem;
+    transform: translateY(-50%);
+    background: var(--brass);
+    color: #1b2433;
+    font-family: var(--label);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+}
+
+.hero-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    align-items: start;
+}
+
+.location {
+    margin: 0.4rem 0 0.35rem;
+    font-family: var(--label);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--signal);
+}
+
+.level-name {
+    margin: 0 0 0.5rem;
+    font-size: 2rem;
+    line-height: 1.15;
+}
+
+.level-message { margin: 0 0 0.65rem; }
+.story-line { margin: 0 0 0.85rem; }
+
+.character-role {
+    margin: 0;
+    padding-left: 0.7rem;
+    border-left: 3px solid var(--brass);
+    font-style: italic;
+    color: var(--navy);
+}
+
+body.level-3 .character-role,
+body.level-4 .character-role,
+body.level-5 .character-role {
+    color: var(--brass);
+}
+
+.hero-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--navy);
+}
+
+body.level-3 .hero-visual,
+body.level-4 .hero-visual,
+body.level-5 .hero-visual { color: var(--brass); }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.stat-label {
+    font-family: var(--label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: var(--ink-light);
+}
+
+.condition-desc { margin: 0.85rem 0 0; }
+.reasons-list { margin: 0.5rem 0 0; padding-left: 1.1rem; }
+
+h3 {
+    margin: 0 0 0.75rem;
+    font-family: var(--label);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.92rem;
+}
+
+.advisor-quote {
+    margin: 0.85rem 0 0;
+    padding: 0.7rem 0 0.2rem 0.8rem;
+    border-left: 3px solid var(--brass);
+}
+
+.advisor-name { font-weight: 700; }
+.advisor-verb { font-style: italic; }
+
+.scale-path {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.scale-step {
+    opacity: 0.45;
+    text-align: center;
+}
+
+.scale-step.reached { opacity: 0.8; }
+.scale-step.active { opacity: 1; font-weight: 700; }
+
+.scale-num {
+    display: block;
+    font-family: var(--label);
+    font-size: 0.95rem;
+}
+
+.scale-short {
+    font-family: var(--label);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+}
+
+.scale-arrow { opacity: 0.4; }
+
+.hourly-track { overflow-x: auto; }
+.hourly-track-inner { display: flex; gap: 0.65rem; }
+.hour-cell {
+    min-width: 3.4rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.78rem;
+}
+
+.daily-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.day-card time {
+    font-family: var(--label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.day-desc, .day-temps { margin: 0.25rem 0 0; font-size: 0.9rem; }
+
+.nws-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+}
+
+.nws-count { margin: 0; font-family: var(--label); letter-spacing: 0.08em; text-transform: uppercase; }
+.nws-summary-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0 1rem; }
+.nws-chip {
+    font-family: var(--label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    border: 1px solid currentColor;
+    padding: 0.15rem 0.45rem;
+}
+.nws-alert-event { margin: 0.35rem 0; }
+.nws-source { font-size: 0.85rem; }
+
+.official-card ul { margin: 0; padding-left: 1.1rem; }
+.disclaimer, .woods-accuracy, .hint { font-size: 0.88rem; color: var(--ink-light); }
+.site-footer {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem 3rem;
+    font-size: 0.85rem;
+    color: var(--ink-light);
+}
+
+.footer-links a { color: inherit; }
+
+.day-story-aside { font-style: italic; }
+
+a { color: var(--navy); }
+body.level-3 a, body.level-4 a, body.level-5 a { color: var(--brass); }
+
+@media (max-width: 640px) {
+    .hero-grid, .stats-grid, .daily-grid { grid-template-columns: 1fr 1fr; }
+    .hero-grid { grid-template-columns: 1fr; }
+    .level-name { font-size: 1.65rem; }
+}

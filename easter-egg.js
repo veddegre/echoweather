@@ -1,12 +1,21 @@
-// ---------- Hundred Acre Weather easter egg ----------
+// ---------- Themed weather easter eggs ----------
 const POOH_BASE = './pooh/';
+const LOG_BASE = './log/';
 const EGG_STORAGE = 'st_woods_unlocked';
+const LOG_STORAGE = 'st_log_unlocked';
 
 const WOODS_TOASTS = [
   'Off to the Hundred Acre Wood…',
   'Pooh is checking the sky for you…',
   'Owl has been consulted. Reluctantly.',
   'The woods have their own forecast now.',
+];
+
+const LOG_TOASTS = [
+  'Opening the log…',
+  'The keeper has the glass.',
+  'Mind the bar.',
+  'A weather eye, if you please.',
 ];
 
 function hundredAcreLocation(){
@@ -19,6 +28,18 @@ function hundredAcreLocation(){
   };
 }
 
+function echoThemeQuery(extra){
+  const loc = hundredAcreLocation();
+  const q = new URLSearchParams(extra || {});
+  if(loc){
+    q.set('lat', String(loc.lat));
+    q.set('lon', String(loc.lon));
+    q.set('name', loc.name);
+    q.set('from', 'echo');
+  }
+  return q;
+}
+
 function openHundredAcreWeather(){
   const loc = hundredAcreLocation();
   if(!loc){
@@ -26,31 +47,29 @@ function openHundredAcreWeather(){
     return;
   }
   try{ store.set(EGG_STORAGE, '1'); }catch(e){}
-  const q = new URLSearchParams({
-    lat: String(loc.lat),
-    lon: String(loc.lon),
-    name: loc.name,
-    from: 'echo'
-  });
-  location.href = POOH_BASE + 'index.php?' + q.toString();
+  location.href = POOH_BASE + 'index.php?' + echoThemeQuery().toString();
 }
 
 function openHundredAcreGuide(){
-  const q = new URLSearchParams({ from: 'echo' });
+  location.href = POOH_BASE + 'slides.php?' + echoThemeQuery({ from: 'echo' }).toString();
+}
+
+function openShipLog(){
   const loc = hundredAcreLocation();
-  if(loc){
-    q.set('lat', String(loc.lat));
-    q.set('lon', String(loc.lon));
-    q.set('name', loc.name);
+  if(!loc){
+    showLocToast('Set a location first — the log needs a station.');
+    return;
   }
-  location.href = POOH_BASE + 'slides.php?' + q.toString();
+  try{ store.set(LOG_STORAGE, '1'); }catch(e){}
+  revealShipLogLinks();
+  location.href = LOG_BASE + 'index.php?' + echoThemeQuery().toString();
 }
 
 function waitForLocationThen(fn, attempts){
   const left = attempts ?? 40;
   if(hundredAcreLocation()){ fn(); return; }
   if(left <= 0){
-    showLocToast('Still waiting on a location — the woods are patient, but not forever.');
+    showLocToast('Still waiting on a location.');
     return;
   }
   setTimeout(() => waitForLocationThen(fn, left - 1), 150);
@@ -67,6 +86,13 @@ function woodsTriggerFromUrl(){
   return true;
 }
 
+function logTriggerFromUrl(){
+  const params = new URLSearchParams(location.search);
+  if(!params.has('log') && params.get('egg') !== 'log') return false;
+  waitForLocationThen(openShipLog);
+  return true;
+}
+
 function woodsTriggerFromHash(){
   const raw = (location.hash || '').replace(/^#/, '');
   const path = raw.split('?')[0];
@@ -76,21 +102,74 @@ function woodsTriggerFromHash(){
   return true;
 }
 
+function logTriggerFromHash(){
+  const raw = (location.hash || '').replace(/^#/, '');
+  const path = raw.split('?')[0];
+  if(path !== 'logbook' && path !== 'log') return false;
+  waitForLocationThen(openShipLog);
+  return true;
+}
+
 function woodsToast(){
   const i = Math.floor(Math.random() * WOODS_TOASTS.length);
   showLocToast(WOODS_TOASTS[i]);
 }
 
-function initEasterEgg(){
-  if(woodsTriggerFromUrl()) return;
+function logToast(){
+  const loc = hundredAcreLocation();
+  const lake = (typeof greatLakeName === 'function' && loc)
+    ? greatLakeName(loc.lat, loc.lon)
+    : null;
+  if(lake){
+    showLocToast('Opening the log of ' + lake + '…');
+    return;
+  }
+  const i = Math.floor(Math.random() * LOG_TOASTS.length);
+  showLocToast(LOG_TOASTS[i]);
+}
 
-  const onHash = () => {
-    if(!woodsTriggerFromHash()) return;
-    history.replaceState(null, '', location.pathname + location.search);
-  };
-  if(woodsTriggerFromHash()) onHash();
-  window.addEventListener('hashchange', onHash);
+function bindShipLogLink(el){
+  if(!el || el.dataset.logBound) return;
+  el.dataset.logBound = '1';
+  el.addEventListener('click', e => {
+    e.preventDefault();
+    openShipLog();
+  });
+}
 
+function revealShipLogLinks(){
+  let unlocked = false;
+  try{ unlocked = store.get(LOG_STORAGE) === '1'; }catch(e){}
+  document.querySelectorAll('[data-ship-log-link]').forEach(el => {
+    if(unlocked) el.hidden = false;
+    bindShipLogLink(el);
+  });
+}
+
+function initMarineLogEgg(){
+  const title = document.getElementById('marineTitle');
+  if(!title) return;
+
+  let taps = 0;
+  let tapTimer = 0;
+  title.addEventListener('click', e => {
+    const loc = hundredAcreLocation();
+    const onLakes = loc && typeof isGreatLakesLoc === 'function' && isGreatLakesLoc(loc);
+    if(!onLakes) return;
+    taps++;
+    clearTimeout(tapTimer);
+    if(taps >= 3){
+      taps = 0;
+      e.preventDefault();
+      logToast();
+      setTimeout(openShipLog, 450);
+      return;
+    }
+    tapTimer = setTimeout(() => { taps = 0; }, 2500);
+  });
+}
+
+function initWoodsBrandEgg(){
   const brand = document.querySelector('.brand-mark');
   if(!brand) return;
 
@@ -108,4 +187,20 @@ function initEasterEgg(){
     }
     tapTimer = setTimeout(() => { taps = 0; }, 2500);
   }, true);
+}
+
+function initEasterEgg(){
+  if(logTriggerFromUrl() || woodsTriggerFromUrl()) return;
+
+  const onHash = () => {
+    if(logTriggerFromHash() || woodsTriggerFromHash()){
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  };
+  if(logTriggerFromHash() || woodsTriggerFromHash()) onHash();
+  window.addEventListener('hashchange', onHash);
+
+  initWoodsBrandEgg();
+  initMarineLogEgg();
+  revealShipLogLinks();
 }

@@ -1,0 +1,5 @@
+# Writable cache — not for direct HTTP access.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^cache/ - [F,L]
+</IfModule>
