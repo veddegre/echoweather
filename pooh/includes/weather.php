@@ -73,6 +73,19 @@ function fetchWeather(array $config, float $lat, float $lon): array
 
     $levelResult = determineLevel($data, $alerts, $config);
     $levels = getWeatherLevels();
+    $copyContext = [
+        'timezone'     => $data['timezone'] ?? 'UTC',
+        'location'     => $config['location_name'] ?? 'The Hundred Acre Wood',
+        'weather_code' => (int) ($data['current']['weather_code'] ?? 0),
+        'reasons'      => $levelResult['reasons'],
+        'wind'         => (float) ($data['current']['wind_speed_10m'] ?? 0),
+        'gusts'        => (float) ($data['current']['wind_gusts_10m'] ?? 0),
+        'wind_unit'    => $config['wind_unit'] ?? 'mph',
+    ];
+    if (isset($data['current']['temperature_2m'])) {
+        $copyContext['temperature'] = (float) $data['current']['temperature_2m'];
+        $copyContext['temperature_unit'] = $config['temperature_unit'] ?? 'fahrenheit';
+    }
 
     $result = [
         'fetched_at'   => time(),
@@ -91,13 +104,13 @@ function fetchWeather(array $config, float $lat, float $lon): array
         'forecast_source' => $forecastSource,
         'current_source'  => $currentSource,
         'level'        => $levelResult['level'],
-        'level_info'   => $levels[$levelResult['level']],
+        'level_info'   => applyLevelSayings($levels[$levelResult['level']], $levelResult['level'], $copyContext),
         'level_reasons'=> formatWoodsReasons($levelResult['reasons']),
-        'advisor'      => pickAdvisor($levelResult['level'], $levelResult['reasons']),
+        'advisor'      => pickAdvisor($levelResult['level'], $levelResult['reasons'], $copyContext),
         'spot_character' => pickSpotCharacter($levelResult['level'], $levelResult['reasons']),
     ];
 
-    $result['day_story'] = buildDayStory($result['hourly'], $alerts, $config, $levelResult['level']);
+    $result['day_story'] = buildDayStory($result['hourly'], $alerts, $config, $levelResult['level'], $copyContext);
 
     if ($ttl > 0) {
         if (!is_dir($config['cache_dir'])) {
@@ -364,7 +377,7 @@ function pickSpotCharacter(int $level, array $reasons): ?string
     return $default;
 }
 
-function pickAdvisor(int $level, array $reasons): array
+function pickAdvisor(int $level, array $reasons, array $context = []): array
 {
     $character = pickAdvisorCharacter($level, $reasons);
     $quotes = getAdvisorQuotes();
@@ -372,8 +385,13 @@ function pickAdvisor(int $level, array $reasons): array
         ?? $quotes[$character]['any']
         ?? ['Stay aware of changing conditions.'];
 
-    $seed = crc32($character . '|' . $level . '|' . implode(';', $reasons));
-    $quote = $pool[$seed % count($pool)];
+    $ctx = $context + ['reasons' => $reasons];
+    $quote = pickWoodsSaying(
+        $pool,
+        woodsCopySeed($level, 'advisor:' . $character, $ctx),
+        'Stay aware of changing conditions.',
+        $ctx
+    );
 
     $verbs = [
         'Pooh'              => 'says',
@@ -582,29 +600,30 @@ function storyTransitionPhrase(int $previousLevel, int $level, bool $isFirst, bo
     return 'Continues as';
 }
 
-function storyCharacterAside(string $character, int $level): string
+function storyCharacterAside(string $character, int $level, array $context = []): string
 {
     $levels = getWeatherLevels();
     $info = $levels[$level] ?? $levels[0];
+    $fallback = $info['character_role'] ?? 'has thoughts about the weather';
+    $isLevelCharacter = ($info['character'] ?? '') === $character;
 
-    if (($info['character'] ?? '') === $character && !empty($info['character_role'])) {
-        return $info['character_role'];
+    $pool = [];
+    if ($isLevelCharacter) {
+        $pool = getLevelSayingPools()[$level]['character_role'] ?? [];
+        $kind = 'character_role';
+    } else {
+        $pool = getCharacterAsidePools()[$character][$level] ?? [];
+        $kind = 'aside:' . $character;
     }
 
-    $short = [
-        'Pooh'              => [0 => 'approves wholeheartedly', 1 => 'looks at the sky with quiet suspicion'],
-        'Piglet'            => [2 => 'finds it rather blustery', 3 => 'wishes he were somewhere smaller and drier'],
-        'Rabbit'            => [2 => 'is already thinking about the garden chairs', 3 => 'has begun reorganizing the afternoon'],
-        'Owl'               => [3 => 'consults the map with growing seriousness', 4 => 'considers this beneath his dignity and the clouds\''],
-        'Eeyore'            => [1 => 'is not surprised', 2 => 'suspected the wind would get ideas'],
-        'Christopher Robin' => [4 => 'would like everyone nearer the house', 5 => 'has opened the door and will not take no for an answer'],
-    ];
+    if ($pool !== []) {
+        return pickWoodsSaying($pool, woodsCopySeed($level, $kind, $context), $fallback, $context);
+    }
 
-    return $short[$character][$level]
-        ?? ($info['character_role'] ?? 'has thoughts about the weather');
+    return $fallback;
 }
 
-function pickStoryFootnote(array $alerts): ?array
+function pickStoryFootnote(array $alerts, array $context = []): ?array
 {
     if (empty($alerts)) {
         return null;
@@ -616,47 +635,42 @@ function pickStoryFootnote(array $alerts): ?array
     $quotes = getAdvisorQuotes();
 
     if (str_contains($event, 'warning')) {
+        $character = 'Christopher Robin';
+        $verb = 'calls out';
         $pool = $quotes['Christopher Robin'][4]
             ?? $quotes['Christopher Robin']['any']
             ?? ['Come inside, please.'];
-        return [
-            'character' => 'Christopher Robin',
-            'verb'      => 'calls out',
-            'text'      => $pool[0],
-        ];
-    }
-
-    if (str_contains($event, 'wind')) {
+    } elseif (str_contains($event, 'wind')) {
+        $character = 'Rabbit';
+        $verb = 'insists';
         $pool = $quotes['Rabbit'][2]
             ?? $quotes['Rabbit']['any']
             ?? ['Bring the garden chairs in.'];
-        return [
-            'character' => 'Rabbit',
-            'verb'      => 'insists',
-            'text'      => $pool[0],
-        ];
-    }
-
-    if (str_contains($event, 'watch') || str_contains($event, 'advisory')) {
+    } elseif (str_contains($event, 'watch') || str_contains($event, 'advisory')) {
+        $character = 'Rabbit';
+        $verb = 'insists';
         $pool = $quotes['Rabbit']['any']
             ?? $quotes['Owl']['any']
             ?? ['Stay informed and prepare accordingly.'];
-        return [
-            'character' => 'Rabbit',
-            'verb'      => 'insists',
-            'text'      => $pool[0],
-        ];
+    } else {
+        $character = 'Owl';
+        $verb = 'declares';
+        $pool = $quotes['Owl']['any'] ?? ['Monitor official alerts.'];
     }
 
-    $pool = $quotes['Owl']['any'] ?? ['Monitor official alerts.'];
     return [
-        'character' => 'Owl',
-        'verb'      => 'declares',
-        'text'      => $pool[0],
+        'character' => $character,
+        'verb'      => $verb,
+        'text'      => pickWoodsSaying(
+            $pool,
+            woodsCopySeed(0, 'footnote:' . $character, $context),
+            woodsSayingText($pool[0] ?? 'Stay informed.'),
+            $context
+        ),
     ];
 }
 
-function buildDayStory(array $hourly, array $alerts, array $config, int $currentLevel = 0): array
+function buildDayStory(array $hourly, array $alerts, array $config, int $currentLevel = 0, array $copyContext = []): array
 {
     if (empty($hourly)) {
         return ['beats' => [], 'footnote' => null];
@@ -717,7 +731,7 @@ function buildDayStory(array $hourly, array $alerts, array $config, int $current
     }
 
     if (empty($rawBeats)) {
-        return ['beats' => [], 'footnote' => pickStoryFootnote($alerts)];
+        return ['beats' => [], 'footnote' => pickStoryFootnote($alerts, $copyContext)];
     }
 
     $merged = [];
@@ -763,14 +777,14 @@ function buildDayStory(array $hourly, array $alerts, array $config, int $current
             'level'        => $level,
             'level_name'   => $info['name'],
             'character'    => $character,
-            'aside'        => storyCharacterAside($character, $level),
+            'aside'        => storyCharacterAside($character, $level, $copyContext),
         ];
         $previousLevel = $level;
     }
 
     return [
         'beats'    => $beats,
-        'footnote' => pickStoryFootnote($alerts),
+        'footnote' => pickStoryFootnote($alerts, $copyContext),
     ];
 }
 
