@@ -130,6 +130,7 @@ nav a:hover { text-decoration: underline; }
     justify-content: space-between;
     gap: 1rem;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .log-location-name {
@@ -141,10 +142,115 @@ nav a:hover { text-decoration: underline; }
     color: var(--signal);
 }
 
-.log-location-meta {
+.log-location-meta,
+.log-location-note {
     display: block;
     font-size: 0.78rem;
     color: var(--ink-light);
+}
+
+.log-location-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 260px;
+    justify-content: flex-end;
+}
+
+.log-location-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.log-btn {
+    flex-shrink: 0;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--navy);
+    background: var(--navy);
+    color: var(--paper);
+    font-family: var(--label);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.log-btn:hover { background: var(--signal); border-color: var(--signal); }
+.log-btn:disabled { opacity: 0.6; cursor: wait; }
+
+.log-search {
+    position: relative;
+    flex: 1 1 180px;
+    max-width: 280px;
+    min-width: 140px;
+}
+
+.log-search input {
+    width: 100%;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid rgba(30, 58, 95, 0.28);
+    background: rgba(255, 255, 255, 0.92);
+    font-size: 0.84rem;
+    color: var(--ink);
+    font-family: inherit;
+}
+
+.log-search input::placeholder { color: var(--ink-light); font-style: italic; }
+.log-search input:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.18);
+}
+
+.log-search-results {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: #fff;
+    border: 1px solid rgba(30, 58, 95, 0.28);
+    box-shadow: 0 8px 24px rgba(20, 36, 58, 0.14);
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.log-search-results button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.55rem 0.85rem;
+    border: none;
+    background: none;
+    font-size: 0.84rem;
+    cursor: pointer;
+    color: var(--ink);
+    font-family: inherit;
+}
+
+.log-search-results button:hover { background: var(--paper); }
+
+.log-search-empty {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--ink-light);
+    line-height: 1.45;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
 }
 
 .woods-unit-toggle {
@@ -386,7 +492,28 @@ h3 {
 
 .footer-links a { color: inherit; }
 
-.day-story-aside { font-style: italic; }
+.log-guide-nudge {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0.65rem 1.25rem 0.85rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    justify-content: space-between;
+    font-size: 0.88rem;
+}
+.log-guide-nudge[hidden] { display: none; }
+.glossary-lead { margin: 0 0 0.75rem; font-size: 0.92rem; }
+.glossary { margin: 0; }
+.glossary-row { margin: 0 0 0.65rem; }
+.glossary dt {
+    font-family: var(--label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    color: var(--signal);
+}
+.glossary dd { margin: 0.15rem 0 0; }
 
 a { color: var(--navy); }
 body.level-3 a, body.level-4 a, body.level-5 a { color: var(--brass); }
@@ -395,4 +522,19 @@ body.level-3 a, body.level-4 a, body.level-5 a { color: var(--brass); }
     .hero-grid, .stats-grid, .daily-grid { grid-template-columns: 1fr 1fr; }
     .hero-grid { grid-template-columns: 1fr; }
     .level-name { font-size: 1.65rem; }
+
+    .log-location-inner {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .log-location-controls {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+    }
+
+    .log-search {
+        max-width: none;
+    }
 }

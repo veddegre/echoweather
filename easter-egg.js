@@ -54,6 +54,12 @@ function openHundredAcreGuide(){
   location.href = POOH_BASE + 'slides.php?' + echoThemeQuery({ from: 'echo' }).toString();
 }
 
+function openShipLogGuide(){
+  try{ store.set(LOG_STORAGE, '1'); }catch(e){}
+  revealShipLogLinks();
+  location.href = LOG_BASE + 'slides.php?' + echoThemeQuery({ from: 'echo' }).toString();
+}
+
 function openShipLog(){
   const loc = hundredAcreLocation();
   if(!loc){
@@ -89,6 +95,10 @@ function woodsTriggerFromUrl(){
 function logTriggerFromUrl(){
   const params = new URLSearchParams(location.search);
   if(!params.has('log') && params.get('egg') !== 'log') return false;
+  if(params.get('log') === 'guide'){
+    waitForLocationThen(openShipLogGuide);
+    return true;
+  }
   waitForLocationThen(openShipLog);
   return true;
 }
@@ -106,7 +116,8 @@ function logTriggerFromHash(){
   const raw = (location.hash || '').replace(/^#/, '');
   const path = raw.split('?')[0];
   if(path !== 'logbook' && path !== 'log') return false;
-  waitForLocationThen(openShipLog);
+  if(raw.includes('guide')) waitForLocationThen(openShipLogGuide);
+  else waitForLocationThen(openShipLog);
   return true;
 }
 

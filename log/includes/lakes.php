@@ -38,3 +38,15 @@ function lakeLogStationName(float $lat, float $lon, string $placeName): string
 
     return $placeName;
 }
+
+function lakeLogLocationSourceLabel(string $source): string
+{
+    return match ($source) {
+        'browser' => 'Fix from this vessel',
+        'ip'      => 'Estimated from the shore',
+        'cookie'  => 'Last station logged',
+        'manual'  => 'Custom station',
+        'search'  => 'Looked up by name',
+        default   => 'Default station',
+    };
+}

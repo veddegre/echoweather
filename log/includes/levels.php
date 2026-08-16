@@ -14,6 +14,11 @@ function getLakeLogLevels(): array
             'message'     => 'The lake is keeping its own counsel, and the counsel is kind.',
             'story'       => 'A still fetch. The breakwater took the morning without complaint.',
             'action'      => 'Walk the pier if you like. Mind the spray anyway — habit is cheaper than regret.',
+            'conditions'  => [
+                'Light airs or a calm fetch',
+                'Harbor and breakwater easy',
+                'No marine alerts on the board',
+            ],
             'official'    => ['No marine alerts', 'Light winds'],
             'css_class'   => 'level-0',
             'icon'        => 'sun',
@@ -26,6 +31,11 @@ function getLakeLogLevels(): array
             'message'     => 'The lake has opinions. They are not yet orders.',
             'story'       => 'A short steep lump off the harbor mouth. Nothing a sensible boat cannot abide.',
             'action'      => 'Small boats keep an eye on the sky. Hats stay on. Plans may still proceed.',
+            'conditions'  => [
+                'A short steep lump or chop',
+                'Clouds making up, or a light drizzle',
+                'The bar beginning to mutter',
+            ],
             'official'    => ['No alert', 'Elevated nearshore chop'],
             'css_class'   => 'level-1',
             'icon'        => 'cloud',
@@ -38,6 +48,11 @@ function getLakeLogLevels(): array
             'message'     => 'The wind has found the fetch, and the fetch is answering.',
             'story'       => 'Whitecaps in the open. The harbor looks more intelligent than it did at breakfast.',
             'action'      => 'Small craft stay in, or go with someone who knows the bar. Allow extra time along the shore.',
+            'conditions'  => [
+                'Whitecaps in the open',
+                'Small Craft Advisory weather',
+                'Wind finding the fetch',
+            ],
             'official'    => ['Small Craft Advisory', 'Wind Advisory', 'Beach hazards'],
             'css_class'   => 'level-2',
             'icon'        => 'wind',
@@ -50,6 +65,11 @@ function getLakeLogLevels(): array
             'message'     => 'This is weather that writes itself into the book.',
             'story'       => 'The lake has dropped the pretense of manners. The light is for more than courtesy now.',
             'action'      => 'Stay off the open water. Secure what can blow. Check again after the next watch.',
+            'conditions'  => [
+                'Gale building, or a determined sea',
+                'Thunder, heavy rain, or a flooding risk',
+                'Spray over the wall',
+            ],
             'official'    => ['Gale Warning', 'Flood Watch', 'Severe Thunderstorm Watch'],
             'css_class'   => 'level-3',
             'icon'        => 'rain',
@@ -62,6 +82,11 @@ function getLakeLogLevels(): array
             'message'     => 'The open lake is not a place. It is a mistake.',
             'story'       => 'No one argues with a sea like this. The walls that matter are the ones already around you.',
             'action'      => 'Ashore. Inland of the spray. Follow official instruction without debate.',
+            'conditions'  => [
+                'Storm-force wind or a damaging sea',
+                'Severe thunderstorms or ice',
+                'Travel along the shore becoming dangerous',
+            ],
             'official'    => ['Storm Warning', 'Severe Thunderstorm Warning', 'Winter Storm Warning'],
             'css_class'   => 'level-4',
             'icon'        => 'storm',
@@ -74,6 +99,11 @@ function getLakeLogLevels(): array
             'message'     => 'This is not a log entry. This is an order.',
             'story'       => 'There is only the nearest solid ground, the lowest room, and staying put until someone official says otherwise.',
             'action'      => 'Get off the water and off the open shore. Innermost room, away from windows. Do exactly what the officials say.',
+            'conditions'  => [
+                'Hurricane-force wind, tornado, or a flash flood emergency',
+                'A destructive storm in progress',
+                'Life-threatening conditions on the water or the open shore',
+            ],
             'official'    => ['Hurricane Force Wind Warning', 'Tornado Warning', 'Flash Flood Emergency'],
             'css_class'   => 'level-5',
             'icon'        => 'house',
@@ -89,11 +119,13 @@ function getLakeSayingPools(): array
                 'The lake is keeping its own counsel, and the counsel is kind.',
                 'A working day, if you have work that likes fair water.',
                 'Nothing on the glass that a keeper would underline.',
+                'Fair along the lee. A day for painting, not for reefing.',
             ],
             'story' => [
                 'A still fetch. The breakwater took the morning without complaint.',
                 'The harbor looked pleased with itself, which is rare and should be enjoyed.',
                 'Smoke from the stacks went straight up, as if it had an appointment ashore.',
+                'The fetch was short and honest. No sea to speak of beyond the pier.',
             ],
             'character_role' => [
                 'has the lamp trimmed and nothing particular to report',
@@ -106,6 +138,7 @@ function getLakeSayingPools(): array
                 'The lake has opinions. They are not yet orders.',
                 'A bit of a lump. The sort that makes a green hand thoughtful.',
                 'Not a warning. A suggestion, delivered by the chop.',
+                'A weather eye is enough. A gale warning is not yet required.',
             ],
             'story' => [
                 'A short steep lump off the harbor mouth. Nothing a sensible boat cannot abide.',
@@ -123,6 +156,7 @@ function getLakeSayingPools(): array
                 'The wind has found the fetch, and the fetch is answering.',
                 'Small craft would do well to remember they are small.',
                 'Hats, canvas, and optimism are all under review.',
+                'The Small Craft Advisory is the lake speaking plainly.',
             ],
             'story' => [
                 'Whitecaps in the open. The harbor looks more intelligent than it did at breakfast.',
@@ -322,4 +356,80 @@ function applyLakeLogCopy(array $info, int $level, array $context = []): array
     }
 
     return $info;
+}
+
+function getLakeCharacterGuide(): array
+{
+    return [
+        'The keeper' => [
+            'notices' => 'the light, the glass, and whether the fetch is still honest',
+            'station' => 'The lighthouse',
+        ],
+        'The deckhand' => [
+            'notices' => 'chop, spray, and anything that wants to come adrift',
+            'station' => 'On deck',
+        ],
+        'The captain' => [
+            'notices' => 'when small craft should stay in, and when all hands come below',
+            'station' => 'The wheelhouse',
+        ],
+    ];
+}
+
+function getLakeGlossary(): array
+{
+    return [
+        ['term' => 'The glass', 'sense' => 'The barometer. A falling glass means trouble is making up.'],
+        ['term' => 'Fetch', 'sense' => 'How far the wind has to work on the water. A long fetch builds a larger sea.'],
+        ['term' => 'The bar', 'sense' => 'The shallow water at a harbor mouth, where a short steep sea can stand up.'],
+        ['term' => 'Lump / chop', 'sense' => 'A short, steep sea. Uncomfortable, not yet a gale.'],
+        ['term' => 'Small craft', 'sense' => 'Boats that feel a Small Craft Advisory first — open boats, daysailers, tenders.'],
+        ['term' => 'Watch', 'sense' => 'A four-hour trick of duty, and also NWS language: conditions may become hazardous.'],
+        ['term' => 'Weather eye', 'sense' => 'Keep looking. The lake changes its mind without asking.'],
+        ['term' => 'Lee', 'sense' => 'The sheltered side. Seek the lee of the land, not the open fetch.'],
+        ['term' => 'All hands below', 'sense' => 'Off the deck. Ashore. The lake is no longer a place of work.'],
+        ['term' => 'GLF', 'sense' => 'The NWS Great Lakes forecast. Echo still has the full product when you need the fine print.'],
+    ];
+}
+
+function formatLakeReasons(array $reasons): array
+{
+    $out = [];
+    foreach ($reasons as $reason) {
+        $r = $reason;
+        if (str_starts_with($r, 'Official word from beyond the woods:')) {
+            $out[] = 'Notice posted: ' . trim(substr($r, strlen('Official word from beyond the woods:')));
+            continue;
+        }
+        if (str_starts_with($r, 'Active alert:')) {
+            $out[] = 'Notice posted: ' . trim(substr($r, strlen('Active alert:')));
+            continue;
+        }
+        if (str_starts_with($r, 'The trees report ')) {
+            $out[] = 'The glass and the anemometer report ' . substr($r, strlen('The trees report '));
+            continue;
+        }
+        if (str_starts_with($r, 'Wind ')) {
+            $out[] = 'Wind on the fetch: ' . lcfirst($r);
+            continue;
+        }
+        if (str_starts_with($r, 'Thermometer reading:')) {
+            $out[] = 'Air on deck: ' . trim(substr($r, strlen('Thermometer reading:')));
+            continue;
+        }
+        if (str_starts_with($r, 'Temperature ')) {
+            $out[] = 'Air on deck: ' . substr($r, strlen('Temperature '));
+            continue;
+        }
+        if (str_starts_with($r, 'Sky is dropping water at ')) {
+            $out[] = 'Rain on deck at ' . substr($r, strlen('Sky is dropping water at '));
+            continue;
+        }
+        if (str_starts_with($r, 'Precipitation ')) {
+            $out[] = 'Rain on deck: ' . substr($r, strlen('Precipitation '));
+            continue;
+        }
+        $out[] = $r;
+    }
+    return $out;
 }

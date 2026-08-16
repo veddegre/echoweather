@@ -164,6 +164,7 @@ curl_smoke "/pooh/slides.php"
 echo ""
 echo "Lakes Log (log/)"
 curl_smoke "/log/index.php"
+curl_smoke "/log/slides.php"
 pooh_geo_code="$(curl_code "/pooh/api/geocode.php?q=Chicago" /tmp/echoweather-pooh-geocode.json)"
 if [[ "$pooh_geo_code" == "200" ]] && grep -q '"results"' /tmp/echoweather-pooh-geocode.json; then
   echo "OK   /pooh/api/geocode.php?q=Chicago — HTTP 200 with results"

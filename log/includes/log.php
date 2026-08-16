@@ -99,6 +99,7 @@ function applyLakePageCopy(array $weather, array $copyContext): array
         ?? $copyContext['reasons']
         ?? [];
     $weather['advisor'] = pickLakeAdvisor($level, $rawReasons, $copyContext);
+    $weather['level_reasons'] = formatLakeReasons($weather['level_reasons'] ?? $rawReasons);
 
     if (!empty($weather['day_story']['beats']) && is_array($weather['day_story']['beats'])) {
         foreach ($weather['day_story']['beats'] as $index => $beat) {

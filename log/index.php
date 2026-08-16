@@ -76,7 +76,7 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
         'description' => $pageDescription,
     ]) ?>
 </head>
-<body class="<?= htmlspecialchars($info['css_class']) ?> log-page">
+<body class="<?= htmlspecialchars($info['css_class']) ?> log-page" data-location-source="<?= htmlspecialchars($locationSource) ?>">
 
 <div class="wave-layer" aria-hidden="true"></div>
 
@@ -85,22 +85,40 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
         <h1 class="site-title">The Lakes Log</h1>
         <nav>
             <a href="index.php<?= $echoQs ?>">Log</a>
+            <a href="slides.php<?= $echoQs ?>">Standing orders</a>
             <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>" class="echo-back">← Echo Weather</a>
         </nav>
     </div>
 </header>
 
-<section class="log-location" aria-label="Station">
+<section class="log-location" aria-label="Choose station">
     <div class="log-location-inner">
         <div class="log-location-text">
             <span class="log-location-name"><?= $name ?></span>
             <span class="log-location-meta">Log date <?= htmlspecialchars($logDate) ?></span>
+            <?php if ($locationSource !== 'echo'): ?>
+            <span class="log-location-note"><?= htmlspecialchars(lakeLogLocationSourceLabel($locationSource)) ?></span>
+            <?php endif; ?>
         </div>
-        <div class="woods-unit-toggle" id="woods-unit-toggle" role="group" aria-label="Temperature units">
-            <button type="button" class="woods-unit<?= $isFahrenheit ? ' is-on' : '' ?>" data-units="f" aria-pressed="<?= $isFahrenheit ? 'true' : 'false' ?>">°F</button>
-            <button type="button" class="woods-unit<?= !$isFahrenheit ? ' is-on' : '' ?>" data-units="c" aria-pressed="<?= !$isFahrenheit ? 'true' : 'false' ?>">°C</button>
+        <div class="log-location-controls">
+            <div class="log-location-actions">
+                <div class="woods-unit-toggle" id="woods-unit-toggle" role="group" aria-label="Temperature units">
+                    <button type="button" class="woods-unit<?= $isFahrenheit ? ' is-on' : '' ?>" data-units="f" aria-pressed="<?= $isFahrenheit ? 'true' : 'false' ?>">°F</button>
+                    <button type="button" class="woods-unit<?= !$isFahrenheit ? ' is-on' : '' ?>" data-units="c" aria-pressed="<?= !$isFahrenheit ? 'true' : 'false' ?>">°C</button>
+                </div>
+                <button type="button" class="log-btn" id="use-my-location">This vessel</button>
+            </div>
+            <form class="log-search" id="location-search-form" role="search">
+                <label for="location-search-input" class="visually-hidden">Search another station</label>
+                <input type="search" id="location-search-input" name="q" placeholder="Search another station…" autocomplete="off" spellcheck="false">
+                <div class="log-search-results" id="location-search-results" hidden></div>
+            </form>
         </div>
     </div>
+    <aside class="log-guide-nudge" id="log-guide-nudge" hidden aria-live="polite">
+        <p><strong>New to the log?</strong> The <a href="slides.php<?= $echoQs ?>">standing orders</a> explain the six marks, the talk of the lakes, and who keeps the book.</p>
+        <button type="button" class="woods-unit" id="log-guide-dismiss">Very well</button>
+    </aside>
 </section>
 
 <main class="main-content">
@@ -238,6 +256,20 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
     </section>
     <?php endif; ?>
 
+    <section class="card glossary-card">
+        <h3>Talk of the lakes</h3>
+        <p class="glossary-lead">A few working words, so a remark in the log means what it does on the water.</p>
+        <dl class="glossary">
+            <?php foreach (getLakeGlossary() as $entry): ?>
+            <div class="glossary-row">
+                <dt><?= htmlspecialchars($entry['term']) ?></dt>
+                <dd><?= htmlspecialchars($entry['sense']) ?></dd>
+            </div>
+            <?php endforeach; ?>
+        </dl>
+        <p class="woods-accuracy">The full standing orders — including Watch versus Warning — are in the <a href="slides.php<?= $echoQs ?>">guide</a>.</p>
+    </section>
+
     <section class="card official-card">
         <h3>Official equivalents for this level</h3>
         <ul>
@@ -267,14 +299,16 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
 <footer class="site-footer">
     <p>A Great Lakes reading of the same official weather Echo uses. Not affiliated with NOAA or the National Weather Service.</p>
     <p class="footer-links">
-        <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Use this place in Echo Weather</a>
+        <a href="slides.php<?= $echoQs ?>">Standing orders</a>
+        &middot; <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Use this place in Echo Weather</a>
         <?php if ($echoFrom): ?>
         &middot; <a href="../" class="echo-back">← Back to Echo Weather</a>
         <?php endif; ?>
     </p>
 </footer>
 
-<script src="../pooh/assets/js/woods.js?v=<?= woodsAssetVersion('assets/js/woods.js') ?>"></script>
+<script src="assets/js/log.js?v=<?= logAssetVersion('assets/js/log.js') ?>"></script>
+<script src="assets/js/location.js?v=<?= logAssetVersion('assets/js/location.js') ?>"></script>
 
 </body>
 </html>
