@@ -78,6 +78,7 @@ return [
     'rate_limit_hms_smoke' => 60,
     'rate_limit_wpc_ero' => 60,
     'rate_limit_nhc_storms' => 60,
+    'rate_limit_7timer' => 60,
 
     // -------------------------------------------------------------------------
     // TAF cache — reduces AviationWeather API load

@@ -22,6 +22,10 @@ let radarDeepFrame = null;
 let mapB = null, mapBMarker = null, basemapLayerB = null;
 let iemOverlayLayersB = [null, null], iemSlotFrameB = [-1, -1], iemOverlaySlotB = 0;
 let radarDualOn = false, mapSyncLock = false;
+let radarPalette = store.get('st_radar_palette') === 'cividis' ? 'cividis' : 'standard';
+let satMap = null, satLayer = null, satBasemap = null, satMarker = null;
+let satProduct = 'east-ir';
+let echoDrawGroup = null, echoDrawControl = null;
 const MRMS_BREF_WMS_URL = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows';
 const MRMS_GEOSERVER_OWS = 'https://opengeo.ncep.noaa.gov/geoserver/ows';
 const MRMS_WMS_URL = MRMS_BREF_WMS_URL;
@@ -162,7 +166,7 @@ function ensurePingPongLayer(layers, slot, onError, opts, targetMap){
   const m = targetMap || map;
   if(!m) return null;
   if(!layers[slot]){
-    layers[slot] = L.tileLayer('', { ...opts, opacity: 0 });
+    layers[slot] = createRadarTileLayer('', { ...opts, opacity: 0 });
     if(onError) layers[slot].on('tileerror', onError);
     layers[slot].addTo(m);
   } else if(!m.hasLayer(layers[slot])) {
@@ -231,6 +235,85 @@ const MRMS_TILE_OPTS = {
   keepBuffer: 1,
   attribution: 'NOAA MRMS'
 };
+const CIVIDIS_LUT = (() => {
+  const stops = [
+    [0, 0, 32, 77],
+    [0.14, 22, 62, 108],
+    [0.28, 54, 88, 115],
+    [0.42, 87, 105, 115],
+    [0.56, 122, 121, 109],
+    [0.70, 162, 140, 94],
+    [0.84, 207, 166, 66],
+    [1, 253, 231, 37]
+  ];
+  const lut = new Uint8Array(256 * 3);
+  for(let i = 0; i < 256; i++){
+    const t = i / 255;
+    let a = stops[0], b = stops[stops.length - 1];
+    for(let s = 0; s < stops.length - 1; s++){
+      if(t >= stops[s][0] && t <= stops[s + 1][0]){ a = stops[s]; b = stops[s + 1]; break; }
+    }
+    const u = (t - a[0]) / ((b[0] - a[0]) || 1);
+    lut[i * 3] = Math.round(a[1] + (b[1] - a[1]) * u);
+    lut[i * 3 + 1] = Math.round(a[2] + (b[2] - a[2]) * u);
+    lut[i * 3 + 2] = Math.round(a[3] + (b[3] - a[3]) * u);
+  }
+  return lut;
+})();
+function remapCividisPixels(data){
+  for(let i = 0; i < data.length; i += 4){
+    if(data[i + 3] < 12) continue;
+    const y = Math.max(0, Math.min(255, Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2])));
+    data[i] = CIVIDIS_LUT[y * 3];
+    data[i + 1] = CIVIDIS_LUT[y * 3 + 1];
+    data[i + 2] = CIVIDIS_LUT[y * 3 + 2];
+  }
+}
+function cividisCreateTile(coords, done){
+  const tile = document.createElement('canvas');
+  const size = this.getTileSize();
+  tile.width = size.x;
+  tile.height = size.y;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try{
+      const ctx = tile.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, tile.width, tile.height);
+      remapCividisPixels(imageData.data);
+      ctx.putImageData(imageData, 0, 0);
+    }catch(e){
+      const ctx = tile.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+    }
+    done(null, tile);
+  };
+  img.onerror = () => {
+    const plain = new Image();
+    plain.onload = () => {
+      try{ tile.getContext('2d').drawImage(plain, 0, 0); }catch(e){}
+      done(null, tile);
+    };
+    plain.onerror = err => done(err, tile);
+    plain.src = this.getTileUrl(coords);
+  };
+  img.src = this.getTileUrl(coords);
+  return tile;
+}
+const CividisTileLayer = L.TileLayer.extend({ createTile: cividisCreateTile });
+const CividisWmsLayer = L.TileLayer.WMS.extend({ createTile: cividisCreateTile });
+function isCividisPalette(){
+  return radarPalette === 'cividis';
+}
+function createRadarTileLayer(url, opts){
+  const o = isCividisPalette() ? { ...opts, crossOrigin: true } : opts;
+  return isCividisPalette() ? new CividisTileLayer(url, o) : L.tileLayer(url, o);
+}
+function createRadarWmsLayer(url, opts){
+  const o = isCividisPalette() ? { ...opts, crossOrigin: true } : opts;
+  return isCividisPalette() ? new CividisWmsLayer(url, o) : L.tileLayer.wms(url, o);
+}
 function hidePingPongLayers(layers){
   layers.forEach(l => { if(l) l.setOpacity(0); });
 }
@@ -258,7 +341,17 @@ function clearRadarLayers(){
   removePingPongLayers(iemOverlayLayers, map);
   removePingPongLayers(mrmsOverlayLayers, map);
   clearDualPaneOverlays();
+  radarOverlayLayers = [null, null];
+  satOverlayLayers = [null, null];
+  iemOverlayLayers = [null, null];
+  mrmsOverlayLayers = [null, null];
+  iemOverlayLayersB = [null, null];
+  if(mrmsOverlayLayerB && mapB && mapB.hasLayer(mrmsOverlayLayerB)) mapB.removeLayer(mrmsOverlayLayerB);
+  mrmsOverlayLayerB = null;
+  mrmsWmsLayerKey = '';
+  mrmsWmsLayerKeyB = '';
   hideGoesSatellite();
+  goesSatLayer = null;
   resetPingPongSlots();
 }
 function stopRadarTimer(){
@@ -342,6 +435,7 @@ function refreshRadarMapSize(){
       sizeLightningCanvas();
     }
     if(mapB) mapB.invalidateSize({ animate: false });
+    if(satMap) satMap.invalidateSize({ animate: false });
   };
   invalidate();
   requestAnimationFrame(() => {
@@ -385,13 +479,8 @@ async function ensureDualPaneVelocitySite(){
 }
 function syncMapBBasemap(){
   if(!mapB) return;
-  const style = cssVar('--map-tiles') || (isDarkTheme() ? 'dark_all' : 'light_all');
-  const url = 'https://{s}.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}{r}.png';
   if(basemapLayerB) mapB.removeLayer(basemapLayerB);
-  basemapLayerB = L.tileLayer(url, {
-    attribution: '\u00A9 OpenStreetMap \u00A9 CARTO', subdomains: 'abcd',
-    minZoom: RADAR_ZOOM.min, maxZoom: radarMaxZoom()
-  }).addTo(mapB);
+  basemapLayerB = createBasemapLayer(radarMaxZoom()).addTo(mapB);
   basemapLayerB.bringToBack();
   if(mapBMarker) mapBMarker.bringToFront();
 }
@@ -531,6 +620,8 @@ function activateRadarPanel(){
   syncStormReportMarkers();
   syncThreatOverlays();
   if(typeof syncOverlayLegends === 'function') syncOverlayLegends();
+  initDrawTools();
+  loadSatellitePanel(loc);
 }
 function initMap(loc){
   if(map){
@@ -541,6 +632,7 @@ function initMap(loc){
     syncAlertPolygons(stormState.alertFeatures.filter(f => f.geometry));
     if(radarLightningOn) setLightningOverlay(true);
     if(typeof radarWindOn !== 'undefined' && radarWindOn) setWindOverlay(true);
+    clearMapMeasurements();
     return;
   }
   map = L.map('radar', {
@@ -557,6 +649,7 @@ function initMap(loc){
   });
   syncMapBasemap();
   mapMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(map);
+  initDrawTools();
 }
 function centerRadarMap(){
   if(!map) return;
@@ -694,14 +787,14 @@ function ensureMrmsWmsLayerB(product){
   if(!mapB) return null;
   const cfg = mrmsWmsConfigForProduct(product);
   if(!cfg) return null;
-  const key = cfg.url + '|' + cfg.layers + '|' + cfg.styles;
+  const key = cfg.url + '|' + cfg.layers + '|' + cfg.styles + '|' + radarPalette;
   if(mrmsOverlayLayerB && mrmsWmsLayerKeyB && mrmsWmsLayerKeyB !== key){
     if(mapB.hasLayer(mrmsOverlayLayerB)) mapB.removeLayer(mrmsOverlayLayerB);
     mrmsOverlayLayerB = null;
   }
   mrmsWmsLayerKeyB = key;
   if(!mrmsOverlayLayerB){
-    mrmsOverlayLayerB = L.tileLayer.wms(cfg.url, {
+    mrmsOverlayLayerB = createRadarWmsLayer(cfg.url, {
       layers: cfg.layers,
       styles: cfg.styles || '',
       format: 'image/png',
@@ -730,14 +823,14 @@ function ensureMrmsWmsLayer(slot){
   if(!map) return null;
   const cfg = mrmsWmsConfig();
   if(!cfg) return null;
-  const key = cfg.url + '|' + cfg.layers + '|' + cfg.styles;
+  const key = cfg.url + '|' + cfg.layers + '|' + cfg.styles + '|' + radarPalette;
   if(mrmsOverlayLayers[slot] && mrmsWmsLayerKey && mrmsWmsLayerKey !== key){
     if(map.hasLayer(mrmsOverlayLayers[slot])) map.removeLayer(mrmsOverlayLayers[slot]);
     mrmsOverlayLayers[slot] = null;
   }
   mrmsWmsLayerKey = key;
   if(!mrmsOverlayLayers[slot]){
-    mrmsOverlayLayers[slot] = L.tileLayer.wms(cfg.url, {
+    mrmsOverlayLayers[slot] = createRadarWmsLayer(cfg.url, {
       layers: cfg.layers,
       styles: cfg.styles || '',
       format: 'image/png',
@@ -1084,9 +1177,14 @@ function updateRadarLegend(){
   if(!leg) return;
   const vel = (IEM_TILES[radarMode] && IEM_TILES[radarMode].velocity)
     || (radarMode === 'mrms' && mrmsProduct === 'bvel');
+  const bar = vel
+    ? 'linear-gradient(90deg,#00f,#0ff,#0f0,#ff0,#f00,#f0f)'
+    : (isCividisPalette()
+      ? 'linear-gradient(90deg,#00204d,#3b4c6e,#7d7c74,#c3b369,#fee838)'
+      : '');
   leg.innerHTML = vel
-    ? '<div>Velocity</div><div class="bar" style="background:linear-gradient(90deg,#00f,#0ff,#0f0,#ff0,#f00,#f0f)"></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>In</span><span>0</span><span>Out</span></div>'
-    : '<div>Reflectivity (dBZ)</div><div class="bar"></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>5</span><span>35</span><span>65+</span></div>';
+    ? '<div>Velocity</div><div class="bar" style="background:' + bar + '"></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>In</span><span>0</span><span>Out</span></div>'
+    : '<div>Reflectivity (dBZ)</div><div class="bar"' + (bar ? ' style="background:' + bar + '"' : '') + '></div><div style="display:flex;justify-content:space-between;margin-top:2px"><span>5</span><span>35</span><span>65+</span></div>';
   if(typeof syncOverlayLegends === 'function') syncOverlayLegends();
 }
 function radarFrameCount(){
@@ -1101,7 +1199,7 @@ function hideGoesSatellite(){
 function ensureGoesSatLayer(){
   if(!map) return null;
   if(!goesSatLayer){
-    goesSatLayer = L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes_east_conus_ch13/{z}/{x}/{y}.png', {
+    goesSatLayer = createRadarTileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/goes_east_conus_ch13/{z}/{x}/{y}.png', {
       opacity: 0.55,
       maxNativeZoom: 9,
       maxZoom: RADAR_ZOOM.rainviewer,
@@ -1259,6 +1357,7 @@ async function loadRadar(){
     if(!map) return;
     const loadId = ++radarLoadId;
     primeRadarLoad();
+    clearMapMeasurements();
     try{
       if(radarMode === 'rainviewer') await loadRainViewerRadar(loadId);
       else if(radarMode === 'mrms'){
@@ -1560,8 +1659,200 @@ function updateRadarStormMark(){
   mark.title = 'Severe window ' + stormState.severeWindow.label;
 }
 
+const SAT_PRODUCTS = {
+  'east-ir': { id: 'goes_east_conus_ch13', fulldisk: 'goes_east_fulldisk_ch13', label: 'GOES-East infrared (band 13)', btn: 'satEastIr' },
+  'east-vis': { id: 'goes_east_conus_ch02', fulldisk: 'goes_east_fulldisk_ch02', label: 'GOES-East visible (band 2)', btn: 'satEastVis' },
+  'west-ir': { id: 'goes_west_conus_ch13', fulldisk: 'goes_west_fulldisk_ch13', label: 'GOES-West infrared (band 13)', btn: 'satWestIr' },
+  'west-vis': { id: 'goes_west_conus_ch02', fulldisk: 'goes_west_fulldisk_ch02', label: 'GOES-West visible (band 2)', btn: 'satWestVis' }
+};
+function satUsesWestFulldisk(){
+  const loc = state.locations[state.active];
+  return !loc || loc.lon > -102;
+}
+function satLayerName(product){
+  const spec = SAT_PRODUCTS[product] || SAT_PRODUCTS['east-ir'];
+  if(String(product).startsWith('west') && satUsesWestFulldisk()) return spec.fulldisk;
+  return spec.id;
+}
+function satTileUrl(product){
+  return 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/' + satLayerName(product) + '/{z}/{x}/{y}.png';
+}
+function syncSatBasemap(){
+  if(!satMap) return;
+  if(satBasemap) satMap.removeLayer(satBasemap);
+  satBasemap = createBasemapLayer(8).addTo(satMap);
+  satBasemap.setOpacity(0.28);
+  satBasemap.bringToBack();
+  if(satLayer) satLayer.bringToFront();
+  if(satMarker) satMarker.bringToFront();
+}
+function syncSatLayer(){
+  if(!satMap) return;
+  if(satLayer) satMap.removeLayer(satLayer);
+  const spec = SAT_PRODUCTS[satProduct] || SAT_PRODUCTS['east-ir'];
+  satLayer = L.tileLayer(satTileUrl(satProduct), {
+    opacity: 1,
+    maxNativeZoom: 8,
+    maxZoom: 10,
+    zIndex: 450,
+    attribution: 'IEM / NOAA ' + spec.label
+  }).addTo(satMap);
+  satLayer.bringToFront();
+  if(satMarker) satMarker.bringToFront();
+  const note = $('satelliteNote');
+  const time = $('satelliteTime');
+  let extra = spec.label + ' \u00B7 Iowa Environmental Mesonet';
+  if(String(satProduct).startsWith('west') && satUsesWestFulldisk()){
+    extra += ' \u00B7 full disk (West CONUS does not cover this location)';
+  }
+  if(note) note.textContent = extra;
+  if(time) time.textContent = 'Near real-time';
+}
+function syncSatProductButtons(){
+  Object.entries(SAT_PRODUCTS).forEach(([key, spec]) => {
+    const btn = $(spec.btn);
+    if(!btn) return;
+    const on = key === satProduct;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+function initSatelliteMap(){
+  const el = $('satelliteMap');
+  if(!el || satMap) return;
+  const loc = state.locations[state.active];
+  satMap = L.map('satelliteMap', {
+    zoomControl: false,
+    minZoom: 3,
+    maxZoom: 10,
+    attributionControl: true
+  }).setView(loc ? [loc.lat, loc.lon] : [39.8, -98.5], 6);
+  L.control.zoom({ position: 'topleft' }).addTo(satMap);
+  syncSatBasemap();
+  if(loc) satMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(satMap);
+  syncSatLayer();
+  syncSatProductButtons();
+}
+function loadSatellitePanel(loc){
+  const panel = $('satellitePanel');
+  if(!panel) return;
+  initSatelliteMap();
+  if(!satMap) return;
+  if(loc){
+    satMap.setView([loc.lat, loc.lon], satMap.getZoom());
+    if(satMarker) satMarker.setLatLng([loc.lat, loc.lon]);
+    else satMarker = L.circleMarker([loc.lat, loc.lon], markerStyle()).addTo(satMap);
+  }
+  syncSatBasemap();
+  syncSatLayer();
+  requestAnimationFrame(() => { if(satMap) satMap.invalidateSize({ animate: false }); });
+}
+function setSatProduct(product){
+  if(!SAT_PRODUCTS[product]) return;
+  satProduct = product;
+  syncSatProductButtons();
+  syncSatLayer();
+}
+
+function polylineMeters(layer){
+  const raw = layer.getLatLngs ? layer.getLatLngs() : [];
+  const pts = Array.isArray(raw[0]) ? raw.flat() : raw;
+  let meters = 0;
+  for(let i = 1; i < pts.length; i++){
+    if(pts[i - 1] && pts[i] && pts[i - 1].distanceTo) meters += pts[i - 1].distanceTo(pts[i]);
+  }
+  return meters;
+}
+function formatMeasureDistance(meters){
+  if(state.units === 'F'){
+    const mi = meters / 1609.34;
+    return (mi < 10 ? mi.toFixed(2) : mi.toFixed(1)) + ' mi';
+  }
+  const km = meters / 1000;
+  return (km < 10 ? km.toFixed(2) : km.toFixed(1)) + ' km';
+}
+function showMeasureResult(layer){
+  const el = $('measureResult');
+  if(!el) return;
+  const meters = polylineMeters(layer);
+  el.hidden = false;
+  el.textContent = formatMeasureDistance(meters);
+}
+function hideMeasureResult(){
+  const el = $('measureResult');
+  if(el){ el.hidden = true; el.textContent = ''; }
+}
+function clearMapMeasurements(){
+  if(echoDrawGroup) echoDrawGroup.clearLayers();
+  hideMeasureResult();
+}
+function initDrawTools(){
+  if(!map || echoDrawControl || typeof L === 'undefined' || !L.Control || !L.Control.Draw) return;
+  echoDrawGroup = new L.FeatureGroup();
+  map.addLayer(echoDrawGroup);
+  echoDrawControl = new L.Control.Draw({
+    position: 'bottomleft',
+    draw: {
+      polyline: { metric: false, feet: false, showLength: false, shapeOptions: { color: '#3c91e6', weight: 3 } },
+      polygon: false, rectangle: false, circle: false, marker: false, circlemarker: false
+    },
+    edit: { featureGroup: echoDrawGroup, edit: false }
+  });
+  map.addControl(echoDrawControl);
+  map.on(L.Draw.Event.CREATED, e => {
+    echoDrawGroup.clearLayers();
+    echoDrawGroup.addLayer(e.layer);
+    showMeasureResult(e.layer);
+  });
+  map.on(L.Draw.Event.DELETED, () => hideMeasureResult());
+}
+
+function syncPaletteButton(){
+  const btn = $('radarPaletteBtn');
+  if(!btn) return;
+  const on = isCividisPalette();
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.textContent = on ? 'Color-blind palette' : 'Standard palette';
+}
+function setRadarPalette(next){
+  radarPalette = next === 'cividis' ? 'cividis' : 'standard';
+  store.set('st_radar_palette', radarPalette);
+  syncPaletteButton();
+  updateRadarLegend();
+  if(map) loadRadar();
+}
+function syncBasemapSelect(){
+  const sel = $('radarBasemap');
+  if(sel) sel.value = store.get('st_basemap') || 'auto';
+}
+function setRadarBasemap(pref){
+  store.set('st_basemap', pref || 'auto');
+  syncMapBasemap();
+  if(typeof syncMapBBasemap === 'function') syncMapBBasemap();
+  syncSatBasemap();
+}
+
 const radarCenterBtn = $('radarCenterBtn');
 if(radarCenterBtn) radarCenterBtn.addEventListener('click', centerRadarMap);
 const radarExpandBtn = $('radarExpandBtn');
 if(radarExpandBtn) radarExpandBtn.addEventListener('click', toggleRadarExpand);
+
+syncPaletteButton();
+syncBasemapSelect();
+const radarPaletteBtn = $('radarPaletteBtn');
+if(radarPaletteBtn){
+  radarPaletteBtn.addEventListener('click', () => {
+    setRadarPalette(isCividisPalette() ? 'standard' : 'cividis');
+  });
+}
+const radarBasemapSel = $('radarBasemap');
+if(radarBasemapSel){
+  radarBasemapSel.addEventListener('change', e => setRadarBasemap(e.target.value));
+}
+Object.entries(SAT_PRODUCTS).forEach(([key, spec]) => {
+  const btn = $(spec.btn);
+  if(btn) btn.addEventListener('click', () => setSatProduct(key));
+});
+
 

@@ -157,6 +157,41 @@ for path in /api/wpc-ero /api/nhc-storms; do
   echo "OK   ${path} — HTTP ${code}"
 done
 
+# 7Timer! civil proxy — CORS bypass for forecast comparison.
+timer_code="000"
+for attempt in $(seq 1 "$SMOKE_RETRIES"); do
+  timer_code="$(curl_code "/api/7timer?lat=42.97&lon=-85.92" /tmp/echoweather-7timer.json)"
+  if [[ "$timer_code" == "200" || "$timer_code" == "502" || "$timer_code" == "429" ]]; then
+    break
+  fi
+  if [[ "$timer_code" == "404" ]]; then
+    break
+  fi
+  if (( attempt < SMOKE_RETRIES )); then
+    echo "RETRY /api/7timer — HTTP ${timer_code} (attempt ${attempt}/${SMOKE_RETRIES})" >&2
+    sleep "$SMOKE_RETRY_SLEEP"
+  fi
+done
+if [[ "$timer_code" == "404" ]]; then
+  echo "FAIL /api/7timer — HTTP 404 (missing api/.htaccess rewrite)" >&2
+  exit 1
+fi
+if [[ "$timer_code" != "200" && "$timer_code" != "502" && "$timer_code" != "429" ]]; then
+  echo "FAIL /api/7timer — HTTP ${timer_code}" >&2
+  exit 1
+fi
+if [[ "$timer_code" == "200" ]] && ! grep -q '"dataseries"' /tmp/echoweather-7timer.json; then
+  echo "FAIL /api/7timer — expected dataseries JSON" >&2
+  exit 1
+fi
+echo "OK   /api/7timer?lat=42.97&lon=-85.92 — HTTP ${timer_code}"
+bad_timer="$(curl_code "/api/7timer?lat=999&lon=0")"
+if [[ "$bad_timer" != "400" ]]; then
+  echo "FAIL /api/7timer invalid coords — HTTP ${bad_timer} (expected 400)" >&2
+  exit 1
+fi
+echo "OK   /api/7timer invalid coords — HTTP 400"
+
 echo ""
 echo "Hundred Acre Weather (pooh/)"
 curl_smoke "/pooh/index.php"

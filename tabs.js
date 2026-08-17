@@ -43,6 +43,7 @@ function ensureTabPanels(tab){
     loadClimoNormals(loc);
     loadForecastCpcTeaser(loc);
     loadForecastUsdmTeaser(loc);
+    if(typeof loadForecastCompare === 'function') loadForecastCompare(loc, d);
   }
   if((all || tab === 'radar') && !tabPanelsLoaded.radar){
     tabPanelsLoaded.radar = true;
@@ -50,6 +51,7 @@ function ensureTabPanels(tab){
     activateRadarPanel();
     if(typeof syncRadarMesonet === 'function') syncRadarMesonet(loc);
     if(typeof loadRadarMesonetStrip === 'function') loadRadarMesonetStrip(loc);
+    if(typeof loadSatellitePanel === 'function') loadSatellitePanel(loc);
   }
   if((all || tab === 'impact') && !tabPanelsLoaded.impact){
     tabPanelsLoaded.impact = true;

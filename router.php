@@ -12,6 +12,7 @@ $routes = [
     '/api/hms-smoke' => __DIR__ . '/api/hms-smoke.php',
     '/api/wpc-ero' => __DIR__ . '/api/wpc-ero.php',
     '/api/nhc-storms' => __DIR__ . '/api/nhc-storms.php',
+    '/api/7timer' => __DIR__ . '/api/7timer.php',
 ];
 
 if (isset($routes[$path])) {

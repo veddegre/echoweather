@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '273';
+const APP_VERSION = '276';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -73,15 +73,33 @@ function updateThemeColorMeta(){
   if(m) m.content = isDarkTheme() ? '#12151a' : '#eaf4ff';
 }
 let basemapLayer = null;
+function selectedBasemap(){
+  const pref = store.get('st_basemap') || 'auto';
+  if(pref === 'light') return { kind: 'carto', path: 'light_all' };
+  if(pref === 'dark') return { kind: 'carto', path: 'dark_all' };
+  if(pref === 'terrain') return { kind: 'carto', path: 'rastertiles/voyager' };
+  if(pref === 'topo') return { kind: 'topo' };
+  return { kind: 'carto', path: cssVar('--map-tiles') || (isDarkTheme() ? 'dark_all' : 'light_all') };
+}
+function createBasemapLayer(maxZoom){
+  const sel = selectedBasemap();
+  if(sel.kind === 'topo'){
+    return L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      attribution: '\u00A9 OpenStreetMap \u00A9 OpenTopoMap (CC-BY-SA)',
+      subdomains: 'abc',
+      minZoom: RADAR_ZOOM.min,
+      maxZoom: Math.min(17, maxZoom || 17)
+    });
+  }
+  return L.tileLayer('https://{s}.basemaps.cartocdn.com/' + sel.path + '/{z}/{x}/{y}{r}.png', {
+    attribution: '\u00A9 OpenStreetMap \u00A9 CARTO', subdomains: 'abcd',
+    minZoom: RADAR_ZOOM.min, maxZoom: maxZoom || RADAR_ZOOM.rainviewer
+  });
+}
 function syncMapBasemap(){
   if(!map) return;
-  const style = cssVar('--map-tiles') || (isDarkTheme() ? 'dark_all' : 'light_all');
-  const url = 'https://{s}.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}{r}.png';
   if(basemapLayer) map.removeLayer(basemapLayer);
-  basemapLayer = L.tileLayer(url, {
-    attribution: '\u00A9 OpenStreetMap \u00A9 CARTO', subdomains: 'abcd',
-    minZoom: RADAR_ZOOM.min, maxZoom: map ? radarMaxZoom() : RADAR_ZOOM.rainviewer
-  }).addTo(map);
+  basemapLayer = createBasemapLayer(radarMaxZoom()).addTo(map);
   basemapLayer.bringToBack();
   if(mapMarker) mapMarker.bringToFront();
 }
@@ -95,6 +113,7 @@ function applyTheme(mode){
   updateThemeColorMeta();
   syncMapBasemap();
   if(typeof syncMapBBasemap === 'function') syncMapBBasemap();
+  if(typeof syncSatBasemap === 'function') syncSatBasemap();
   if(mapMarker){
     const c = cssVar('--accent') || '#3c91e6';
     mapMarker.setStyle({ color: c, fillColor: c });
@@ -106,6 +125,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
     updateThemeColorMeta();
     syncMapBasemap();
     if(typeof syncMapBBasemap === 'function') syncMapBBasemap();
+    if(typeof syncSatBasemap === 'function') syncSatBasemap();
     if(state.data) renderLight(state.data);
   }
 });

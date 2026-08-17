@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#eaf4ff">
 <meta name="description" content="Forecasts, radar, observations, and atmosphere metrics — built for weather enthusiasts.">
 <link rel="canonical" href="https://echoweather.com/">
-<link rel="icon" href="icon.svg?v=273" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=273" sizes="180x180">
+<link rel="icon" href="icon.svg?v=276" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=276" sizes="180x180">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -27,28 +27,31 @@
 <meta name="twitter:description" content="Forecasts, radar, observations, and atmosphere metrics — built for weather enthusiasts.">
 <meta name="twitter:image" content="https://echoweather.com/og-image.png">
 <meta name="twitter:image:alt" content="Echo Weather — forecasts, radar, and atmosphere metrics">
-<link rel="manifest" href="manifest.json?v=273">
+<link rel="manifest" href="manifest.json?v=276">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=273">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+<link rel="stylesheet" href="app.css?v=276">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script defer src="app.js?v=273"></script>
-<script defer src="tabs.js?v=273"></script>
-<script defer src="nav.js?v=273"></script>
-<script defer src="impact.js?v=273"></script>
-<script defer src="marine.js?v=273"></script>
-<script defer src="air.js?v=273"></script>
-<script defer src="forecast-extras.js?v=273"></script>
-<script defer src="mesonet.js?v=273"></script>
-<script defer src="climo.js?v=273"></script>
-<script defer src="obs.js?v=273"></script>
-<script defer src="aviation.js?v=273"></script>
-<script defer src="storm.js?v=273"></script>
-<script defer src="loc-compare.js?v=273"></script>
-<script defer src="radar.js?v=273"></script>
-<script defer src="easter-egg.js?v=273"></script>
-<script defer src="boot.js?v=273"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script defer src="app.js?v=276"></script>
+<script defer src="tabs.js?v=276"></script>
+<script defer src="nav.js?v=276"></script>
+<script defer src="impact.js?v=276"></script>
+<script defer src="marine.js?v=276"></script>
+<script defer src="air.js?v=276"></script>
+<script defer src="forecast-extras.js?v=276"></script>
+<script defer src="forecast-compare.js?v=276"></script>
+<script defer src="mesonet.js?v=276"></script>
+<script defer src="climo.js?v=276"></script>
+<script defer src="obs.js?v=276"></script>
+<script defer src="aviation.js?v=276"></script>
+<script defer src="storm.js?v=276"></script>
+<script defer src="loc-compare.js?v=276"></script>
+<script defer src="radar.js?v=276"></script>
+<script defer src="easter-egg.js?v=276"></script>
+<script defer src="boot.js?v=276"></script>
 </head>
 <body class="mtab-now">
 <div class="wrap">
@@ -56,7 +59,7 @@
   <header>
     <div class="brand-block">
       <a class="brand-mark" href="#now" aria-label="Echo Weather — back to Now">
-        <span class="brand-icon-wrap"><img class="brand-icon" src="logo.svg?v=273" width="72" height="72" alt="" decoding="async"></span>
+        <span class="brand-icon-wrap"><img class="brand-icon" src="logo.svg?v=276" width="72" height="72" alt="" decoding="async"></span>
         <div class="brand-text">
           <span class="brand-name">Echo</span>
           <span class="brand-kind">Weather</span>
@@ -221,6 +224,12 @@
       <div id="forecastUsdmTeaser" class="forecast-usdm-teaser" hidden aria-live="polite"></div>
     </section>
 
+    <section class="panel full nav-target" id="forecastComparePanel" data-tab="forecast" aria-label="Forecast comparison">
+      <h2>Forecast comparison <span class="panel-status" id="forecastCompareStatus"></span></h2>
+      <p class="hourly-lede">NWS, Open-Meteo (default blend), Open-Meteo GFS-only, and 7Timer! civil, side by side. Cell color is the spread in daily highs: green is close, yellow is a few degrees, red is more than 10°F (6°C).</p>
+      <div id="forecastCompare"></div>
+    </section>
+
     <section class="panel full nav-target" id="forecastTextPanel" data-tab="forecast" aria-label="Detailed forecast">
       <h2>Detailed Forecast</h2>
       <div class="fc-meta" id="forecastTextMeta"></div>
@@ -243,6 +252,14 @@
             <button type="button" class="radar-map-btn" id="radarCenterBtn" aria-label="Center map on location">Center</button>
             <button type="button" class="radar-map-btn" id="radarDualBtn" aria-label="Toggle dual-pane reflectivity and velocity" hidden>Dual pane</button>
             <button type="button" class="radar-map-btn" id="radarExpandBtn" aria-label="Expand radar fullscreen">Expand</button>
+            <button type="button" class="radar-map-btn" id="radarPaletteBtn" aria-pressed="false" aria-label="Toggle color-blind friendly radar palette">Standard palette</button>
+            <select id="radarBasemap" class="radar-mode radar-basemap" aria-label="Map basemap">
+              <option value="auto">Auto basemap</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="terrain">Terrain</option>
+              <option value="topo">Topographic</option>
+            </select>
           </div>
           <div class="radar-panes" id="radarPanes">
             <div class="radar-pane radar-pane-a">
@@ -254,6 +271,7 @@
               <div id="radarB"></div>
             </div>
           </div>
+          <div class="measure-result" id="measureResult" hidden></div>
         </div>
           <div class="radar-legends" aria-hidden="true">
             <div class="radar-legend" id="radarLegend">
@@ -336,6 +354,24 @@
             <span class="radar-note wind-status" id="windStatus" hidden></span>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="panel full nav-target" id="satellitePanel" data-tab="radar" aria-label="Satellite imagery">
+      <h2>Satellite <span class="panel-status" id="satelliteStatus"></span></h2>
+      <p class="hourly-lede">GOES infrared and visible imagery, separate from the radar overlay. Centered on your location.</p>
+      <div class="satellite-ctl">
+        <button type="button" class="radar-map-btn on" id="satEastIr" aria-pressed="true">GOES-East IR</button>
+        <button type="button" class="radar-map-btn" id="satEastVis" aria-pressed="false">GOES-East visible</button>
+        <button type="button" class="radar-map-btn" id="satWestIr" aria-pressed="false">GOES-West IR</button>
+        <button type="button" class="radar-map-btn" id="satWestVis" aria-pressed="false">GOES-West visible</button>
+      </div>
+      <div class="satellite-stage">
+        <div id="satelliteMap"></div>
+      </div>
+      <div class="radar-meta">
+        <span class="radar-time" id="satelliteTime">&mdash;</span>
+        <span class="radar-note" id="satelliteNote">IEM / NOAA GOES</span>
       </div>
     </section>
 

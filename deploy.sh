@@ -43,6 +43,7 @@ RSYNC_FILES=(
   app.js
   storm.js
   radar.js
+  forecast-compare.js
   boot.js
   manifest.json
   sw.js

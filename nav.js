@@ -76,8 +76,8 @@ function tabForNavPath(path){
   if(APP_TABS.includes(path)) return path;
   if(path === 'air' || path === 'outdoor') return 'impact';
   if(path === 'lightPanel' || path === 'hourlyPanel' || path === 'nowPanel') return 'now';
-  if(path === 'dailyPanel' || path === 'forecastTextPanel' || path === 'obsPanel') return 'forecast';
-  if(path === 'radarPanel' || path === 'stormLinks') return 'radar';
+  if(path === 'dailyPanel' || path === 'forecastTextPanel' || path === 'obsPanel' || path === 'forecastComparePanel') return 'forecast';
+  if(path === 'radarPanel' || path === 'stormLinks' || path === 'satellitePanel') return 'radar';
   if(path === 'airPanel' || path === 'exposurePanel' || path === 'marinePanel' || path === 'coastalPanel'
     || path === 'waterVerdictPanel' || path === 'streamPanel' || path === 'auroraPanel'
     || path === 'activityPanel' || path === 'impactPanel') return 'impact';

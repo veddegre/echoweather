@@ -15,6 +15,7 @@ function default_config(): array
         'rate_limit_pollen' => 60,
         'rate_limit_buoy' => 120,
         'rate_limit_taf' => 120,
+        'rate_limit_7timer' => 60,
         'cors_origins' => [
             'https://example.com',
             'http://127.0.0.1:8080',
