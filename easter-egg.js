@@ -56,7 +56,6 @@ function openHundredAcreGuide(){
 
 function openShipLogGuide(){
   try{ store.set(LOG_STORAGE, '1'); }catch(e){}
-  revealShipLogLinks();
   location.href = LOG_BASE + 'slides.php?' + echoThemeQuery({ from: 'echo' }).toString();
 }
 
@@ -67,7 +66,6 @@ function openShipLog(){
     return;
   }
   try{ store.set(LOG_STORAGE, '1'); }catch(e){}
-  revealShipLogLinks();
   location.href = LOG_BASE + 'index.php?' + echoThemeQuery().toString();
 }
 
@@ -139,24 +137,6 @@ function logToast(){
   showLocToast(LOG_TOASTS[i]);
 }
 
-function bindShipLogLink(el){
-  if(!el || el.dataset.logBound) return;
-  el.dataset.logBound = '1';
-  el.addEventListener('click', e => {
-    e.preventDefault();
-    openShipLog();
-  });
-}
-
-function revealShipLogLinks(){
-  let unlocked = false;
-  try{ unlocked = store.get(LOG_STORAGE) === '1'; }catch(e){}
-  document.querySelectorAll('[data-ship-log-link]').forEach(el => {
-    if(unlocked) el.hidden = false;
-    bindShipLogLink(el);
-  });
-}
-
 function initMarineLogEgg(){
   const title = document.getElementById('marineTitle');
   if(!title) return;
@@ -213,5 +193,4 @@ function initEasterEgg(){
 
   initWoodsBrandEgg();
   initMarineLogEgg();
-  revealShipLogLinks();
 }

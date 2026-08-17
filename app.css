@@ -130,9 +130,6 @@ body.scrolled .tagline{display:none}
 .airnow-row button{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:6px 12px;font-size:.6875rem;font-weight:500}
 .airnow-row button:hover{border-color:var(--accent)}
 .tagline{font-size:.8125rem;color:var(--mut);font-weight:500;letter-spacing:.04em}
-.ship-log-header-link,.ship-log-link{font-size:.75rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);text-decoration:none;margin-left:.5rem}
-.ship-log-header-link{display:inline-block;margin:4px 0 0;margin-left:0}
-.ship-log-header-link:hover,.ship-log-link:hover{text-decoration:underline}
 #marineTitle{cursor:default}
 .spacer{flex:1}
 .header-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
