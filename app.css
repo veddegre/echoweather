@@ -1106,3 +1106,18 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 .radar-map-tools .radar-basemap{width:auto;min-width:132px;max-width:160px;padding:6px 8px;font-size:.75rem;box-shadow:var(--card-shadow)}
 #radarPaletteBtn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
 
+.sky-told{position:fixed;inset:0;z-index:2400;display:flex;align-items:center;justify-content:center;padding:18px}
+.sky-told[hidden]{display:none!important}
+.sky-told-backdrop{position:absolute;inset:0;background:rgba(8,10,16,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.sky-told-sheet{position:relative;z-index:1;width:min(28rem,100%);max-height:min(88vh,40rem);overflow:auto;padding:22px 22px 18px;border-radius:16px;border:1px solid var(--line);background:var(--panel);box-shadow:0 18px 48px rgba(0,0,0,.35);color:var(--ink)}
+.sky-told-kicker{margin:0;font-size:.6875rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.sky-told-sheet h2{margin:6px 0 0;font-family:var(--serif);font-size:1.45rem;font-weight:600;line-height:1.25}
+.sky-told-place{margin:6px 0 0;font-size:.8125rem;color:var(--mut)}
+.sky-told-block{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.sky-told-block h3{margin:0 0 6px;font-size:.9375rem;font-weight:600}
+.sky-told-block p{margin:0;font-size:.875rem;line-height:1.5;color:var(--ink)}
+.sky-told-foot{margin:16px 0 0;font-size:.6875rem;color:var(--dim);line-height:1.4}
+.sky-told-close{position:absolute;top:12px;right:12px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);color:var(--ink);font:inherit;font-size:.75rem;font-weight:600;padding:6px 12px;cursor:pointer}
+.sky-told-close:hover{border-color:var(--accent);color:var(--accent)}
+body.sky-told-open{overflow:hidden}
+
