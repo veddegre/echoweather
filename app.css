@@ -234,6 +234,7 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .grid.adv-only{grid-template-columns:1fr}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:var(--card-shadow);transition:background .2s,border-color .2s;min-width:0;max-width:100%;overflow-wrap:break-word}
 .panel h2{font-family:var(--serif);font-weight:600;font-size:1.15rem;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.panel h2 .h2-aside{font-family:inherit;font-size:.6875rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
 .now-top{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap}
 .big-temp{font-family:var(--serif);font-weight:600;font-size:4.5rem;line-height:.95;letter-spacing:-.03em;color:var(--ink)}
 .big-temp sup{font-size:1.5rem;color:var(--accent);font-weight:500}
@@ -1113,6 +1114,11 @@ footer{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;font-si
 .sky-told-kicker{margin:0;font-size:.6875rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 .sky-told-sheet h2{margin:6px 0 0;font-family:var(--serif);font-size:1.45rem;font-weight:600;line-height:1.25}
 .sky-told-place{margin:6px 0 0;font-size:.8125rem;color:var(--mut)}
+.sky-told-ask{margin:12px 0 8px;font-size:.75rem;line-height:1.45;color:var(--mut)}
+.sky-told-ask em{font-style:italic;color:var(--ink)}
+.sky-told-birth-row{display:flex;flex-wrap:wrap;gap:8px}
+.sky-told-birth-row label{display:flex;flex-direction:column;gap:3px;font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);flex:1;min-width:5.5rem}
+.sky-told-birth-row select{font:inherit;font-size:.8125rem;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 8px}
 .sky-told-block{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .sky-told-block h3{margin:0 0 6px;font-size:.9375rem;font-weight:600}
 .sky-told-block p{margin:0;font-size:.875rem;line-height:1.5;color:var(--ink)}

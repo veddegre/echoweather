@@ -286,6 +286,10 @@ const SKY_TOLD_LUCK = [
   'Lucky caution: do not confuse a pretty sky with a safe one.'
 ];
 
+const SKY_TOLD_BIRTH_KEY = 'st_sky_told_birth';
+const SKY_TOLD_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const SKY_TOLD_MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 function eggHash(s){
   let h = 2166136261;
   const str = String(s || '');
@@ -318,6 +322,58 @@ function skyToldSunSign(m, d){
     if(m1 > m2 && ((m === m1 && d >= d1) || (m === m2 && d <= d2))) return name;
   }
   return 'Capricorn';
+}
+function skyToldSignRange(name){
+  const row = SKY_TOLD_SIGNS.find(s => s[0] === name);
+  if(!row) return '';
+  const a = SKY_TOLD_MONTH_SHORT[row[1] - 1] + ' ' + row[2];
+  const b = SKY_TOLD_MONTH_SHORT[row[3] - 1] + ' ' + row[4];
+  return a + '\u2013' + b;
+}
+function skyToldDaysInMonth(m, y){
+  return new Date(y || 2024, m, 0).getDate();
+}
+function skyToldLoadBirth(){
+  let v = null;
+  try{ v = typeof store !== 'undefined' ? store.get(SKY_TOLD_BIRTH_KEY) : null; }catch(e){}
+  const m = +v?.m || 0;
+  const d = +v?.d || 0;
+  const y = +v?.y || 0;
+  return { m, d, y };
+}
+function skyToldSaveBirth(birth){
+  try{
+    if(typeof store !== 'undefined') store.set(SKY_TOLD_BIRTH_KEY, birth);
+  }catch(e){}
+}
+function skyToldReadBirthForm(){
+  const monthEl = document.getElementById('skyToldMonth');
+  const dayEl = document.getElementById('skyToldDay');
+  const yearEl = document.getElementById('skyToldYear');
+  return {
+    m: monthEl ? +monthEl.value : 0,
+    d: dayEl ? +dayEl.value : 0,
+    y: yearEl ? +yearEl.value : 0
+  };
+}
+function skyToldFillBirthSelects(){
+  const monthEl = document.getElementById('skyToldMonth');
+  const dayEl = document.getElementById('skyToldDay');
+  const yearEl = document.getElementById('skyToldYear');
+  if(!monthEl || !dayEl || !yearEl) return;
+  const saved = skyToldLoadBirth();
+  if(!monthEl.options.length){
+    monthEl.appendChild(new Option('Month', '0'));
+    SKY_TOLD_MONTHS.forEach((name, i) => monthEl.appendChild(new Option(name, String(i + 1))));
+    dayEl.appendChild(new Option('Day', '0'));
+    for(let d = 1; d <= 31; d++) dayEl.appendChild(new Option(String(d), String(d)));
+    yearEl.appendChild(new Option('Year', '0'));
+    const thisYear = new Date().getFullYear();
+    for(let y = thisYear; y >= 1924; y--) yearEl.appendChild(new Option(String(y), String(y)));
+  }
+  monthEl.value = saved.m ? String(saved.m) : '0';
+  dayEl.value = saved.d ? String(saved.d) : '0';
+  yearEl.value = saved.y ? String(saved.y) : '0';
 }
 function skyToldLunarYear(y, m, d){
   const cny = SKY_TOLD_CNY[y];
@@ -363,32 +419,67 @@ function fillSkyToldEgg(){
     || Intl.DateTimeFormat().resolvedOptions().timeZone;
   const when = new Date();
   const md = skyToldMonthDay(when, tz);
-  const sign = skyToldSunSign(md.m, md.d);
-  const lunarY = skyToldLunarYear(md.y, md.m, md.d);
-  const zo = skyToldZodiac(lunarY);
+  const transitSign = skyToldSunSign(md.m, md.d);
+  const birth = skyToldReadBirthForm();
+  const dayMax = birth.m ? skyToldDaysInMonth(birth.m, birth.y || 2024) : 31;
+  if(birth.d > dayMax) birth.d = dayMax;
+  const natalSign = (birth.m && birth.d) ? skyToldSunSign(birth.m, birth.d) : null;
+  const natalYear = birth.y
+    ? skyToldLunarYear(birth.y, birth.m || 6, birth.d || 15)
+    : 0;
+  const natalZo = natalYear ? skyToldZodiac(natalYear) : null;
+  const yearZo = skyToldZodiac(skyToldLunarYear(md.y, md.m, md.d));
   const bits = skyToldBits(loc, when);
-  const seed = [md.y, md.m, md.d, loc?.lat?.toFixed(2), loc?.lon?.toFixed(2), sign].join('|');
-  const star = eggPick(SKY_TOLD_STAR[sign] || SKY_TOLD_STAR.Leo, seed + '|star');
-  const luck = eggPick(SKY_TOLD_LUCK, seed + '|luck');
-  let skyNote = bits.moonUp
-    ? ' Overhead: ' + bits.moon + '.'
-    : ' The moon is down, which is excellent for secrets and terrible for reading fine print outside.';
-  if(bits.planet){
-    skyNote += ' ' + bits.planet.name + ' is actually up, which counts as a real observation.';
-  }
-  const place = loc
-    ? (loc.name + ' \u00B7 ' + md.m + '/' + md.d)
-    : ('Today \u00B7 ' + md.m + '/' + md.d);
   const placeEl = document.getElementById('skyToldPlace');
   const starHead = document.getElementById('skyToldStarHead');
   const starBody = document.getElementById('skyToldStar');
   const zoHead = document.getElementById('skyToldZodiacHead');
   const zoBody = document.getElementById('skyToldZodiac');
+  const place = loc
+    ? (loc.name + ' \u00B7 ' + md.m + '/' + md.d)
+    : ('Today \u00B7 ' + md.m + '/' + md.d);
   if(placeEl) placeEl.textContent = place;
-  if(starHead) starHead.textContent = sign + ' \u00B7 tropical sun';
-  if(starBody) starBody.textContent = star + skyNote;
-  if(zoHead) zoHead.textContent = zo.element + ' ' + zo.name + '  ' + zo.ch + ' \u00B7 year ' + zo.lunarYear;
-  if(zoBody) zoBody.textContent = zo.hint + ' ' + luck;
+
+  if(!natalSign){
+    if(starHead) starHead.textContent = 'Your sun sign';
+    if(starBody){
+      starBody.textContent = 'The sun is in ' + transitSign + ' today \u2014 that is the sky, not a personal horoscope. '
+        + 'Everyone with the same birthday shares a sun sign (for example Aug 18 is Leo). Pick month and day above.';
+    }
+  }else{
+    const seed = [md.y, md.m, md.d, loc?.lat?.toFixed(2), loc?.lon?.toFixed(2), natalSign].join('|');
+    const star = eggPick(SKY_TOLD_STAR[natalSign] || SKY_TOLD_STAR.Leo, seed + '|star');
+    let skyNote = bits.moonUp
+      ? ' Overhead tonight: ' + bits.moon + '.'
+      : ' The moon is down tonight.';
+    if(bits.planet){
+      skyNote += ' ' + bits.planet.name + ' is actually up.';
+    }
+    if(starHead) starHead.textContent = 'You are ' + natalSign + ' \u00B7 ' + skyToldSignRange(natalSign);
+    if(starBody){
+      starBody.textContent = star + skyNote
+        + ' The sun is in ' + transitSign + ' right now \u2014 that is today\u2019s sky, not your sign.';
+    }
+  }
+
+  if(!natalZo){
+    if(zoHead) zoHead.textContent = 'Chinese zodiac';
+    if(zoBody){
+      zoBody.textContent = 'This lunar year is ' + yearZo.element + ' ' + yearZo.name + ' for everyone. '
+        + 'Add a birth year to see your animal.';
+    }
+  }else{
+    const seed = [md.y, md.m, md.d, natalZo.name, loc?.lat?.toFixed(2)].join('|');
+    const luck = eggPick(SKY_TOLD_LUCK, seed + '|luck');
+    if(zoHead){
+      zoHead.textContent = 'You are a ' + natalZo.element + ' ' + natalZo.name + '  ' + natalZo.ch
+        + ' \u00B7 year ' + natalZo.lunarYear;
+    }
+    if(zoBody){
+      zoBody.textContent = natalZo.hint + ' ' + luck
+        + ' This lunar year is ' + yearZo.element + ' ' + yearZo.name + ' for the calendar.';
+    }
+  }
 }
 function closeSkyToldEgg(){
   const egg = document.getElementById('skyToldEgg');
@@ -396,19 +487,31 @@ function closeSkyToldEgg(){
   document.body.classList.remove('sky-told-open');
 }
 function openSkyToldEgg(){
+  skyToldFillBirthSelects();
   fillSkyToldEgg();
   const egg = document.getElementById('skyToldEgg');
   if(!egg) return;
   egg.hidden = false;
   document.body.classList.add('sky-told-open');
-  const close = document.getElementById('skyToldClose');
-  if(close) close.focus();
+  const birth = skyToldReadBirthForm();
+  const focusEl = (!birth.m && document.getElementById('skyToldMonth'))
+    || document.getElementById('skyToldClose');
+  if(focusEl) focusEl.focus();
 }
 function initSkyToldEgg(){
   const panel = document.getElementById('tonightSkyPanel');
   const title = panel && panel.querySelector('h2');
   const egg = document.getElementById('skyToldEgg');
   if(!title || !egg) return;
+  skyToldFillBirthSelects();
+  ['skyToldMonth', 'skyToldDay', 'skyToldYear'].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('change', () => {
+      skyToldSaveBirth(skyToldReadBirthForm());
+      fillSkyToldEgg();
+    });
+  });
   let taps = 0;
   let tapTimer = 0;
   title.addEventListener('click', e => {
