@@ -1,7 +1,34 @@
 // ---------- regional mesonet (More tab + Radar storm strip) ----------
 let radarMesonetGen = 0;
+let mesonetCache = { key: '', rows: null, at: 0 };
+const MESONET_CACHE_MS = 3 * 60 * 1000;
+
+function mesonetCacheKey(loc){
+  return Number(loc.lat).toFixed(3) + ',' + Number(loc.lon).toFixed(3) + ':' + state.units;
+}
+
+function isLikelyMetarId(id){
+  return /^[A-Z]{4}$/.test(String(id || '').toUpperCase());
+}
+
+function mesonetObsFromFeature(s, feat){
+  const o = (feat && feat.properties) || {};
+  const tc = nwsVal(o.temperature);
+  if(tc == null) return null;
+  const temp = state.units === 'F' ? Math.round(tc * 9 / 5 + 32) : Math.round(tc);
+  const wspd = nwsWindToDisp(o.windSpeed);
+  const wdir = o.windDirection?.value != null ? compass(o.windDirection.value) : '';
+  const wind = wspd != null ? (wdir ? wdir + ' ' : '') + wspd + ' ' + windUnit() : null;
+  return { ...s, temp, wind };
+}
 
 async function fetchMesonetRows(loc, limit){
+  limit = limit || 6;
+  const key = mesonetCacheKey(loc);
+  if(mesonetCache.rows && mesonetCache.key === key && (Date.now() - mesonetCache.at) < MESONET_CACHE_MS){
+    return mesonetCache.rows.slice(0, limit);
+  }
+
   const lat = Number(loc.lat).toFixed(4);
   const lon = Number(loc.lon).toFixed(4);
   const stationsUrl = state.data?.nwsPoints?.observationStations
@@ -21,23 +48,28 @@ async function fetchMesonetRows(loc, limit){
       dist,
       rank
     };
-  }).filter(s => s.id).slice(0, limit || 6);
-  if(!stations.length) return [];
-  return Promise.all(stations.map(async s => {
+  }).filter(s => s.id);
+  const preferred = stations.filter(s => isLikelyMetarId(s.id));
+  const fallback = stations.filter(s => !isLikelyMetarId(s.id));
+  const pool = preferred.concat(fallback).slice(0, Math.max(12, limit * 3));
+  if(!pool.length) return [];
+
+  const rows = [];
+  for(const s of pool){
+    if(rows.length >= limit) break;
     try{
-      const or = await nwsFetch('https://api.weather.gov/stations/' + encodeURIComponent(s.id) + '/observations/latest');
-      if(!or.ok) return { ...s, temp: null, wind: null };
-      const o = (await or.json()).properties || {};
-      const tc = nwsVal(o.temperature);
-      const temp = tc != null
-        ? (state.units === 'F' ? Math.round(tc * 9 / 5 + 32) : Math.round(tc))
-        : null;
-      const wspd = nwsWindToDisp(o.windSpeed);
-      const wdir = o.windDirection?.value != null ? compass(o.windDirection.value) : '';
-      const wind = wspd != null ? (wdir ? wdir + ' ' : '') + wspd + ' ' + windUnit() : null;
-      return { ...s, temp, wind };
-    }catch(e){ return { ...s, temp: null, wind: null }; }
-  }));
+      // /observations?limit=1 returns 200 + empty features when the site is silent.
+      // /observations/latest 404s and Chrome logs it (K8D4 and similar).
+      const or = await nwsFetch('https://api.weather.gov/stations/' + encodeURIComponent(s.id) + '/observations?limit=1');
+      if(!or.ok) continue;
+      const obsFeats = (await or.json()).features || [];
+      const row = mesonetObsFromFeature(s, obsFeats[0]);
+      if(row) rows.push(row);
+    }catch(e){ /* skip silent or unreachable stations */ }
+  }
+
+  mesonetCache = { key, rows, at: Date.now() };
+  return rows.slice(0, limit);
 }
 function renderMesonetHoursHtml(rows, opts){
   opts = opts || {};
