@@ -325,6 +325,7 @@ body:not(.mtab-now) #content>.grid:first-child{display:none!important}
 .impact-group-lbl{margin:0;padding:0 2px;font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 .impact-group-plan .panel{border-color:color-mix(in srgb,var(--accent) 35%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent)}
 .impact-panels-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;min-width:0}
+.impact-group-sky .impact-panels-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
 .impact-group-water:not(:has(.panel:not([hidden]))),
 .impact-group-sky:not(:has(.panel:not([hidden]))){display:none}
 .impact-group-water .panel,.impact-group-sky .panel{margin-top:0}

@@ -14,12 +14,18 @@ function nwsSmokeLevelForHour(d, timeIso){
   if(!/\bsmoke\b|\bhaze\b/.test(sf)) return null;
   let visMi = null;
   if(d.hourly.visibility?.[i] != null){
-    visMi = state.units === 'F' ? d.hourly.visibility[i] / 1609.34 : d.hourly.visibility[i] / 1000;
+    let v = d.hourly.visibility[i];
+    const visUnit = (d.om && d.om.hourly_units && d.om.hourly_units.visibility) || 'm';
+    if(visUnit === 'ft') v *= 0.3048;
+    visMi = v / 1609.34;
   }
   if(/dense smoke|heavy smoke/.test(sf) || (visMi != null && visMi < 1)) return 'heavy';
   if(/areas of smoke|widespread smoke/.test(sf) || (visMi != null && visMi < 3)) return 'moderate';
   if(/\bsmoke\b/.test(sf)) return 'moderate';
-  return 'light';
+  // Forecast "haze" is common summer wording. Only treat it as smoke/haze
+  // impact when visibility is actually reduced.
+  if(/\bhaze\b/.test(sf) && visMi != null && visMi < 3) return 'light';
+  return null;
 }
 function airExtraForHour(d, extra, timeIso){
   const h = outdoorAirHourly;
@@ -70,10 +76,13 @@ function hasActiveSmokeAdvisory(){
   return (stormState.alertFeatures || []).some(f => {
     const p = f.properties || {};
     const ev = (p.event || '').toLowerCase();
-    if(/air quality|smoke|particle pollution|dust/i.test(ev)) return true;
+    const blob = ((p.headline || '') + ' ' + (p.description || '')).toLowerCase();
+    if(/smoke|haze|wildfire/i.test(ev)) return true;
+    if(/air quality|particle pollution/i.test(ev)){
+      return /smoke|haze|wildfire|pm2\.5|pm 2\.5|fine particle/i.test(blob);
+    }
     if(/special weather statement/i.test(ev)){
-      const blob = ((p.headline || '') + ' ' + (p.description || '')).toLowerCase();
-      return /smoke|air quality|visibility/.test(blob);
+      return /smoke|haze|wildfire/i.test(blob);
     }
     return false;
   });
@@ -94,7 +103,7 @@ function syncSmokeRadarHint(pm25, aqi){
     box.hidden = true;
     return;
   }
-  const elevated = (pm25 != null && pm25 >= 35) || (aqi != null && aqi >= 101)
+  const elevated = (pm25 != null && pm25 >= 55) || (aqi != null && aqi >= 151)
     || hasActiveSmokeAdvisory()
     || forecastHasSmokeSoon(state.data);
   if(!elevated){
@@ -608,7 +617,7 @@ function activityAlertImpact(def, hourIso, timezone, ctx){
     }
     if(/special weather statement/i.test(evL)){
       const blob = ((f.properties?.headline || '') + ' ' + (f.properties?.description || '')).toLowerCase();
-      if(/smoke|air quality|visibility/.test(blob)){
+      if(/smoke|haze|wildfire/.test(blob)){
         if(actId === 'air'){ apply(40, 'Smoke / reduced visibility'); return; }
         if(['running', 'hiking', 'cycling', 'dog', 'golf', 'yard', 'beach', 'stars'].includes(actId)){
           apply(42, 'Smoke / reduced visibility');
@@ -892,6 +901,11 @@ const ACTIVITY_SCORERS = {
     }else if(ctx.visibility != null && ctx.visibility < 6){
       s -= 8;
       reasons.push('Hazy visibility');
+    }
+    if(typeof moonIllumination === 'function' && ctx.time){
+      const frac = moonIllumination(new Date(ctx.time)).fraction;
+      if(frac >= 0.85){ s -= 22; reasons.push('Nearly full moon'); }
+      else if(frac >= 0.45){ s -= 12; reasons.push('Bright moon'); }
     }
     if(extra.smokeNote && !reasons.includes(extra.smokeNote)) reasons.unshift(extra.smokeNote);
     if(!ctx.isDay && ctx.cloud < 30 && (extra.aqi == null || extra.aqi <= 50)
@@ -1674,11 +1688,19 @@ function renderConditionsGlance(d, c, vis, visMiNum, dewVal, inHg){
     + (it.s ? '<div class="gs">' + it.s + '</div>' : '') + '</div>'
   ).join('');
 }
-function currentVisibilityMi(d, c, i){
+function currentVisibilityMeters(d, c, i){
   let visMeters = c.visibility_m;
   if(visMeters == null) visMeters = d.hourly.visibility?.[i];
   const visUnit = (d.om && d.om.hourly_units && d.om.hourly_units.visibility) || 'm';
   if(visUnit === 'ft' && visMeters != null) visMeters = visMeters * 0.3048;
+  return visMeters;
+}
+function currentVisibilityMiles(d, c, i){
+  const visMeters = currentVisibilityMeters(d, c, i);
+  return visMeters == null ? null : visMeters / 1609.34;
+}
+function currentVisibilityMi(d, c, i){
+  const visMeters = currentVisibilityMeters(d, c, i);
   if(visMeters == null) return null;
   return state.units === 'F' ? visMeters / 1609.34 : visMeters / 1000;
 }
@@ -1691,16 +1713,18 @@ function currentSkyPresentation(d, c, hourIdx){
   const pm25 = outdoorAir?.pm25 ?? null;
   const aqi = outdoorAir?.aqi ?? null;
   const smokeAlert = hasActiveSmokeAdvisory();
-  const visMi = currentVisibilityMi(d, c, i);
+  const visMi = currentVisibilityMiles(d, c, i);
   const smokeWording = /\bsmoke\b|areas of smoke|dense smoke|widespread smoke/i.test(nwsShort)
     || /\bsmoke\b/i.test(metarText);
   const hazeWording = /\bhaze\b/i.test(nwsShort) || /\bhaze\b/i.test(metarText);
+  const particleSmoke = (pm25 != null && pm25 >= 55) || (aqi != null && aqi >= 151);
+  const visSmoke = visMi != null && visMi < 2;
   const heavySmoke = /dense|heavy|widespread smoke/i.test(nwsShort)
-    || (pm25 != null && pm25 >= 55) || (aqi != null && aqi > 150)
-    || (visMi != null && visMi < 2);
-  const modSmoke = smokeWording || hazeWording || smokeAlert
-    || (pm25 != null && pm25 >= 35) || (aqi != null && aqi > 100)
-    || (visMi != null && visMi < 6);
+    || particleSmoke || visSmoke;
+  // Do not treat everyday 4–6 mi vis or Moderate AQI as wildfire smoke.
+  // Those used to keep "Haze / smoke in the area" on clear METAR days for weeks.
+  const modSmoke = smokeWording || smokeAlert || heavySmoke
+    || (hazeWording && ((pm25 != null && pm25 >= 35) || (aqi != null && aqi >= 101) || (visMi != null && visMi < 4)));
   const readsClear = isGenericClearSkyText(metarText)
     && isGenericClearSkyText(nwsShort)
     && /^(Clear|Mostly clear)$/i.test(baseCond);
@@ -1714,7 +1738,7 @@ function currentSkyPresentation(d, c, hourIdx){
       return { condition: 'Smoke', icon, text: 'Smoke — reduced air quality and visibility' };
     }
     if(hazeWording && nwsShort) return { condition: 'Haze', icon, text: nwsShort };
-    return { condition: hazeWording ? 'Haze' : 'Smoke', icon, text: 'Haze / smoke in the area' };
+    return { condition: 'Smoke', icon, text: 'Smoke in the area' };
   }
   if(nwsShort && !isGenericClearSkyText(nwsShort) && isGenericClearSkyText(metarText)){
     const pair = nwsForecastPair(nwsShort);
@@ -1792,8 +1816,10 @@ function renderCurrent(d){
 
 function syncImpactSkyGroup(){
   const grp = $('impactSkyGroup');
-  const panel = $('auroraPanel');
-  if(grp && panel) grp.hidden = panel.hidden;
+  if(!grp) return;
+  const tonight = $('tonightSkyPanel');
+  const aurora = $('auroraPanel');
+  grp.hidden = !(tonight && !tonight.hidden) && !(aurora && !aurora.hidden);
 }
 const IMPACT_PANEL_SECTION = {
   activityPanel: 'plan',
@@ -1804,7 +1830,8 @@ const IMPACT_PANEL_SECTION = {
   coastalPanel: 'water',
   marinePanel: 'water',
   streamPanel: 'water',
-  auroraPanel: 'sky'
+  auroraPanel: 'sky',
+  tonightSkyPanel: 'sky'
 };
 function impactSectionForPanel(panelId){
   return IMPACT_PANEL_SECTION[panelId] || null;
@@ -1982,4 +2009,204 @@ function renderOvationStrip(loc, kp, ovationScore, coords){
     + bars
     + '<div class="detail" style="margin-top:8px">NOAA OVATION model snapshot \u00B7 planetary Kp '
     + (isNaN(kp) ? '\u2014' : kp.toFixed(1)) + kpNote + '</div>';
+}
+
+const ASTRO_CLOUD_MID = [0, 3, 12, 22, 35, 48, 62, 75, 88, 97];
+const ASTRO_SEEING_LBL = ['', 'Excellent', 'Very good', 'Good', 'Average', 'Below average', 'Poor', 'Very poor', 'Unusable'];
+const ASTRO_TRANS_LBL = ['', 'Excellent', 'Very good', 'Good', 'Average', 'Below average', 'Poor', 'Very poor', 'Opaque'];
+let tonightSkyCache = { key: '', at: 0, json: null };
+
+function astroCloudPct(code){
+  const i = Math.max(1, Math.min(9, Math.round(Number(code) || 9)));
+  return ASTRO_CLOUD_MID[i];
+}
+function astroBandLabel(table, code, max){
+  const i = Math.max(1, Math.min(max, Math.round(Number(code) || max)));
+  return table[i] || '\u2014';
+}
+function astroParseInit(init){
+  if(typeof parseTimerInit === 'function') return parseTimerInit(init);
+  const s = String(init || '').replace(/\s+/g, '');
+  const m = s.match(/^(\d{4})(\d{2})(\d{2})(\d{2})/);
+  if(!m) return Date.now();
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], 0, 0);
+}
+function localHourAtMs(ms, tz){
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz || undefined, hour: 'numeric', hour12: false
+  }).formatToParts(new Date(ms));
+  let h = 0;
+  for(const p of parts){ if(p.type === 'hour') h = +p.value; }
+  return h === 24 ? 0 : h % 24;
+}
+function isAstroNightHour(h){ return h >= 21 || h <= 5; }
+function moonAtMs(ms, loc){
+  const ill = typeof moonIllumination === 'function'
+    ? moonIllumination(new Date(ms))
+    : { fraction: 0, phase: 0 };
+  let alt = null;
+  if(loc && typeof moonPosition === 'function'){
+    alt = moonPosition(new Date(ms), loc.lat, loc.lon).alt;
+  }
+  return { frac: ill.fraction, phase: ill.phase, alt, up: alt == null || alt > -1 };
+}
+function omNightCloud(d){
+  if(!d?.hourly?.time?.length) return null;
+  const i0 = nowIndex(d);
+  let min = null;
+  for(let j = i0; j < Math.min(i0 + 14, d.hourly.time.length); j++){
+    const h = forecastHour(d.hourly.time[j]);
+    if(h >= 21 || h <= 5){
+      const c = activityCloudCover(d.hourly, j);
+      if(min == null || c < min) min = c;
+    }
+  }
+  return min;
+}
+function pickAstroNightSlots(json, tz, nowMs){
+  const series = json?.dataseries;
+  if(!Array.isArray(series) || !series.length) return [];
+  const initMs = astroParseInit(json.init);
+  const rows = series.map(pt => {
+    const ms = initMs + (Number(pt.timepoint) || 0) * 3600000;
+    return { pt, ms, hour: localHourAtMs(ms, tz) };
+  }).filter(r => r.ms >= nowMs - 90 * 60 * 1000);
+  const night = rows.filter(r => isAstroNightHour(r.hour));
+  const soon = night.filter(r => r.ms <= nowMs + 18 * 3600000);
+  return (soon.length ? soon : night).slice(0, 6);
+}
+function astroSlotCost(pt, moon){
+  let n = (Number(pt.cloudcover) || 9) + (Number(pt.seeing) || 8) + (Number(pt.transparency) || 8);
+  if(pt.prec_type && pt.prec_type !== 'none') n += 8;
+  if(moon.up && moon.frac >= 0.85) n += 4;
+  else if(moon.up && moon.frac >= 0.45) n += 2;
+  return n;
+}
+function astroVerdictFor(pt, moon, omCloud){
+  const cloud = astroCloudPct(pt.cloudcover);
+  const seeing = Number(pt.seeing) || 8;
+  const trans = Number(pt.transparency) || 8;
+  const rain = pt.prec_type && pt.prec_type !== 'none';
+  const cloudy = cloud >= 75 || (omCloud != null && omCloud >= 80);
+  if(rain || cloudy) return { cls: 'warn', text: 'Poor \u2014 cloudy' };
+  if(moon.up && moon.frac >= 0.85) return { cls: 'mid', text: 'Fair \u2014 bright moon' };
+  if(cloud <= 25 && seeing <= 3 && trans <= 3 && (!moon.up || moon.frac < 0.5)){
+    return { cls: 'good', text: 'Good night' };
+  }
+  if(cloud <= 50 && seeing <= 5) return { cls: 'mid', text: 'Fair' };
+  return { cls: 'warn', text: 'Poor seeing / transparency' };
+}
+function moonPhaseLabel(phase){
+  if(typeof phaseName !== 'function') return 'Moon';
+  const row = phaseName(phase);
+  return (row && row[1]) || 'Moon';
+}
+function renderTonightSkyFallback(loc, d){
+  const verdictEl = $('tonightSkyVerdict');
+  const detailEl = $('tonightSkyDetail');
+  const metricsEl = $('tonightSkyMetrics');
+  const hoursEl = $('tonightSkyHours');
+  const moon = moonAtMs(Date.now() + 4 * 3600000, loc);
+  const cloud = omNightCloud(d);
+  const illPct = Math.round(moon.frac * 100);
+  const pname = moonPhaseLabel(moon.phase);
+  let cls = 'mid', text = 'Fair';
+  if(cloud != null && cloud >= 70){ cls = 'warn'; text = 'Poor \u2014 cloudy'; }
+  else if(moon.up && moon.frac >= 0.85){ cls = 'mid'; text = 'Fair \u2014 bright moon'; }
+  else if(cloud != null && cloud < 30 && (!moon.up || moon.frac < 0.5)){ cls = 'good'; text = 'Good night'; }
+  if(verdictEl){ verdictEl.className = 'verdict ' + cls; verdictEl.textContent = text; }
+  if(detailEl){
+    detailEl.textContent = (cloud != null ? 'Night cloud around ' + Math.round(cloud) + '%. ' : '')
+      + pname + ' \u00B7 ' + illPct + '% lit'
+      + (moon.up ? '.' : ' \u2014 moon below the horizon.')
+      + ' Astronomy model unavailable; moon and cloud only.';
+  }
+  if(metricsEl){
+    metricsEl.innerHTML = [
+      ['Moon', illPct + '<small>%</small>'],
+      ['Night cloud', cloud != null ? Math.round(cloud) + '<small>%</small>' : '\u2014']
+    ].map(r => '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>').join('');
+  }
+  if(hoursEl) hoursEl.textContent = '';
+  if(typeof setPanelStatus === 'function') setPanelStatus('tonightSkyStatus', '');
+}
+async function fetchAstro(loc){
+  const key = loc.lat.toFixed(3) + ',' + loc.lon.toFixed(3);
+  if(tonightSkyCache.json && tonightSkyCache.key === key && Date.now() - tonightSkyCache.at < 3 * 60 * 1000){
+    return tonightSkyCache.json;
+  }
+  const r = await fetch('/api/7timer?product=astro&lat=' + encodeURIComponent(loc.lat)
+    + '&lon=' + encodeURIComponent(loc.lon));
+  if(!r.ok) throw new Error('astro');
+  const json = await r.json();
+  if(!Array.isArray(json?.dataseries)) throw new Error('astro');
+  tonightSkyCache = { key, at: Date.now(), json };
+  return json;
+}
+async function renderTonightSky(loc, d){
+  const panel = $('tonightSkyPanel');
+  if(!panel) return;
+  panel.hidden = false;
+  if(!loc || !d){
+    syncImpactTabChrome();
+    return;
+  }
+  const verdictEl = $('tonightSkyVerdict');
+  const detailEl = $('tonightSkyDetail');
+  const metricsEl = $('tonightSkyMetrics');
+  const hoursEl = $('tonightSkyHours');
+  const tz = d.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  try{
+    await panelTask('tonightSkyPanel', 'tonightSkyStatus', async () => {
+      const json = await fetchAstro(loc);
+      if(state.locations[state.active] !== loc) return;
+      const slots = pickAstroNightSlots(json, tz, Date.now());
+      if(!slots.length){
+        renderTonightSkyFallback(loc, d);
+        return;
+      }
+      const scored = slots.map(row => {
+        const moon = moonAtMs(row.ms, loc);
+        return { row, moon, cost: astroSlotCost(row.pt, moon) };
+      });
+      scored.sort((a, b) => a.cost - b.cost || a.row.ms - b.row.ms);
+      const best = scored[0];
+      const omCloud = omNightCloud(d);
+      const v = astroVerdictFor(best.row.pt, best.moon, omCloud);
+      const cloud = astroCloudPct(best.row.pt.cloudcover);
+      const seeing = astroBandLabel(ASTRO_SEEING_LBL, best.row.pt.seeing, 8);
+      const trans = astroBandLabel(ASTRO_TRANS_LBL, best.row.pt.transparency, 8);
+      const illPct = Math.round(best.moon.frac * 100);
+      const pname = moonPhaseLabel(best.moon.phase);
+      const when = new Date(best.row.ms).toLocaleTimeString([], { hour: 'numeric', timeZone: tz });
+      if(verdictEl){ verdictEl.className = 'verdict ' + v.cls; verdictEl.textContent = v.text; }
+      const rain = best.row.pt.prec_type && best.row.pt.prec_type !== 'none';
+      let detail = 'Best window around ' + when + '. Seeing ' + seeing.toLowerCase()
+        + ', transparency ' + trans.toLowerCase() + ', cloud ~' + cloud + '%.';
+      if(best.moon.up) detail += ' ' + pname + ' at ' + illPct + '% illumination.';
+      else detail += ' Moon below the horizon.';
+      if(rain) detail += ' Precipitation in the astronomy model.';
+      if(detailEl) detailEl.textContent = detail;
+      if(metricsEl){
+        const rows = [
+          ['Seeing', seeing],
+          ['Transparency', trans],
+          ['Cloud', cloud + '<small>%</small>'],
+          ['Moon', illPct + '<small>%</small>']
+        ];
+        metricsEl.innerHTML = rows.map(r =>
+          '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
+        ).join('');
+      }
+      if(hoursEl){
+        hoursEl.textContent = scored.slice().sort((a, b) => a.row.ms - b.row.ms).slice(0, 5).map(s => {
+          const t = new Date(s.row.ms).toLocaleTimeString([], { hour: 'numeric', timeZone: tz });
+          return t + ' \u00B7 cloud ' + astroCloudPct(s.row.pt.cloudcover) + '%';
+        }).join('  \u00B7  ');
+      }
+    });
+  }catch(e){
+    renderTonightSkyFallback(loc, d);
+  }
+  syncImpactTabChrome();
 }

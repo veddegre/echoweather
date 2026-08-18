@@ -9,16 +9,21 @@ handle_cors_preflight();
 
 $lat = filter_var($_GET['lat'] ?? null, FILTER_VALIDATE_FLOAT);
 $lon = filter_var($_GET['lon'] ?? null, FILTER_VALIDATE_FLOAT);
+$product = strtolower(trim((string) ($_GET['product'] ?? 'civil')));
 
 if ($lat === false || $lon === false || $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180) {
     send_json(400, ['error' => 'invalid coordinates'], cors: true);
+}
+if ($product !== 'civil' && $product !== 'astro') {
+    send_json(400, ['error' => 'invalid product'], cors: true);
 }
 
 try {
     $cfg = load_config();
     enforce_rate_limit('7timer', rate_limit_for($cfg, 'rate_limit_7timer') ?: 60);
     $url = sprintf(
-        'http://www.7timer.info/bin/civil.php?lon=%s&lat=%s&ac=0&unit=metric&output=json&tzshift=0',
+        'http://www.7timer.info/bin/%s.php?lon=%s&lat=%s&ac=0&unit=metric&output=json&tzshift=0',
+        $product,
         rawurlencode((string) $lon),
         rawurlencode((string) $lat)
     );

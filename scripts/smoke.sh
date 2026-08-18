@@ -185,6 +185,22 @@ if [[ "$timer_code" == "200" ]] && ! grep -q '"dataseries"' /tmp/echoweather-7ti
   exit 1
 fi
 echo "OK   /api/7timer?lat=42.97&lon=-85.92 — HTTP ${timer_code}"
+astro_code="$(curl_code "/api/7timer?product=astro&lat=42.97&lon=-85.92" /tmp/echoweather-7timer-astro.json)"
+if [[ "$astro_code" != "200" && "$astro_code" != "502" && "$astro_code" != "429" ]]; then
+  echo "FAIL /api/7timer product=astro — HTTP ${astro_code}" >&2
+  exit 1
+fi
+if [[ "$astro_code" == "200" ]] && ! grep -q '"dataseries"' /tmp/echoweather-7timer-astro.json; then
+  echo "FAIL /api/7timer product=astro — expected dataseries JSON" >&2
+  exit 1
+fi
+echo "OK   /api/7timer?product=astro — HTTP ${astro_code}"
+bad_product="$(curl_code "/api/7timer?product=nope&lat=42.97&lon=-85.92")"
+if [[ "$bad_product" != "400" ]]; then
+  echo "FAIL /api/7timer invalid product — HTTP ${bad_product} (expected 400)" >&2
+  exit 1
+fi
+echo "OK   /api/7timer invalid product — HTTP 400"
 bad_timer="$(curl_code "/api/7timer?lat=999&lon=0")"
 if [[ "$bad_timer" != "400" ]]; then
   echo "FAIL /api/7timer invalid coords — HTTP ${bad_timer} (expected 400)" >&2

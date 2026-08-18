@@ -19,6 +19,7 @@ function prefetchImpactPanels(loc, d){
   if(isLikelyUS(loc) && !stormState.alertFeatures.length) loadAlerts(loc);
   renderActivityPlanner(d);
   syncMarinePanelVisibility(loc);
+  renderTonightSky(loc, d);
   renderAuroraHint(loc, d);
   loadAir(loc);
   loadClimoNormals(loc);
