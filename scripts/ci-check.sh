@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 APP_ROOT="$ROOT" bash "$ROOT/scripts/check-versions.sh"
+APP_ROOT="$ROOT" bash "$ROOT/scripts/test.sh"
 
 for f in app.js tabs.js nav.js impact.js marine.js air.js forecast-extras.js forecast-compare.js mesonet.js climo.js obs.js loc-compare.js aviation.js storm.js radar.js easter-egg.js boot.js sw.js; do
   node --check "$ROOT/$f"

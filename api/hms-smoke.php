@@ -48,7 +48,7 @@ try {
     }
     @file_put_contents($cacheFile, $json);
     header('Content-Type: application/geo+json; charset=utf-8');
-    header('Access-Control-Allow-Origin: *');
+    apply_cors_header();
     header('Cache-Control: public, max-age=900');
     echo $json;
 } catch (Throwable $e) {
@@ -74,7 +74,7 @@ function hms_smoke_try_send_cached(string $cacheFile, int $maxAge): bool
         return false;
     }
     header('Content-Type: application/geo+json; charset=utf-8');
-    header('Access-Control-Allow-Origin: *');
+    apply_cors_header();
     header('Cache-Control: public, max-age=' . $maxAge);
     echo $cached;
     return true;

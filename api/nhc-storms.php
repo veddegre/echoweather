@@ -34,7 +34,7 @@ if (is_file($cacheFile) && (time() - (int) filemtime($cacheFile)) < $ttl) {
     $cached = file_get_contents($cacheFile);
     if ($cached !== false && $cached !== '') {
         header('Content-Type: application/json; charset=utf-8');
-        header('Access-Control-Allow-Origin: *');
+        apply_cors_header();
         header('Cache-Control: public, max-age=300');
         echo $cached;
         exit;
@@ -53,7 +53,7 @@ try {
     }
     @file_put_contents($cacheFile, $json);
     header('Content-Type: application/json; charset=utf-8');
-    header('Access-Control-Allow-Origin: *');
+    apply_cors_header();
     header('Cache-Control: public, max-age=300');
     echo $json;
 } catch (Throwable $e) {
@@ -61,7 +61,7 @@ try {
         $cached = file_get_contents($cacheFile);
         if ($cached !== false && $cached !== '') {
             header('Content-Type: application/json; charset=utf-8');
-            header('Access-Control-Allow-Origin: *');
+            apply_cors_header();
             header('Cache-Control: public, max-age=120');
             echo $cached;
             exit;

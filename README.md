@@ -70,7 +70,8 @@ split across `app.js` (core), `tabs.js`, `nav.js`, `impact.js`, `marine.js`, `ai
 | `deploy.sh` | Optional rsync deploy when the server is not a git clone |
 | `scripts/update-server.sh` | Server-side update logic (called by `update.sh`) |
 | `scripts/fix-permissions.sh` | Repair `.git` / cache ownership after a bad `chown` |
-| `scripts/check-versions.sh` | Verify `APP_VERSION` and `sw.js` `CACHE` stay in sync |
+| `scripts/check-versions.sh` | Verify `APP_VERSION`, `sw.js` `CACHE`, `index.html` `?v=`, and `manifest.json` icon `?v=` stay in sync |
+| `scripts/test.sh` | Unit tests for conversion / parse helpers (`nwsToWmo`, `haversineMi`, …) |
 | `scripts/render-icons.sh` | Regenerate PWA PNG icons from `icon.svg` |
 | `scripts/render-og-image.sh` | Regenerate `og-image.png` for social previews |
 | `scripts/smoke.sh` | Post-deploy health checks (`/`, `/api/status`, `/api/taf`) |
@@ -258,6 +259,7 @@ When you change client JS or CSS, bump **both**:
 - `APP_VERSION` in `app.js`
 - `CACHE` name in `sw.js` (e.g. `echo-weather-v234` → `echo-weather-v235`)
 - All `?v=` query strings on `app.css` and script tags in `index.html`
+- Icon `?v=` query strings in `manifest.json`
 
 Verify before deploy:
 

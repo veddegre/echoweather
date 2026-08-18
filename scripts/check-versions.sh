@@ -55,4 +55,21 @@ if [[ "$ICON_Q" != "$APP_VER" ]]; then
   exit 1
 fi
 
+if [[ ! -f "$ROOT/manifest.json" ]]; then
+  echo "check-versions: missing manifest.json in $ROOT" >&2
+  exit 1
+fi
+MANIFEST_VS="$(grep -oE '[?]v=[0-9]+' "$ROOT/manifest.json" | grep -oE '[0-9]+' | sort -u || true)"
+if [[ -z "$MANIFEST_VS" ]]; then
+  echo "check-versions: no ?v= query strings on manifest.json icons" >&2
+  exit 1
+fi
+while IFS= read -r mv; do
+  [[ -z "$mv" ]] && continue
+  if [[ "$mv" != "$APP_VER" ]]; then
+    echo "Version mismatch: manifest.json ?v=$mv but APP_VERSION=$APP_VER" >&2
+    exit 1
+  fi
+done <<< "$MANIFEST_VS"
+
 echo "Versions OK: v$APP_VER"

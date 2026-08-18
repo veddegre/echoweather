@@ -1,0 +1,14 @@
+{
+  "name": "echoweather",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test scripts/test-core.mjs",
+    "lint": "eslint scripts/",
+    "format": "prettier --write scripts/"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.0",
+    "prettier": "^3.6.2"
+  }
+}

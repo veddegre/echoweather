@@ -16,6 +16,7 @@ function default_config(): array
         'rate_limit_buoy' => 120,
         'rate_limit_taf' => 120,
         'rate_limit_7timer' => 60,
+        'rate_limit_geocode' => 60,
         'cors_origins' => [
             'https://example.com',
             'http://127.0.0.1:8080',
@@ -65,6 +66,23 @@ function match_cors_origin(?string $origin, array $allowed): ?string
     return null;
 }
 
+function apply_cors_header(): void
+{
+    $origin = match_cors_origin($_SERVER['HTTP_ORIGIN'] ?? null, cors_origins_list());
+    if ($origin !== null) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Vary: Origin');
+    }
+}
+
+function send_cached_body(string $body, string $contentType, int $maxAge): void
+{
+    header('Content-Type: ' . $contentType);
+    apply_cors_header();
+    header('Cache-Control: public, max-age=' . $maxAge);
+    echo $body;
+}
+
 function handle_cors_preflight(): void
 {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'OPTIONS') {
@@ -105,11 +123,7 @@ function send_json(int $code, mixed $data, bool $cors = false): void
     header('X-Content-Type-Options: nosniff');
 
     if ($cors) {
-        $origin = match_cors_origin($_SERVER['HTTP_ORIGIN'] ?? null, cors_origins_list());
-        if ($origin !== null) {
-            header('Access-Control-Allow-Origin: ' . $origin);
-            header('Vary: Origin');
-        }
+        apply_cors_header();
         header('Cache-Control: public, max-age=300');
     } else {
         header('Cache-Control: no-store');

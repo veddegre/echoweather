@@ -10,3 +10,6 @@ pooh/cache/*.json
 
 # OS
 .DS_Store
+
+# JS tooling
+node_modules/
