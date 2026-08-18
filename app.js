@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '279';
+const APP_VERSION = '280';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2648,6 +2648,73 @@ function moonPosition(date, lat, lon){
   const alt = Math.asin(Math.sin(phi) * Math.sin(c.dec) + Math.cos(phi) * Math.cos(c.dec) * Math.cos(H));
   const az = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(c.dec) * Math.cos(phi));
   return { alt: alt / RAD, az: (az / RAD + 180) % 360, dist: c.dist };
+}
+function wrapDeg(x){
+  x %= 360;
+  return x < 0 ? x + 360 : x;
+}
+function keplerAnomaly(Mdeg, e){
+  let M = wrapDeg(Mdeg);
+  if(M > 180) M -= 360;
+  let E = M + (180 / Math.PI) * e * Math.sin(M * RAD) * (1 + e * Math.cos(M * RAD));
+  for(let n = 0; n < 10; n++){
+    const dE = (E - (180 / Math.PI) * e * Math.sin(E * RAD) - M) / (1 - e * Math.cos(E * RAD));
+    E -= dE;
+    if(Math.abs(dE) < 1e-5) break;
+  }
+  return E;
+}
+function helioXYZ(el, d){
+  const N = wrapDeg(el.N0 + el.Nd * d) * RAD;
+  const i = (el.i0 + el.id * d) * RAD;
+  const w = wrapDeg(el.w0 + el.wd * d) * RAD;
+  const e = el.e0 + el.ed * d;
+  const E = keplerAnomaly(el.M0 + el.Md * d, e) * RAD;
+  const xv = el.a * (Math.cos(E) - e);
+  const yv = el.a * Math.sqrt(Math.max(0, 1 - e * e)) * Math.sin(E);
+  const v = Math.atan2(yv, xv);
+  const r = Math.hypot(xv, yv);
+  const vw = v + w;
+  return {
+    xh: r * (Math.cos(N) * Math.cos(vw) - Math.sin(N) * Math.sin(vw) * Math.cos(i)),
+    yh: r * (Math.sin(N) * Math.cos(vw) + Math.cos(N) * Math.sin(vw) * Math.cos(i)),
+    zh: r * (Math.sin(vw) * Math.sin(i))
+  };
+}
+function raDecFromHelio(p, earth){
+  const xg = p.xh - earth.xh, yg = p.yh - earth.yh, zg = p.zh - earth.zh;
+  const ye = yg * Math.cos(EOBL) - zg * Math.sin(EOBL);
+  const ze = yg * Math.sin(EOBL) + zg * Math.cos(EOBL);
+  return {
+    ra: Math.atan2(ye, xg),
+    dec: Math.atan2(ze, Math.hypot(xg, ye)),
+    dist: Math.hypot(xg, yg, zg)
+  };
+}
+function altAzFromRaDec(ra, dec, date, lat, lon){
+  const lw = RAD * -lon, phi = RAD * lat, d = toDays(date);
+  const H = sidereal(d, lw) - ra;
+  const alt = Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H));
+  const az = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi));
+  return { alt: alt / RAD, az: (az / RAD + 180) % 360 };
+}
+const PLANET_ORBIT = {
+  earth: { N0: 0, Nd: 0, i0: 0, id: 0, w0: 282.9404, wd: 4.70935e-5, a: 1.0, e0: 0.016709, ed: -1.151e-9, M0: 356.0470, Md: 0.9856002585 },
+  venus: { N0: 76.6799, Nd: 2.46590e-5, i0: 3.3946, id: 2.75e-8, w0: 54.8910, wd: 1.38374e-5, a: 0.723330, e0: 0.006773, ed: -1.302e-9, M0: 48.0052, Md: 1.6021302244 },
+  mars: { N0: 49.5574, Nd: 2.11081e-5, i0: 1.8497, id: -1.78e-8, w0: 286.5016, wd: 2.92961e-5, a: 1.523688, e0: 0.093405, ed: 2.516e-9, M0: 18.6021, Md: 0.5240207766 },
+  jupiter: { N0: 100.4542, Nd: 2.76854e-5, i0: 1.3030, id: -1.557e-7, w0: 273.8777, wd: 1.64505e-5, a: 5.20256, e0: 0.048498, ed: 4.469e-9, M0: 19.8950, Md: 0.0830853001 },
+  saturn: { N0: 113.6634, Nd: 2.38980e-5, i0: 2.4886, id: -1.081e-7, w0: 339.3939, wd: 2.97661e-5, a: 9.55475, e0: 0.055546, ed: -9.499e-9, M0: 316.9670, Md: 0.0334442282 }
+};
+function planetSky(name, date, lat, lon){
+  const el = PLANET_ORBIT[name];
+  if(!el || name === 'earth') return null;
+  const d = toDays(date);
+  const eq = raDecFromHelio(helioXYZ(el, d), helioXYZ(PLANET_ORBIT.earth, d));
+  const sun = sunCoords(d);
+  const sep = Math.sin(eq.dec) * Math.sin(sun.dec)
+    + Math.cos(eq.dec) * Math.cos(sun.dec) * Math.cos(eq.ra - sun.ra);
+  const pos = altAzFromRaDec(eq.ra, eq.dec, date, lat, lon);
+  return { ...pos, elong: Math.acos(Math.max(-1, Math.min(1, sep))) / RAD, dist: eq.dist };
 }
 function moonIllumination(date){
   const d = toDays(date), s = sunCoords(d), m = moonCoords(d), sdist = 149598000;

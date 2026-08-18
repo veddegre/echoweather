@@ -906,6 +906,11 @@ body:not(.mtab-radar) #radarScrub{display:none!important;visibility:hidden!impor
 .fire-timeline-foot{display:flex;justify-content:space-between;margin-top:4px;font-size:.5625rem;color:var(--dim)}
 .coastal-marine-metrics{border-top:1px solid var(--line);padding-top:10px}
 #winterOutlook{padding:12px 14px;margin-bottom:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2)}
+.sky-look{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.sky-look .lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.sky-look ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.sky-look li{font-size:.8125rem;line-height:1.4;color:var(--ink)}
+.sky-look .hint{color:var(--mut)}
 .aurora-hint{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
 .aurora-hint .lbl{font-size:.6875rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
 .aurora-ovation{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}

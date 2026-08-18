@@ -2101,6 +2101,162 @@ function moonPhaseLabel(phase){
   const row = phaseName(phase);
   return (row && row[1]) || 'Moon';
 }
+function skyHeightWord(alt){
+  if(alt >= 50) return 'high';
+  if(alt >= 25) return 'well up';
+  if(alt >= 10) return 'low';
+  return 'near the horizon';
+}
+function compassPhrase(az){
+  const map = {
+    N: 'north', NNE: 'north-northeast', NE: 'northeast', ENE: 'east-northeast',
+    E: 'east', ESE: 'east-southeast', SE: 'southeast', SSE: 'south-southeast',
+    S: 'south', SSW: 'south-southwest', SW: 'southwest', WSW: 'west-southwest',
+    W: 'west', WNW: 'west-northwest', NW: 'northwest', NNW: 'north-northwest'
+  };
+  const p = typeof compass === 'function' ? compass(az) : '';
+  return map[p] || p || 'the sky';
+}
+function monthDayInTz(date, tz){
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, month: 'numeric', day: 'numeric'
+  }).formatToParts(date);
+  let m = 1, d = 1;
+  for(const p of parts){
+    if(p.type === 'month') m = +p.value;
+    if(p.type === 'day') d = +p.value;
+  }
+  return { m, d };
+}
+function approxDoy(m, d){
+  const md = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  return md[m - 1] + d;
+}
+function daysBetweenDoy(a, b){
+  const d = Math.abs(a - b);
+  return Math.min(d, 365 - d);
+}
+function eveningConstellation(date, lat, tz){
+  const month = monthDayInTz(date, tz).m - 1;
+  if(lat < 0){
+    const sh = [
+      ['Canopus', 'south', 'Bright Canopus; the False Cross west of Crux'],
+      ['Crux', 'south', 'Southern Cross high in the south'],
+      ['Crux', 'south', 'Southern Cross still well placed'],
+      ['Carina', 'south', 'The keel of Argo; Canopus in the southwest'],
+      ['Centaurus', 'south', 'Alpha and Beta Centauri near Crux, low south'],
+      ['Sagittarius', 'north', 'The teapot along the Milky Way, north of overhead'],
+      ['Sagittarius', 'north', 'Galactic center high for far-south sites'],
+      ['Pavo', 'south', 'The south celestial pole region'],
+      ['Grus', 'south', 'The crane, south of Fomalhaut'],
+      ['Achernar', 'south', 'Achernar and the river Eridanus'],
+      ['Canopus', 'south', 'Canopus rising; Magellanic Clouds if you are far enough south'],
+      ['Canopus', 'south', 'Canopus and the southern Milky Way']
+    ];
+    const row = sh[month] || sh[0];
+    return { name: row[0], look: row[1], hint: row[2] };
+  }
+  if(month === 5 && lat > 48){
+    return { name: 'Arcturus and the Big Dipper', look: 'south', hint: 'Dipper high in the northwest; orange Arcturus in the south' };
+  }
+  const nh = [
+    ['Orion', 'south', 'Three-star belt; Sirius sparkles below-left'],
+    ['Orion', 'southwest', 'Winter hexagon still owns the south'],
+    ['Leo', 'south', 'The sickle looks like a backwards question mark'],
+    ['Leo', 'southwest', 'Follow the sickle; Regulus at its base'],
+    ['Virgo', 'south', 'Arcturus high in the southeast, Spica below'],
+    ['Scorpius', 'south', 'Red Antares and the hook of the scorpion, low south'],
+    ['the Summer Triangle', 'east', 'Vega, Deneb, and Altair \u2014 a big triangle, higher later'],
+    ['the Summer Triangle', 'south', 'Vega nearly overhead; the Sagittarius teapot low south'],
+    ['Pegasus', 'east', 'The Great Square rising in the east'],
+    ['Pegasus', 'south', 'Great Square high; Andromeda off the northeast corner'],
+    ['Taurus', 'east', 'Pleiades and orange Aldebaran rising in the east'],
+    ['Orion', 'east', 'Orion rising in the east; Taurus already up']
+  ];
+  const row = nh[month] || nh[0];
+  return { name: row[0], look: row[1], hint: row[2] };
+}
+const METEOR_SHOWERS = [
+  { name: 'Quadrantids', m: 1, d: 3, window: 3, hint: 'Look northeast after midnight' },
+  { name: 'Lyrids', m: 4, d: 22, window: 4, hint: 'Look east, late night' },
+  { name: 'Eta Aquariids', m: 5, d: 6, window: 5, hint: 'Best before dawn, low in the east' },
+  { name: 'Perseids', m: 8, d: 12, window: 5, hint: 'Look northeast after 11 pm' },
+  { name: 'Orionids', m: 10, d: 21, window: 5, hint: 'Look south after midnight' },
+  { name: 'Leonids', m: 11, d: 17, window: 4, hint: 'Look east after midnight' },
+  { name: 'Geminids', m: 12, d: 14, window: 5, hint: 'Look east; often the year\u2019s strongest shower' },
+  { name: 'Ursids', m: 12, d: 22, window: 3, hint: 'Look north, late night' }
+];
+function meteorNearPeak(date, tz){
+  const md = monthDayInTz(date, tz);
+  const doy = approxDoy(md.m, md.d);
+  for(const s of METEOR_SHOWERS){
+    if(daysBetweenDoy(doy, approxDoy(s.m, s.d)) <= s.window) return s;
+  }
+  return null;
+}
+function bestPlanetView(id, loc, times){
+  if(typeof planetSky !== 'function' || !times?.length) return null;
+  let best = null;
+  for(const ms of times){
+    const sky = planetSky(id, new Date(ms), loc.lat, loc.lon);
+    if(!sky) continue;
+    if(!best || sky.alt > best.alt) best = { ...sky, ms };
+  }
+  return best;
+}
+function renderTonightSkyLook(loc, d, whenMs, extraTimes){
+  const box = $('tonightSkyLook');
+  if(!box) return;
+  if(!loc){ box.innerHTML = ''; return; }
+  const tz = d?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const when = whenMs || Date.now();
+  const times = [when].concat(extraTimes || []).filter((t, i, a) => a.indexOf(t) === i);
+  const items = [];
+  const moonPos = typeof moonPosition === 'function'
+    ? moonPosition(new Date(when), loc.lat, loc.lon)
+    : null;
+  const moon = moonAtMs(when, loc);
+  const pname = moonPhaseLabel(moon.phase);
+  const illPct = Math.round(moon.frac * 100);
+  if(moonPos && moonPos.alt > 0){
+    items.push('<strong>' + pname + '</strong> \u2014 ' + illPct + '% lit, '
+      + skyHeightWord(moonPos.alt) + ' in the ' + compassPhrase(moonPos.az));
+  }else{
+    items.push('<strong>Moon</strong> \u2014 below the horizon (' + pname.toLowerCase()
+      + ', ' + illPct + '% lit). Darker sky for faint stars.');
+  }
+  const planets = [
+    { id: 'venus', name: 'Venus', minElong: 12, minAlt: 3 },
+    { id: 'mars', name: 'Mars', minElong: 18, minAlt: 5 },
+    { id: 'jupiter', name: 'Jupiter', minElong: 18, minAlt: 5 },
+    { id: 'saturn', name: 'Saturn', minElong: 18, minAlt: 5 }
+  ];
+  let anyPlanet = false;
+  for(const p of planets){
+    const v = bestPlanetView(p.id, loc, times);
+    if(!v || v.alt < p.minAlt || v.elong < p.minElong) continue;
+    anyPlanet = true;
+    items.push('<strong>' + p.name + '</strong> \u2014 ' + skyHeightWord(v.alt)
+      + ' in the ' + compassPhrase(v.az));
+  }
+  if(!anyPlanet){
+    items.push('No bright planets well placed in the night window.');
+  }
+  const con = eveningConstellation(new Date(when), loc.lat, tz);
+  items.push('<strong>' + con.name + '</strong> \u2014 look ' + con.look
+    + '. <span class="hint">' + con.hint + '</span>');
+  const shower = meteorNearPeak(new Date(when), tz);
+  if(shower){
+    let extra = shower.hint;
+    if(moonPos && moonPos.alt > 0 && moon.frac >= 0.7){
+      extra += ' Moonlight will wash out fainter meteors.';
+    }
+    items.push('<strong>' + shower.name + '</strong> \u2014 in season. <span class="hint">'
+      + extra + '</span>');
+  }
+  box.innerHTML = '<div class="lbl">Look for</div><ul>'
+    + items.map(t => '<li>' + t + '</li>').join('') + '</ul>';
+}
 function renderTonightSkyFallback(loc, d){
   const verdictEl = $('tonightSkyVerdict');
   const detailEl = $('tonightSkyDetail');
@@ -2128,6 +2284,7 @@ function renderTonightSkyFallback(loc, d){
     ].map(r => '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>').join('');
   }
   if(hoursEl) hoursEl.textContent = '';
+  renderTonightSkyLook(loc, d, Date.now() + 4 * 3600000);
   if(typeof setPanelStatus === 'function') setPanelStatus('tonightSkyStatus', '');
 }
 async function fetchAstro(loc){
@@ -2204,6 +2361,7 @@ async function renderTonightSky(loc, d){
           return t + ' \u00B7 cloud ' + astroCloudPct(s.row.pt.cloudcover) + '%';
         }).join('  \u00B7  ');
       }
+      renderTonightSkyLook(loc, d, best.row.ms, scored.map(s => s.row.ms));
     });
   }catch(e){
     renderTonightSkyFallback(loc, d);
