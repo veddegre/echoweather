@@ -64,6 +64,10 @@ run_root mkdir -p "$APP_DIR/cache/pollen" "$APP_DIR/cache/ratelimit"
 run_root chown -R "$WEB_USER:$WEB_GROUP" "$APP_DIR/cache"
 run_root chmod -R 750 "$APP_DIR/cache"
 
+run_root mkdir -p "$APP_DIR/pooh/cache"
+run_root chown -R "$WEB_USER:$WEB_GROUP" "$APP_DIR/pooh/cache"
+run_root chmod -R 750 "$APP_DIR/pooh/cache"
+
 if [[ -f "$APP_DIR/config.local.php" ]]; then
   run_root chown root:"$WEB_GROUP" "$APP_DIR/config.local.php"
   run_root chmod 640 "$APP_DIR/config.local.php"
