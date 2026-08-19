@@ -208,14 +208,13 @@ function determineLevel(array $data, array $alerts, array $config): array
 function weatherCodeLevel(int $code): int
 {
     return match (true) {
-        in_array($code, [0, 1], true)                     => 0,
-        in_array($code, [2, 3], true)                     => 1,
-        in_array($code, [45, 48, 51, 53], true)           => 1,
+        in_array($code, [0, 1, 2], true)                   => 0,
+        in_array($code, [3, 45, 48, 51, 53], true)         => 1,
         in_array($code, [55, 56, 57, 61, 71, 77, 80], true)=> 2,
-        in_array($code, [63, 73, 81, 85], true)           => 2,
+        in_array($code, [63, 73, 81, 85], true)             => 2,
         in_array($code, [65, 67, 75, 82, 86, 95], true)    => 3,
         in_array($code, [96, 99], true)                     => 4,
-        default                                             => 1,
+        default                                             => 0,
     };
 }
 
