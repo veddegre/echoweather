@@ -80,7 +80,7 @@ if [[ "$SMOKE_ONLY" -eq 0 ]]; then
     "$DEPLOY_HOST:$REMOTE_STAGING/"
 
   echo "Installing to $REMOTE_WWW on server..."
-  ssh "$DEPLOY_HOST" "sudo rsync -a $REMOTE_STAGING/ $REMOTE_WWW/ && sudo chown -R www-data:www-data $REMOTE_WWW"
+  ssh "$DEPLOY_HOST" "sudo rsync -a $REMOTE_STAGING/ $REMOTE_WWW/ && sudo mkdir -p $REMOTE_WWW/cache $REMOTE_WWW/pooh/cache && sudo chown -R www-data:www-data $REMOTE_WWW"
   echo "Deploy complete."
 fi
 

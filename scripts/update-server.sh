@@ -95,6 +95,14 @@ fi
 
 APP_ROOT="$APP_DIR" bash "$APP_DIR/scripts/check-versions.sh"
 
+# Ensure cache directories exist (gitignored, never created by pull/rsync)
+for cachedir in cache pooh/cache; do
+  if [[ ! -d "$cachedir" ]]; then
+    echo "Creating $cachedir/"
+    mkdir -p "$cachedir"
+  fi
+done
+
 # Gitignored server state — never overwritten by pull
 if [[ ! -f config.local.php ]]; then
   echo
