@@ -583,6 +583,15 @@ body.level-4 .wind-layer {
     font-size: 0.92rem;
     line-height: 1.55;
 }
+.woods-guide-nudge-text a {
+    color: var(--green-dark);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--green-dark) 35%, transparent);
+    text-underline-offset: 2px;
+}
+.woods-guide-nudge-text a:hover {
+    text-decoration-color: currentColor;
+}
 
 .woods-accuracy {
     margin: 0.85rem 0 0;
