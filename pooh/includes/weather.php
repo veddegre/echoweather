@@ -155,6 +155,48 @@ function isUsLocation(float $lat, float $lon): bool
     return $lat >= 24.0 && $lat <= 50.0 && $lon >= -125.0 && $lon <= -66.0;
 }
 
+/**
+ * Look at the next few hours of forecast. If the observation says overcast
+ * (level 1) but the forecast is clearing soon, soften to level 0.
+ * Only applies to the mild overcast case — anything level 2+ stays as-is.
+ */
+function blendObservationWithForecast(int $obsCodeLevel, int $obsCode, array $data): int
+{
+    if ($obsCodeLevel !== 1 || $obsCode < 2 || $obsCode > 3) {
+        return $obsCodeLevel;
+    }
+
+    $hourly = $data['hourly'] ?? [];
+    $times = $hourly['time'] ?? [];
+    $codes = $hourly['weather_code'] ?? [];
+    if (empty($times)) {
+        return $obsCodeLevel;
+    }
+
+    $now = time();
+    $windowEnd = $now + 3 * 3600;
+    $clearCount = 0;
+    $total = 0;
+
+    foreach ($times as $i => $t) {
+        $ts = strtotime((string) $t);
+        if ($ts < $now || $ts > $windowEnd) {
+            continue;
+        }
+        $total++;
+        $hCode = (int) ($codes[$i] ?? 3);
+        if (weatherCodeLevel($hCode) === 0) {
+            $clearCount++;
+        }
+    }
+
+    if ($total > 0 && $clearCount >= ($total / 2)) {
+        return 0;
+    }
+
+    return $obsCodeLevel;
+}
+
 function determineLevel(array $data, array $alerts, array $config): array
 {
     $current = $data['current'];
@@ -163,6 +205,7 @@ function determineLevel(array $data, array $alerts, array $config): array
 
     $code = (int) ($current['weather_code'] ?? 0);
     $codeLevel = weatherCodeLevel($code);
+    $codeLevel = blendObservationWithForecast($codeLevel, $code, $data);
     if ($codeLevel > 0) {
         $candidates[] = $codeLevel;
         $reasons[] = weatherCodeDescription($code);
