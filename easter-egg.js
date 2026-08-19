@@ -695,18 +695,258 @@ function skyToldPickQuip(signPool, seed, mood){
   return eggPick(signPool.any || [], seed);
 }
 const SKY_TOLD_ANIMALS = [
-  { name: 'Rat', ch: '\u9F20', hint: 'Notice the small leak before it is a flood.' },
-  { name: 'Ox', ch: '\u725B', hint: 'Steady work outlasts a flashy front.' },
-  { name: 'Tiger', ch: '\u864E', hint: 'A bold step, then a pause to hear the thunder.' },
-  { name: 'Rabbit', ch: '\u5154', hint: 'Soft landings. Leave early if the road ices.' },
-  { name: 'Dragon', ch: '\u9F8D', hint: 'Big weather, bigger patience. Do not chase every cell.' },
-  { name: 'Snake', ch: '\u86C7', hint: 'Read the quiet sky. The loud one is already obvious.' },
-  { name: 'Horse', ch: '\u99AC', hint: 'Move while the window is open. Windows close.' },
-  { name: 'Goat', ch: '\u7F8A', hint: 'Gather your people. Leave the argument on the porch.' },
-  { name: 'Monkey', ch: '\u7334', hint: 'A clever shortcut exists. Check it is not a gust front.' },
-  { name: 'Rooster', ch: '\u96DE', hint: 'Announce less. Watch the sunrise more.' },
-  { name: 'Dog', ch: '\u72D7', hint: 'Loyalty first. Then a walk, weather allowing.' },
-  { name: 'Pig', ch: '\u8C6C', hint: 'Comfort is a plan. Rest is not a failure of ambition.' }
+  { name: 'Rat', ch: '\u9F20', hints: {
+    any: [
+      'Notice the small leak before it is a flood.',
+      'Resourcefulness is not hoarding. It is knowing where the dry shelter is.',
+      'You saw the opportunity before the forecast confirmed it.',
+      'Small moves, big results. The drizzle fills the reservoir.',
+      'Cleverness peaks when nobody else is watching the data.',
+      'Your instincts are faster than the warning system. Trust them, then verify.',
+      'Adaptability is your climate. Thrive in any weather.'
+    ],
+    storm: [
+      'A storm rewards the prepared. You were prepared last week.',
+      'Small creatures survive big weather by being smarter, not bigger.'
+    ],
+    clear: [
+      'Clear skies mean the competition is relaxed. You are not. Good.',
+      'Quiet conditions. Perfect for the move nobody saw coming.'
+    ],
+    hot: ['Heat makes others slow. You were already three steps ahead.'],
+    cold: ['The cold sharpens your edge. It was already sharp.']
+  }},
+  { name: 'Ox', ch: '\u725B', hints: {
+    any: [
+      'Steady work outlasts a flashy front.',
+      'The field does not care about your mood. Plow it anyway.',
+      'Patience is not passive. It is structural.',
+      'You finished what they abandoned when it got hard.',
+      'Endurance is your forecast: persistent, reliable, occasionally stubborn.',
+      'The slow path is the one still standing after the storm.',
+      'Strength without spectacle. The sky does not applaud the bedrock either.'
+    ],
+    storm: [
+      'The storm will not move you. That has always been the arrangement.',
+      'Heavy weather meets heavy resolve. You barely notice.'
+    ],
+    clear: [
+      'A calm day rewards the work you did on the hard ones.',
+      'Good conditions. Maintain the pace. You never needed the excuse to stop.'
+    ],
+    hot: ['Heat tests endurance. You wrote the test.'],
+    cold: ['Cold and steady. Your operating temperature.']
+  }},
+  { name: 'Tiger', ch: '\u864E', hints: {
+    any: [
+      'A bold step, then a pause to hear the thunder.',
+      'Courage is not the absence of caution. It is going anyway.',
+      'The jungle watches you. So does the sky. Neither blinks.',
+      'Power without direction is just weather. Aim it.',
+      'You enter every room like a front moves through: unmistakably.',
+      'Bravery is your constant. Timing is the variable.',
+      'The stripe does not fade. Neither does the impression you leave.'
+    ],
+    storm: [
+      'The storm has teeth. So do you. Respect the other predator.',
+      'Even tigers shelter during the worst of it. Strength includes restraint.'
+    ],
+    clear: [
+      'Clear sky, clean strike. Today the territory is yours.',
+      'Nothing obscuring the view. Hunt what matters.'
+    ],
+    hot: ['The heat is fierce. So are you. Only one of you needs water.'],
+    cold: ['Cold sharpens the hunter. Move with precision.']
+  }},
+  { name: 'Rabbit', ch: '\u5154', hints: {
+    any: [
+      'Soft landings. Leave early if the road ices.',
+      'Gentleness is not timidity. It is choosing where to land.',
+      'You sensed the shift before the instruments did.',
+      'Diplomacy works. So does knowing when to run.',
+      'Grace under pressure is your specialty. The barometer agrees.',
+      'Quiet does not mean absent. It means listening.',
+      'Your timing is impeccable when you trust it.'
+    ],
+    storm: [
+      'The burrow was built for this. Stay low and wait.',
+      'Storms are loud. You are not. That is an advantage.'
+    ],
+    clear: [
+      'Gentle conditions match your energy. Venture out softly.',
+      'A kind sky. Accept it without suspicion for once.'
+    ],
+    hot: ['Heat asks for stillness. You were already still.'],
+    cold: ['The cold is crisp and so is your instinct. Stay warm, stay alert.']
+  }},
+  { name: 'Dragon', ch: '\u9F8D', hints: {
+    any: [
+      'Big weather, bigger patience. Do not chase every cell.',
+      'You carry the storm inside. The one outside is redundant.',
+      'Legend is just persistence with better lighting.',
+      'Scale the ambition to the day. Even dragons rest.',
+      'The sky is your element. Share it occasionally.',
+      'Grandeur is exhausting for everyone except you.',
+      'Your presence changes the atmospheric pressure in a room.'
+    ],
+    storm: [
+      'The storm thinks it is impressive. It has not met you.',
+      'Thunder and lightning are your backup singers. Let them finish.'
+    ],
+    clear: [
+      'A calm sky and a dragon. The sky is being polite.',
+      'Clear air lets the world see you at full span. Enjoy it.'
+    ],
+    hot: ['Fire-breather in a heat wave. Even you should hydrate.'],
+    cold: ['Cold cannot touch the fire inside. But wear the coat anyway.']
+  }},
+  { name: 'Snake', ch: '\u86C7', hints: {
+    any: [
+      'Read the quiet sky. The loud one is already obvious.',
+      'Wisdom is knowing which weather to ignore.',
+      'You see the pattern before the model finishes running.',
+      'Patience is not waiting. It is knowing when.',
+      'Shed what is not working. The skin grows back better.',
+      'Stillness is your intelligence gathering. Do not explain it.',
+      'Intuition and data agree more often than either admits.'
+    ],
+    storm: [
+      'The storm reveals. You already saw what it is uncovering.',
+      'Stay coiled. The moment after the storm is yours.'
+    ],
+    clear: [
+      'Clear conditions. Everything is visible, including your next move.',
+      'A transparent sky suits a mind that sees through surfaces.'
+    ],
+    hot: ['Heat suits the cold-blooded. Bask strategically.'],
+    cold: ['Cold slows you. Use the slowness. Think longer.']
+  }},
+  { name: 'Horse', ch: '\u99AC', hints: {
+    any: [
+      'Move while the window is open. Windows close.',
+      'Freedom is your forecast. Check the road conditions first.',
+      'Speed is a talent. Knowing the destination is the other talent.',
+      'Your stride covers ground that others map from a desk.',
+      'Energy is not the problem. Direction sometimes is.',
+      'The open plain is your office. Today it is open.',
+      'Restlessness is just ambition warming up.'
+    ],
+    storm: [
+      'Even the fastest horse shelters during hail. Pace yourself.',
+      'The storm blocks the path. Find a new one. You always do.'
+    ],
+    clear: [
+      'Clear and open. Run. The sky will not ask again this nicely.',
+      'Unobstructed horizon. Your favorite kind of permission.'
+    ],
+    hot: ['Heat and speed do not mix. Walk this one. Hydrate.'],
+    cold: ['Cold air in your lungs, fire in your step. Go.']
+  }},
+  { name: 'Goat', ch: '\u7F8A', hints: {
+    any: [
+      'Gather your people. Leave the argument on the porch.',
+      'Creativity peaks when the pressure is low \u2014 barometric and social.',
+      'The flock matters. So does the view from slightly apart.',
+      'Art is not a hobby. It is how you process the weather.',
+      'Gentle persistence carved the valley. Keep going.',
+      'Your kindness is structural, not decorative.',
+      'The meadow is wide enough for everyone. You knew that first.'
+    ],
+    storm: [
+      'The storm is someone else\u2019s drama. Graze through it.',
+      'Shelter the herd. That is leadership, not retreat.'
+    ],
+    clear: [
+      'Soft sky, soft heart, productive afternoon.',
+      'Clear weather invites the daydream. Follow it for once.'
+    ],
+    hot: ['Heat and creativity. The kiln fires the clay. Make something.'],
+    cold: ['Cold gathers the flock closer. You like it that way.']
+  }},
+  { name: 'Monkey', ch: '\u7334', hints: {
+    any: [
+      'A clever shortcut exists. Check it is not a gust front.',
+      'Play is intelligence in disguise. The sky knows.',
+      'You solved it already. Now solve it the way they can follow.',
+      'Curiosity plus agility equals you. Aim both.',
+      'The branch you are swinging from is strong. Probably.',
+      'Wit is your weather system. It adapts to anything.',
+      'Mischief is just problem-solving with style.'
+    ],
+    storm: [
+      'The storm is chaotic. So are you. Do not compete.',
+      'Even monkeys come down from the tree when it thunders.'
+    ],
+    clear: [
+      'Clear skies and a clear head. Dangerous combination for everyone else.',
+      'Good visibility means your trick will be seen. Make it a good one.'
+    ],
+    hot: ['Too hot to hustle. Coast on cleverness.'],
+    cold: ['Cold makes you inventive. Warmer solutions incoming.']
+  }},
+  { name: 'Rooster', ch: '\u96DE', hints: {
+    any: [
+      'Announce less. Watch the sunrise more.',
+      'Punctuality is a superpower. The dawn agrees.',
+      'Your standards are high. So is the cirrus. Both are fine.',
+      'Confidence is the crow. Competence is the follow-through.',
+      'You noticed the detail everyone missed. Say it once.',
+      'Organization is your element. Chaos is just a puzzle.',
+      'The early call is your gift. Make sure it is worth hearing.'
+    ],
+    storm: [
+      'No point crowing during thunder. Wait for the break.',
+      'The storm ruffles feathers. Yours smooth back faster than most.'
+    ],
+    clear: [
+      'A perfect morning. You were up before it started. As usual.',
+      'Clear and orderly. Your kind of sky.'
+    ],
+    hot: ['Heat before dawn. Even the rooster hits snooze.'],
+    cold: ['Cold, crisp mornings are your runway. Strut.']
+  }},
+  { name: 'Dog', ch: '\u72D7', hints: {
+    any: [
+      'Loyalty first. Then a walk, weather allowing.',
+      'You guard what matters. The sky respects the watch.',
+      'Faithfulness is not a weakness. It is load-bearing.',
+      'The nose knows. Trust what you sense before the data arrives.',
+      'Devotion and a good walk cure most things.',
+      'Honesty is your default. The weather could learn from you.',
+      'Your people are your weather. Check on them.'
+    ],
+    storm: [
+      'Guard the door. The storm is not getting in on your watch.',
+      'Loyalty means staying. Even when the wind says go.'
+    ],
+    clear: [
+      'Clear day, long walk, good company. The whole prescription.',
+      'Fair weather and a familiar trail. That is enough.'
+    ],
+    hot: ['Hot pavement. Short walk. Extra water. Guard the shade.'],
+    cold: ['Cold nose, warm heart. The oldest forecast.']
+  }},
+  { name: 'Pig', ch: '\u8C6C', hints: {
+    any: [
+      'Comfort is a plan. Rest is not a failure of ambition.',
+      'Generosity is your weather pattern. Persistent and warm.',
+      'The good life is not lazy. It is curated.',
+      'Abundance does not apologize. Neither should you.',
+      'Enjoy the meal. Enjoy the company. Enjoy the sky. In that order.',
+      'Kindness is underrated. So is a nap after lunch.',
+      'You give freely. Refill freely too.'
+    ],
+    storm: [
+      'The storm changes nothing indoors. Your setup is excellent.',
+      'Weather delays are just bonus rest. Accept the gift.'
+    ],
+    clear: [
+      'Beautiful day. Eat outside. Invite someone.',
+      'Clear sky, full plate, no complaints. Paradise.'
+    ],
+    hot: ['Heat calls for shade and something cold to drink. Already on it.'],
+    cold: ['Cold weather is blanket weather. You have been ready since October.']
+  }}
 ];
 const SKY_TOLD_STEMS = ['Wood', 'Wood', 'Fire', 'Fire', 'Earth', 'Earth', 'Metal', 'Metal', 'Water', 'Water'];
 const SKY_TOLD_CNY = {
@@ -975,14 +1215,18 @@ function fillSkyToldEgg(){
         + 'Add a birth year to see your animal.';
     }
   }else{
+    const mood = typeof skyToldWeatherMood === 'function' ? skyToldWeatherMood() : 'any';
     const seed = [md.y, md.m, md.d, natalZo.name, loc?.lat?.toFixed(2)].join('|');
+    const animalHint = natalZo.hints
+      ? skyToldPickQuip(natalZo.hints, seed + '|zo', mood)
+      : (natalZo.hint || '');
     const luck = eggPick(SKY_TOLD_LUCK, seed + '|luck');
     if(zoHead){
       zoHead.textContent = 'You are a ' + natalZo.element + ' ' + natalZo.name + '  ' + natalZo.ch
         + ' \u00B7 year ' + natalZo.lunarYear;
     }
     if(zoBody){
-      zoBody.textContent = natalZo.hint + ' ' + luck
+      zoBody.textContent = animalHint + ' ' + luck
         + ' This lunar year is ' + yearZo.element + ' ' + yearZo.name + ' for the calendar.';
     }
   }
