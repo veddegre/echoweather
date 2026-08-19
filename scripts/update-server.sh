@@ -65,6 +65,14 @@ if [[ "$(id -un)" == "root" && -n "${SUDO_USER:-}" ]]; then
 fi
 
 echo "Updating Echo Weather in $APP_DIR (branch $GIT_BRANCH)..."
+
+# Ensure git-tracked files in web-owned dirs are writable before fetch/reset
+for d in pooh/cache; do
+  if [[ -d "$d" ]]; then
+    sudo chown -R "$REPO_USER:$REPO_USER" "$d" 2>/dev/null || true
+  fi
+done
+
 git fetch origin
 
 REMOTE_REF="origin/$GIT_BRANCH"
