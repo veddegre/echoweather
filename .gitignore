@@ -1,9 +1,10 @@
 # Local secrets — use config.example.php template in git
 config.local.php
-cache/
+/cache/
 
 # Hundred Acre Weather (easter egg) — runtime cache only
 pooh/cache/*.json
+!pooh/cache/.gitkeep
 
 # Icon build temps (scripts/render-icons.sh)
 .render-icon-*.html
