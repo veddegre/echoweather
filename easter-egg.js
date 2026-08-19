@@ -195,67 +195,505 @@ const SKY_TOLD_SIGNS = [
   ['Sagittarius', 11, 22, 12, 21]
 ];
 const SKY_TOLD_STAR = {
-  Capricorn: [
-    'You already checked the pressure trend. The stars notice, and they are a little intimidated.',
-    'A stubborn high builds over your to-do list. Leave one item unfinished on purpose.',
-    'If the plan is solid, do not add a bonus errand just because the sky looks honest.'
-  ],
-  Aquarius: [
-    'You will invent a better way to watch the sky, then use the old way anyway.',
-    'A weird idea about the wind is correct. Do not workshop it in a group chat.',
-    'Stay curious, but come inside when the lightning does.'
-  ],
-  Pisces: [
-    'Feelings arrive like stratus: quiet, total, and somehow damp. Name one of them.',
-    'A small kindness lands better than a grand speech. Fog does not need a spotlight.',
-    'Trust the hunch, then check a real observation. Poetry plus a METAR.'
-  ],
-  Aries: [
-    'Charge the hill, but not the one with the severe thunderstorm warning.',
-    'Someone will try to slow you down. They are not the wind. You can still go.',
-    'Start before you are ready. Finish before the next cell arrives.'
-  ],
-  Taurus: [
-    'Comfort is not a character flaw. Neither is leaving the porch when it gusts.',
-    'Hold your ground, then eat something that is not a weather snack.',
-    'A slow evening beats a dramatic one. The sky can be dramatic without you.'
-  ],
-  Gemini: [
-    'Two tabs, two theories, one actual sky. Pick a window and look.',
-    'A conversation splits like a warm front. Let the interesting side win.',
-    'You can explain the radar to someone, or you can go outside. Both is greedy.'
-  ],
-  Cancer: [
-    'Home pressure is falling. Text the person who makes the room feel high pressure.',
-    'Protect your evening like a lake-effect band: local, intense, nobody else\u2019s business.',
-    'If you nest, nest with a view of the western sky.'
-  ],
-  Leo: [
-    'The sun is doing bits and so are you. Save a little gold for after dusk.',
-    'Compliments arrive. Accept one without issuing a forecast disclaimer.',
-    'You do not have to host the whole horizon. Let someone else point at the moon.'
-  ],
-  Virgo: [
-    'You will want to correct the model. The model does not know you are watching.',
-    'Tidy one small system. Leave the atmosphere to the atmosphere.',
-    'Precision is a gift. So is stopping at good enough before midnight.'
-  ],
-  Libra: [
-    'Balance is not 50/50 cloud cover. Choose the nicer evening and mean it.',
-    'A polite disagreement clears like haze after a cold front. Open a window.',
-    'You can be fair without becoming the referee of other people\u2019s weather.'
-  ],
-  Scorpio: [
-    'Something under the surface is moving. You already knew. Do not poke it twice.',
-    'Intensity is allowed. A midnight walk is allowed. A speech is optional.',
-    'Keep the secret. Share the sky.'
-  ],
-  Sagittarius: [
-    'The far horizon looks better than your inbox. That is data.',
-    'Say yes to one outing. No to the one that starts after the lightning.',
-    'You do not need a new philosophy. You need a clear west and earlier bedtime.'
-  ]
+  Capricorn: {
+    any: [
+      'You already checked the pressure trend. The stars notice, and they are a little intimidated.',
+      'A stubborn high builds over your to-do list. Leave one item unfinished on purpose.',
+      'If the plan is solid, do not add a bonus errand just because the sky looks honest.',
+      'Measure twice, then measure twice more. That is not advice. That is your personality.',
+      'The spreadsheet will not save you from the sunset. Close it early today.',
+      'You outwork the barometer. Nobody asked. Keep going anyway.',
+      'Ambition is good. Sleep is also good. Pick one before two a.m.',
+      'Your five-year plan is stronger than the jet stream. That is not always a compliment.',
+      'Nobody doubts your follow-through. They doubt your ability to rest.',
+      'The mountain does not move. Neither do you. That is usually a virtue.',
+      'Structure is a love language. So is loosening the schedule once.',
+      'You peaked at responsibility early. Allow a pointless evening.',
+      'Discipline got you here. A nap gets you further.'
+    ],
+    storm: [
+      'Storms pass. Your plan was built for this. Check the basement, not the model.',
+      'You prepared for this exact weather. Congratulations, now sit still.',
+      'The storm has no agenda. You have seventeen. Let it win for an hour.',
+      'Even the barometer takes a break during rapid pressure falls. You can too.'
+    ],
+    clear: [
+      'The sky gave you a clean slate and you already have three things on it.',
+      'Clear air and zero excuses. Walk somewhere that is not a meeting.',
+      'A perfect sky and nothing on the calendar. Let the discomfort of that be the lesson.',
+      'The atmosphere did its job today. You can stop supervising it.'
+    ],
+    hot: [
+      'The heat is testing your patience. It has no idea who it is dealing with.',
+      'Efficiency drops above ninety. So should your expectations.',
+      'You will try to power through the heat. The heat does not negotiate.'
+    ],
+    cold: [
+      'Cold builds character. You already have character. Stay in.',
+      'Frozen air, sharp thinking. Your season, arguably.',
+      'The cold respects your work ethic. Return the favor and layer up.'
+    ]
+  },
+  Aquarius: {
+    any: [
+      'You will invent a better way to watch the sky, then use the old way anyway.',
+      'A weird idea about the wind is correct. Do not workshop it in a group chat.',
+      'Stay curious, but come inside when the lightning does.',
+      'Your contrarian streak is showing. The atmosphere does not care, but your roommate might.',
+      'You are thinking three systems ahead. The current one just wants lunch.',
+      'Originality is fine. Original routes during a flood watch are not.',
+      'The future you are imagining is real. It just has a different dew point.',
+      'You do not follow the herd. The herd does not check the radar either, so maybe one thing in common.',
+      'A breakthrough is coming, but it is on your timeline, not the sky\u2019s.',
+      'Social norms are someone else\u2019s forecast. Write your own.',
+      'The group wants your opinion. Give half of it and keep the good half.',
+      'Your independence is weather-proof. Just not waterproof. Bring a jacket.',
+      'Every rebel needs a roof. Check the ceiling before the sky.'
+    ],
+    storm: [
+      'A storm is not a metaphor right now. It is an actual storm. Go inside.',
+      'You want to watch it. Fair. Watch it from a building.',
+      'Chaos is your element, but lightning is not. Observe from shelter.',
+      'The atmosphere is doing something unusual. You approve, but from indoors.'
+    ],
+    clear: [
+      'Clear sky, open mind, phone off. That is the whole prescription.',
+      'Visibility is excellent. So is your excuse to wander without a destination.',
+      'A blank sky is an invitation to think without guardrails.',
+      'Nothing overhead but possibility. Your favorite weather.'
+    ],
+    hot: [
+      'Heat and rebellion go together. Hydrate the rebellion.',
+      'Conventional wisdom says stay cool. You will find an unconventional way.',
+      'The heat is conformist. Resist it with shade and water.'
+    ],
+    cold: [
+      'Cold sharpens the mind. Yours was already sharp. Just add layers.',
+      'Cold air carries clarity. Use it before the next warm front arrives.',
+      'The chill is bracing. So are your opinions. Both are fine in moderation.'
+    ]
+  },
+  Pisces: {
+    any: [
+      'Feelings arrive like stratus: quiet, total, and somehow damp. Name one of them.',
+      'A small kindness lands better than a grand speech. Fog does not need a spotlight.',
+      'Trust the hunch, then check a real observation. Poetry plus a METAR.',
+      'You absorbed the mood of the sky again. Wring yourself out before bed.',
+      'The daydream is valid. The umbrella is also valid. Bring both.',
+      'Someone needs your gentleness today. So does the plant you forgot to water.',
+      'The boundary between your feelings and the weather is decorative at best.',
+      'Intuition is not data, but yours has a better track record than some models.',
+      'You are the only sign that can feel a pressure change without a barometer.',
+      'Creativity peaks when the sky is ambiguous. Today is ambiguous enough.',
+      'You gave too much yesterday. The atmosphere noticed. Take something back.',
+      'Your empathy is a weather system. It has its own fronts and advisories.',
+      'The ocean does not apologize for its depth. Neither should you.'
+    ],
+    storm: [
+      'Storms match your inner weather a little too well. This one is not yours to carry.',
+      'Rain was always your element. Let it run its course without narrating.',
+      'The storm is real and so is what you are feeling. Only one requires shelter.',
+      'Water in every form today. You understand it all and that is exhausting.'
+    ],
+    clear: [
+      'Clear skies feel unfamiliar. Enjoy the disorientation.',
+      'Sunlight and stillness. You will try to find the sadness in it. There is none today.',
+      'A dry day. Your soul is confused but your shoes are grateful.',
+      'Clarity is temporary. Enjoy it like a tide pool \u2014 small, vivid, and already changing.'
+    ],
+    hot: [
+      'Warmth pools around you like emotion. Drink cold water and call it self-care.',
+      'The heat is heavy. You carry heavy things well, but not forever.',
+      'Humidity matches your emotional density. Both peak in August.'
+    ],
+    cold: [
+      'The cold asks you to feel less. Respectfully decline.',
+      'Frozen things preserve. Let the cold keep one feeling safe until you are ready.',
+      'Your warmth is internal and radiant. The wind chill does not apply.'
+    ]
+  },
+  Aries: {
+    any: [
+      'Charge the hill, but not the one with the severe thunderstorm warning.',
+      'Someone will try to slow you down. They are not the wind. You can still go.',
+      'Start before you are ready. Finish before the next cell arrives.',
+      'Momentum does not care about your calendar. Neither do you, apparently.',
+      'You picked a fight with the forecast. The forecast does not argue back, and that makes it worse.',
+      'Speed is your gift. Knowing when to brake is the upgrade.',
+      'You were first out the door this morning. The sunrise barely beat you.',
+      'Patience is a skill. You have other skills. Use those today.',
+      'Confidence is a tailwind. Stubbornness is a headwind. Know which is blowing.',
+      'Action is your default. Reflection is the patch you keep postponing.',
+      'The finish line is not going anywhere. Neither is the person you nearly cut off.',
+      'Your energy could power a small radar installation. Aim it.',
+      'Rest is not retreat. It is reloading.'
+    ],
+    storm: [
+      'The storm has the same energy you do. Let it go first.',
+      'Lightning does not yield to enthusiasm. Take the detour.',
+      'You want to race the storm. The storm does not know it is racing. Shelter.',
+      'Adrenaline says go. The warning says no. The warning wins today.'
+    ],
+    clear: [
+      'Nothing between you and the horizon. Go earn the view.',
+      'A clear day is a runway. You were already taxiing.',
+      'Open sky, open road, zero hesitation. Your ideal forecast.',
+      'Today the atmosphere got out of your way. Accept the gift.'
+    ],
+    hot: [
+      'The heat is daring you. Do not accept every dare.',
+      'Fire signs and high temps. Redundant. Find water.',
+      'Your engine runs hot. The air does too. Cool both before redlining.'
+    ],
+    cold: [
+      'Cold air, quick legs. Your best ideas happen at pace.',
+      'The cold makes you faster. Physics disagrees, but you do not listen to physics.',
+      'Brisk air sharpens the charge. Go, but dress for it.'
+    ]
+  },
+  Taurus: {
+    any: [
+      'Comfort is not a character flaw. Neither is leaving the porch when it gusts.',
+      'Hold your ground, then eat something that is not a weather snack.',
+      'A slow evening beats a dramatic one. The sky can be dramatic without you.',
+      'Stubbornness is loyalty to your own rhythm. The barometer respects that.',
+      'Pleasure is not a side quest. It is the main plot. Add dessert.',
+      'You do not need to move fast. You need to move right. Then sit down.',
+      'The couch is not a character flaw. It is infrastructure.',
+      'Your patience outlasts the dew point cycle. That is either admirable or concerning.',
+      'Beauty matters. The sky knows this. So does your dinner plate.',
+      'Routine is the gravity that keeps you in orbit. Respect it.',
+      'You will not be rushed. The atmosphere tried. The atmosphere lost.',
+      'Loyalty is your weather pattern: persistent, warm, and occasionally stubborn.',
+      'Luxury is a clean window with a good view. You already knew that.'
+    ],
+    storm: [
+      'Storms want attention. You are under no obligation. Stay comfortable.',
+      'You already stocked the pantry. Weather confirmed your instincts.',
+      'The storm rearranges. You do not rearrange. Wait it out with something warm.',
+      'Comfort during chaos is your superpower. Deploy it.'
+    ],
+    clear: [
+      'The sky has nowhere to be and neither should you right now.',
+      'Perfect conditions for doing exactly what you were already doing.',
+      'A calm sky rewards those who were calm before it arrived.',
+      'Clear weather and no pressure to perform. Your paradise.'
+    ],
+    hot: [
+      'Heat melts urgency. Lean into it. Nothing is that important before dusk.',
+      'The heat wants you to move. You decline. Shade and patience.',
+      'Sensuality peaks in summer. So does your grocery list.'
+    ],
+    cold: [
+      'Cold weather, warm blanket, no explanation needed.',
+      'Winter is just the universe agreeing you should stay in.',
+      'The cold cannot reach you through cashmere and resolve.'
+    ]
+  },
+  Gemini: {
+    any: [
+      'Two tabs, two theories, one actual sky. Pick a window and look.',
+      'A conversation splits like a warm front. Let the interesting side win.',
+      'You can explain the radar to someone, or you can go outside. Both is greedy.',
+      'Your brain has two fronts converging. Let the interesting one win.',
+      'Boredom is a myth you tell yourself between hyperfixations.',
+      'Switch tasks once. Not seven times. Once.',
+      'You are already writing the text and the reply. Send the first one.',
+      'Information is your weather. Today\u2019s is scattered with occasional insight.',
+      'Curiosity killed the cat but the cat had nine lives and you have more tabs.',
+      'Words come easy. Silence comes hard. Try the hard one for ten minutes.',
+      'Your attention span is a hummingbird. Beautiful, fast, and gone.',
+      'The duality is not a bug. It is the entire operating system.',
+      'You can hold two opinions and still be right. The weather does it every day.'
+    ],
+    storm: [
+      'A storm gives you permission to stay in and read three things at once.',
+      'Commentary is your storm shelter. Narrate the thunder and feel better.',
+      'Two kinds of lightning: the sky\u2019s and your ideas during the storm.',
+      'The storm has your attention. That alone makes it interesting.'
+    ],
+    clear: [
+      'Clear air, clear signal. Say the thing you keep rewording.',
+      'Good visibility means you can actually see the friend you have been texting instead of visiting.',
+      'Nothing in the sky to analyze. Redirect that energy to a person.',
+      'Transparent skies. Try being transparent with someone too.'
+    ],
+    hot: [
+      'Heat slows you down. That is medicine, not punishment.',
+      'Too hot to think at full speed. Coast on charm instead.',
+      'Summer heat makes everyone chatty. Finally, your pace.'
+    ],
+    cold: [
+      'Cold air makes your thoughts louder. That is a warning, not a feature.',
+      'The cold confines you. Your mind compensates by going everywhere else.',
+      'Frigid air, fast wit. You warm any room you enter.'
+    ]
+  },
+  Cancer: {
+    any: [
+      'Home pressure is falling. Text the person who makes the room feel high pressure.',
+      'Protect your evening like a lake-effect band: local, intense, nobody else\u2019s business.',
+      'If you nest, nest with a view of the western sky.',
+      'The kitchen is your forecast office. Issue a dinner advisory.',
+      'Your heart has more memory than the climate record. Let one year go.',
+      'Guard the peace of your home the way a seawall guards the coast.',
+      'Nostalgia is not a forecast, but you treat it like one.',
+      'You felt the mood shift before anyone checked the radar.',
+      'Caring is not weakness. Overgiving is not strength. Find the middle.',
+      'Your shell is not hiding. It is load-bearing.',
+      'Tenderness in a tough world is braver than anyone admits.',
+      'You remember the weather on days that mattered. That is not trivial.',
+      'The tide is yours. Let it come in. Let it go out. Do not chase it.'
+    ],
+    storm: [
+      'A storm outside means the inside job matters more. Light something warm.',
+      'Storms remind you why walls exist. So do people who drain you.',
+      'You feel the storm in your chest before it shows on radar. Trust that.',
+      'The rain is not personal. Your instinct to shelter everyone is, though.'
+    ],
+    clear: [
+      'The sky is calm and so is the house. Do not invent a crisis.',
+      'Step outside the shell for one hour. The sun is gentle today.',
+      'Calm weather invites you out. Accept the invitation for once.',
+      'Nothing threatening overhead. You can relax the perimeter.'
+    ],
+    hot: [
+      'Heat makes the house heavy. Open something \u2014 a window, a conversation.',
+      'Summer heat softens everything. Let it soften your grip too.',
+      'The warmth is not smothering. That is your job description. Take a break from it.'
+    ],
+    cold: [
+      'Cold drives everyone home. You were already there, ready.',
+      'Winter is when the world finally wants what you always offer: shelter.',
+      'Cold outside, warm inside. Your natural state.'
+    ]
+  },
+  Leo: {
+    any: [
+      'The sun is doing bits and so are you. Save a little gold for after dusk.',
+      'Compliments arrive. Accept one like the sky accepts a sunset \u2014 gracefully.',
+      'You do not have to host the whole horizon. Let someone else point at the moon.',
+      'You outshine the UV index today. Wear it, but also wear sunscreen.',
+      'Generosity is your weather system. Make sure you are not depleted by sundown.',
+      'Main character energy is fine. Just check if the scene needs a rest.',
+      'Your warmth is literal and figurative. Both require hydration.',
+      'Not every room needs a leader. But every room you are in has one.',
+      'The spotlight is a tool, not a home. Step out of it to see what is behind you.',
+      'Confidence is magnetic. Arrogance is weather damage. Know the difference today.',
+      'You give more than you admit. The sun does the same.',
+      'Pride is a lion. Feed it, but do not let it drive.',
+      'Shine, but check on the people in your shadow.'
+    ],
+    storm: [
+      'Even royalty stands down for a tornado warning. Crown stays on indoors.',
+      'A storm is not your rival. Let it have the stage for an hour.',
+      'The thunder is loud but you are louder. Save it for the clearing.',
+      'Storms dim the sun. Temporarily. Same rules apply to your setbacks.'
+    ],
+    clear: [
+      'Sunshine is your birthright. Today the sky agrees. Go collect.',
+      'Clear skies and an audience of one is still an audience.',
+      'The sky rolled out gold for you. Walk through it like you know.',
+      'A perfect day to be exactly who you are. No edits.'
+    ],
+    hot: [
+      'You run warm already. The heat is redundant. Shade is not weakness.',
+      'Fire sign in a heat wave. Dial it back. The world is already warm.',
+      'You and the sun are coworkers today. Let the sun take the lead.'
+    ],
+    cold: [
+      'Cold dims the spotlight. Bring your own warmth \u2014 you always have.',
+      'Winter cannot cool your presence. It tries every year.',
+      'The cold wants you small. You have never been small. Bundle up and glow.'
+    ]
+  },
+  Virgo: {
+    any: [
+      'You will want to correct the model. The model does not know you are watching.',
+      'Tidy one small system. Leave the atmosphere to the atmosphere.',
+      'Precision is a gift. So is stopping at good enough before midnight.',
+      'Your inner auditor found a discrepancy in the dew point. Let it go.',
+      'Helping is your default. Today, help yourself to doing nothing useful.',
+      'The plan has seventeen steps. Step eighteen is forgiving step four.',
+      'Not everything is a problem to solve. Some things are just weather.',
+      'You noticed the flaw nobody else saw. You always do. Let one go.',
+      'Service is noble. Burnout is not. Check your reserves like you check the data.',
+      'The details matter. So does the person buried in them.',
+      'Your standards are a gift to the world and a tax on your evening.',
+      'Perfectionism is a forecast that never verifies. Issue a correction.',
+      'You fixed something today that nobody asked about. That is love, technically.'
+    ],
+    storm: [
+      'The storm is messy. You cannot organize it. Organize your reaction instead.',
+      'Everything you prepared is working. Trust the preparation.',
+      'Chaos outside. You have a checklist. The checklist will hold.',
+      'The mess is temporary. Your systems are not. Breathe.'
+    ],
+    clear: [
+      'Clean sky, clean desk, clean conscience. Almost suspicious.',
+      'Clear conditions. Resist the urge to find a flaw in them.',
+      'A flawless day. That should worry you, and it does. Enjoy it anyway.',
+      'Perfect weather is your aesthetic. Do not overthink why.'
+    ],
+    hot: [
+      'Heat is inefficient. You hate inefficiency. Find shade and regroup.',
+      'The heat disrupts your system. Adapt the system. You are good at that.',
+      'Humidity introduces variables. You will account for all of them.'
+    ],
+    cold: [
+      'Cold is precise. You respect that. Layer precisely.',
+      'Crisp air, crisp thinking. Your season in disguise.',
+      'The cold does not waste energy. Neither should you.'
+    ]
+  },
+  Libra: {
+    any: [
+      'Balance is not 50/50 cloud cover. Choose the nicer evening and mean it.',
+      'A polite disagreement clears like haze after a cold front. Open a window.',
+      'You can be fair without becoming the referee of other people\u2019s weather.',
+      'Weighing options is a talent. Weighing them forever is a trap.',
+      'Harmony requires one person to go first. It might as well be you.',
+      'Aesthetics count. The sky agrees. Look west at golden hour.',
+      'You want everyone comfortable. Start with yourself.',
+      'Justice is a weather system. Slow, persistent, and worth waiting for.',
+      'The scale does not have to be even today. Tip it toward rest.',
+      'Beauty is not frivolous. It is the thing that makes the rest bearable.',
+      'Indecision is just thoroughness with a bad reputation.',
+      'Your charm is a constant. The weather is a variable. Let something else change.',
+      'Fairness is your instinct. Self-care is your homework.'
+    ],
+    storm: [
+      'A storm is not balanced. That is fine. Not everything has to be.',
+      'Shelter is not a compromise. It is a decision. Make it.',
+      'The storm chose a side. You can too, at least until it passes.',
+      'Harmony is not possible during a squall line. Wait for the calm.'
+    ],
+    clear: [
+      'The sky decided on blue. Commit to something with that same energy.',
+      'Beautiful conditions. Stop comparing them to yesterday\u2019s.',
+      'The light is flattering. So is doing nothing. Both are valid.',
+      'A perfect sky asks nothing of you. Rest in the symmetry.'
+    ],
+    hot: [
+      'Heat forces a choice: outside or not. The indecision is the discomfort.',
+      'Even the air is heavy today. Delegate something.',
+      'Balance means knowing when to stop being fair and start the air conditioning.'
+    ],
+    cold: [
+      'Cold picks a side. You could learn something.',
+      'The chill is decisive. You admire that. Borrow it.',
+      'Cold weather, warm aesthetics. Scarf season is your runway.'
+    ]
+  },
+  Scorpio: {
+    any: [
+      'Something under the surface is moving. You already knew. Do not poke it twice.',
+      'Intensity is allowed. A midnight walk is allowed. A speech is optional.',
+      'Keep the secret. Share the sky.',
+      'Your silence says more than the forecast discussion. That is a compliment.',
+      'Depth is your domain. The shallow end has better visibility, but you do not care.',
+      'Trust what you sense. Then verify with a surface observation, because you will anyway.',
+      'You knew this would happen. Knowing does not always help, but it is never wasted.',
+      'Loyalty is quiet. So is a cold front before it arrives. Same energy.',
+      'Transformation is not dramatic if you do it every day. You do it every day.',
+      'The truth is not always kind. You prefer it anyway.',
+      'You observe more than you reveal. The radar has the same policy.',
+      'Control is a comfort. Letting go is the forecast you keep postponing.',
+      'Your instincts are a weather station. The readings are rarely wrong.'
+    ],
+    storm: [
+      'The storm matches your energy. Do not take that as encouragement.',
+      'Thunder is not a personal message. It is just thermodynamics. Probably.',
+      'You thrive in intensity but the lightning does not care about your threshold.',
+      'The storm reveals what was hiding. You already saw it.'
+    ],
+    clear: [
+      'A clear night is wasted on small talk. Go look at something permanent.',
+      'Calm skies. The drama is internal tonight, and that is where you prefer it.',
+      'Stillness outside, motion inside. Your default setting.',
+      'Transparency overhead. Try a small dose of it down here.'
+    ],
+    hot: [
+      'Heat exposes everything. You already operate exposed. Hydrate.',
+      'The heat is relentless. So are you. Call it a draw and find shade.',
+      'Intensity from the sky now too. Pace yourself. One source at a time.'
+    ],
+    cold: [
+      'The cold is honest. So are you. Stay sharp.',
+      'Frozen surfaces hide moving water. You understand this better than most.',
+      'Winter is just the sky doing your thing: keeping what matters underneath.'
+    ]
+  },
+  Sagittarius: {
+    any: [
+      'The far horizon looks better than your inbox. That is data.',
+      'Say yes to one outing. No to the one that starts after the lightning.',
+      'You do not need a new philosophy. You need a clear west and earlier bedtime.',
+      'The road calls. Check the road conditions before answering.',
+      'Your optimism is a climate, not a forecast. It survives bad days.',
+      'Adventure has a return trip. Plan that part too.',
+      'Freedom is not the absence of weather. It is having the right jacket.',
+      'You would rather be wrong and moving than right and still.',
+      'The truth you are chasing is not at the end of the road. It is the road.',
+      'Bluntness is efficient. So is checking the filter once in a while.',
+      'You learned something today. By tonight it will be a philosophy.',
+      'Restlessness is just curiosity with legs. Take it for a walk.',
+      'Your luck is real. It also prefers you hydrated and rested.'
+    ],
+    storm: [
+      'A storm is an adventure you did not sign up for. Enjoy the plot twist from inside.',
+      'Delay is not defeat. The road will exist tomorrow.',
+      'You want to outrun it. You cannot. But you will try. At least check the warnings first.',
+      'Storms redirect the arrow. Sometimes the redirect is the point.'
+    ],
+    clear: [
+      'Clear sky and an open road. The universe is hinting. Take the hint.',
+      'Visibility unlimited. Go somewhere you can see all of it.',
+      'No clouds, no ceiling. Your favorite kind of day and everyone else\u2019s too.',
+      'An honest sky. Match its energy by saying what you mean.'
+    ],
+    hot: [
+      'Heat slows the journey. Travel early or travel cool.',
+      'The heat is a border. Cross it with water and a plan.',
+      'Hot air rises and so do your plans. Ground at least one.'
+    ],
+    cold: [
+      'Cold never stopped you. Just bring the extra layer you always forget.',
+      'Winter is just exploration with higher stakes. You like stakes.',
+      'The cold sharpens the view. Go see something worth the chill.'
+    ]
+  }
 };
+
+const SKY_TOLD_WEATHER_KEYS = ['storm', 'clear', 'hot', 'cold', 'any'];
+
+function skyToldWeatherMood(){
+  const d = typeof state !== 'undefined' ? state.data : null;
+  if(!d) return 'any';
+  const cur = d.current || {};
+  const code = cur.weather_code ?? 0;
+  const temp = cur.temperature_2m;
+  if(code >= 95) return 'storm';
+  if(code >= 61 || code === 55 || code === 57) return 'storm';
+  if(code <= 1 && (cur.cloud_cover ?? 100) < 25) return 'clear';
+  if(temp != null){
+    const hot = state.units === 'F' ? 90 : 32;
+    const cold = state.units === 'F' ? 28 : -2;
+    if(temp >= hot) return 'hot';
+    if(temp <= cold) return 'cold';
+  }
+  return 'any';
+}
+
+function skyToldPickQuip(signPool, seed, mood){
+  if(!signPool) return '';
+  const mooded = signPool[mood];
+  if(mooded && mooded.length){
+    const combined = [...mooded, ...(signPool.any || [])];
+    return eggPick(combined, seed);
+  }
+  return eggPick(signPool.any || [], seed);
+}
 const SKY_TOLD_ANIMALS = [
   { name: 'Rat', ch: '\u9F20', hint: 'Notice the small leak before it is a flood.' },
   { name: 'Ox', ch: '\u725B', hint: 'Steady work outlasts a flashy front.' },
@@ -283,8 +721,63 @@ const SKY_TOLD_LUCK = [
   'Lucky color: whatever the western sky does at dusk.',
   'Lucky number: the visibility in miles, if it is still honest.',
   'Lucky move: look up once without taking a photo.',
-  'Lucky caution: do not confuse a pretty sky with a safe one.'
+  'Lucky caution: do not confuse a pretty sky with a safe one.',
+  'Lucky errand: the one you finish before the dew point rises.',
+  'Lucky window: the ten minutes right after the front passes.',
+  'Lucky sound: the wind chime that only rings when you needed the reminder.',
+  'Lucky meal: the one eaten outside when the radar is empty.',
+  'Lucky nap: the one that starts during drizzle and ends during sun.',
+  'Lucky drive: the one where every light is green and the sky is gold.',
+  'Lucky detour: the one that leads to a better view than the destination.',
+  'Lucky purchase: something you did not need until the sky reminded you.',
+  'Lucky timing: leaving five minutes before the downpour.',
+  'Lucky conversation: the one that happens because you both stopped to watch the sky.',
+  'Lucky decision: the first one. Not the revision. Not the third draft.',
+  'Lucky weather: whatever is happening right now, if you stop fighting it.',
+  'Lucky item: the jacket you almost left behind.',
+  'Lucky view: the one from the window you never open.',
+  'Lucky walk: the one taken for no reason that ends at the right thought.',
+  'Lucky skill: knowing when to stop checking the forecast and trust the sky.'
 ];
+
+const SKY_TOLD_ZODIAC_SIGNS = [
+  'Aries','Taurus','Gemini','Cancer','Leo','Virgo',
+  'Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'
+];
+const SKY_TOLD_SIGN_LONGITUDES = {
+  Aries: [0, 30], Taurus: [30, 60], Gemini: [60, 90], Cancer: [90, 120],
+  Leo: [120, 150], Virgo: [150, 180], Libra: [180, 210], Scorpio: [210, 240],
+  Sagittarius: [240, 270], Capricorn: [270, 300], Aquarius: [300, 330], Pisces: [330, 360]
+};
+function skyToldEclipticLon(ra, dec){
+  const e = 23.4393 * Math.PI / 180;
+  const r = ra, d = dec;
+  const sinL = Math.sin(r) * Math.cos(e) + Math.tan(d) * Math.sin(e);
+  const cosL = Math.cos(r);
+  let lon = Math.atan2(sinL, cosL) * 180 / Math.PI;
+  if(lon < 0) lon += 360;
+  return lon;
+}
+function skyToldPlanetTransits(loc, when, natalSign){
+  if(!loc || !natalSign || typeof planetSky !== 'function') return [];
+  const names = { venus: 'Venus', mars: 'Mars', jupiter: 'Jupiter', saturn: 'Saturn' };
+  const range = SKY_TOLD_SIGN_LONGITUDES[natalSign];
+  if(!range) return [];
+  const hits = [];
+  Object.keys(names).forEach(id => {
+    const p = planetSky(id, when, loc.lat, loc.lon);
+    if(!p) return;
+    const el = PLANET_ORBIT[id];
+    if(!el) return;
+    const d = toDays(when);
+    const eq = raDecFromHelio(helioXYZ(el, d), helioXYZ(PLANET_ORBIT.earth, d));
+    const lon = skyToldEclipticLon(eq.ra, eq.dec);
+    if(lon >= range[0] && lon < range[1]){
+      hits.push({ name: names[id], up: p.alt > 5 });
+    }
+  });
+  return hits;
+}
 
 const SKY_TOLD_BIRTH_KEY = 'st_sky_told_birth';
 const SKY_TOLD_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -447,18 +940,31 @@ function fillSkyToldEgg(){
         + 'Everyone with the same birthday shares a sun sign (for example Aug 18 is Leo). Pick month and day above.';
     }
   }else{
+    const mood = skyToldWeatherMood();
     const seed = [md.y, md.m, md.d, loc?.lat?.toFixed(2), loc?.lon?.toFixed(2), natalSign].join('|');
-    const star = eggPick(SKY_TOLD_STAR[natalSign] || SKY_TOLD_STAR.Leo, seed + '|star');
-    let skyNote = bits.moonUp
-      ? ' Overhead tonight: ' + bits.moon + '.'
-      : ' The moon is down tonight.';
+    const signPool = SKY_TOLD_STAR[natalSign] || SKY_TOLD_STAR.Leo;
+    const star = skyToldPickQuip(signPool, seed + '|star', mood);
+    const skyParts = [];
+    if(bits.moonUp){
+      skyParts.push('The ' + bits.moon + ' is up tonight.');
+    }
     if(bits.planet){
-      skyNote += ' ' + bits.planet.name + ' is actually up.';
+      skyParts.push(bits.planet.name + ' is visible in the sky right now.');
+    }
+    const transits = skyToldPlanetTransits(loc, when, natalSign);
+    transits.forEach(t => {
+      skyParts.push(t.up
+        ? (t.name + ' is transiting ' + natalSign + ' and visible tonight.')
+        : (t.name + ' is passing through ' + natalSign + ' right now.'));
+    });
+    if(transitSign === natalSign){
+      skyParts.push('The sun is in ' + transitSign + ' right now \u2014 your sign season.');
+    }else{
+      skyParts.push('The sun is currently in ' + transitSign + '.');
     }
     if(starHead) starHead.textContent = 'You are ' + natalSign + ' \u00B7 ' + skyToldSignRange(natalSign);
     if(starBody){
-      starBody.textContent = star + skyNote
-        + ' The sun is in ' + transitSign + ' right now \u2014 that is today\u2019s sky, not your sign.';
+      starBody.textContent = star + ' ' + skyParts.join(' ');
     }
   }
 
