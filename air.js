@@ -422,14 +422,15 @@ function pollenTypeFromGoogle(types, code, plants){
   const name = code === 'GRASS' ? 'Grass' : code === 'TREE' ? 'Tree' : 'Weed';
   const { upi, category, hasData } = pollenGoogleTypeUpi(types, code, plants);
   if(!hasData || (upi <= 0 && (!category || isPollenNoneCategory(category)))){
-    return { label: 'Off', cls: 'pl-none', score: 0, name, hasData: false };
+    return Object.assign({ name, hasData: true }, pollenIndexTier(0));
   }
   return Object.assign({ name, hasData: true }, pollenTierFromGoogle(upi));
 }
 function pollenOverallFromTypes(grass, tree, weed){
-  const active = [grass, tree, weed].filter(t => t && t.hasData && (t.score || 0) > 0);
+  const types = [grass, tree, weed].filter(Boolean);
+  const active = types.filter(t => (t.score || 0) > 0);
   if(!active.length){
-    return { index: 0, label: 'None', cls: 'pl-none', main: '', hasData: false };
+    return { index: 0, label: 'None', cls: 'pl-none', main: '', hasData: types.length > 0 };
   }
   const best = active.reduce((a, b) => ((b.score || 0) >= (a.score || 0) ? b : a));
   return {
@@ -461,7 +462,7 @@ function pollenTypeFromLocal(localDay, code, googleDay){
     const upi = Number(lt.index) || 0;
     const category = lt.category || '';
     if(upi <= 0 && (!category || isPollenNoneCategory(category))){
-      return { name, label: 'Off', cls: 'pl-none', score: 0, hasData: false };
+      return Object.assign({ name, hasData: true }, pollenIndexTier(0));
     }
     return Object.assign({ name, hasData: true }, pollenTierFromGoogle(upi));
   }
@@ -528,16 +529,13 @@ function pollenOverallFromMeteo(daily, i){
   return { index: max, label: tier.label, cls: tier.cls, main, grass, tree, weed };
 }
 function pollenRingHtml(ico, name, tier){
-  const fill = tier.hasData && tier.score > 0 ? tier.score : 0;
-  const cat = tier.hasData === false
-    ? '<div class="pollen-ring-cat pl-none">Off</div>'
-    : '<div class="pollen-ring-cat ' + tier.cls + '">' + esc(tier.label) + '</div>'
-      + (tier.score > 0 ? '<div class="pollen-ring-score">' + tier.score + '</div>' : '');
+  const fill = tier.score > 0 ? tier.score : 0;
   return '<div class="pollen-ring">'
     + '<div class="pollen-ring-arc">' + pollenRingSvg(fill, tier.cls) + '</div>'
     + '<div class="pollen-ring-ico" aria-hidden="true">' + ico + '</div>'
     + '<div class="pollen-ring-name">' + esc(name) + '</div>'
-    + cat
+    + '<div class="pollen-ring-cat ' + tier.cls + '">' + esc(tier.label) + '</div>'
+    + '<div class="pollen-ring-score">' + (tier.score || 0) + '</div>'
     + '</div>';
 }
 function pollenDayPillHtml(label, tier, isToday){
@@ -672,9 +670,7 @@ function renderPollenMsnHtml(todayOverall, grassTier, treeTier, weedTier, dayPil
   const src = sourceLine
     ? '<div class="pollen-source">' + esc(sourceLine) + '</div>'
     : '';
-  const scoreLine = (tier.score || 0) > 0
-    ? '<div class="pollen-gauge-val ' + tier.cls + '">' + tier.score + '</div>'
-    : '<div class="pollen-gauge-val pl-none">—</div>';
+  const scoreLine = '<div class="pollen-gauge-val ' + tier.cls + '">' + (tier.score || 0) + '</div>';
   let html = '<div class="pollen-msn">'
     + '<div class="pollen-msn-hero">'
     + '<div class="pollen-gauge">'
@@ -699,7 +695,7 @@ function renderPollenMsnHtml(todayOverall, grassTier, treeTier, weedTier, dayPil
   return html + '</div>';
 }
 function meteoPollenLevel(v){
-  if(v == null || v <= 0) return { text: 'Off', cls: 'pd-none' };
+  if(v == null || v <= 0) return { text: 'None', cls: 'pd-none' };
   if(v < 10) return { text: 'Low', cls: 'pd-low' };
   if(v < 50) return { text: 'Moderate', cls: 'pd-mid' };
   return { text: 'High', cls: 'pd-high' };
