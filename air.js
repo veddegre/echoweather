@@ -302,8 +302,8 @@ function renderAirMetricSections(sections){
       ).join('') + '</div></div>';
   }).join('');
 }
-/** Soft 0–100 display for Google UPI (0–5). Not ×10 — keeps label and gauge aligned. */
-const GOOGLE_UPI_DISPLAY = [0, 15, 30, 50, 70, 90];
+/** Soft 0–100 display for Google UPI (0–5). UPI 3 stays Moderate; 4+ is High. */
+const GOOGLE_UPI_DISPLAY = [0, 15, 30, 45, 70, 90];
 function googleUpiToDisplay(upi){
   if(upi == null || upi <= 0) return 0;
   const x = Math.min(5, Math.max(0, Number(upi)));
