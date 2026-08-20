@@ -23,7 +23,7 @@ try {
     send_api_error(500, 'Service unavailable', $e, 'pollen/config', cors: true);
 }
 
-if (google_pollen_api_key($cfg) === '') {
+if (!pollen_configured($cfg)) {
     send_json(503, ['error' => 'Pollen integration not configured'], cors: true);
 }
 

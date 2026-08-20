@@ -542,6 +542,7 @@ body.radar-expanded .app-tab-bar{display:none}
 .pollen-hero-copy{min-width:0}
 .pollen-risk-msg{font-size:.875rem;line-height:1.4;color:var(--ink);margin:0 0 4px}
 .pollen-main-type{font-size:.75rem;color:var(--mut)}
+.pollen-source{font-size:.625rem;color:var(--dim);margin-top:4px;letter-spacing:.02em}
 .pollen-type-rings{display:flex;gap:14px;grid-column:1/-1;justify-content:center;padding-top:4px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);margin-top:4px}
 .pollen-ring{text-align:center;min-width:0;flex:1;max-width:88px}
 .pollen-ring-arc{position:relative;width:52px;height:52px;margin:0 auto 4px}

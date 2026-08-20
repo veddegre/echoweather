@@ -11,7 +11,7 @@ try {
     send_json(200, [
         'airnow' => trim((string) ($cfg['airnow_api_key'] ?? '')) !== '',
         'buoy' => true,
-        'pollen' => google_pollen_api_key($cfg) !== '',
+        'pollen' => pollen_configured($cfg),
         'taf' => true,
     ], cors: true);
 } catch (Throwable $e) {

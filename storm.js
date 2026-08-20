@@ -576,6 +576,7 @@ async function syncThreatOverlays(){
 let lightningCanvas = null, lightningCtx = null, lightningStrikes = [];
 let lightningWs = null, lightningWsIdx = 0, lightningRcTimer = null, lightningRaf = 0;
 let lightningWsState = 'off', lightningRecentHits = [];
+let lightningMsgCount = 0, lightningQuietTimer = null, lightningFeedQuiet = false;
 let lightningReconnects = 0;
 const LIGHTNING_MAX_RECONNECTS = 12;
 let radarLightningOn = false;
@@ -768,10 +769,15 @@ function updateLightningStatus(){
     el.textContent = 'Lightning · reconnecting…';
     el.className = 'radar-note lightning-status err';
   }else if(lightningWsState === 'live'){
-    el.textContent = n
-      ? 'Lightning live · ' + n + ' strike' + (n === 1 ? '' : 's') + ' in map (last min)'
-      : 'Lightning live · no strikes in map area';
-    el.className = 'radar-note lightning-status';
+    if(lightningFeedQuiet && lightningMsgCount === 0){
+      el.textContent = 'Lightning connected but no feed data — auth key may have changed.';
+      el.className = 'radar-note lightning-status err';
+    }else{
+      el.textContent = n
+        ? 'Lightning live · ' + n + ' strike' + (n === 1 ? '' : 's') + ' in map (last min)'
+        : 'Lightning live · no strikes in map area';
+      el.className = 'radar-note lightning-status';
+    }
   }else{
     el.textContent = 'Lightning · starting…';
     el.className = 'radar-note lightning-status wait';
@@ -826,6 +832,9 @@ function removeLightningCanvas(){
 function disconnectLightningWs(){
   clearTimeout(lightningRcTimer);
   lightningRcTimer = null;
+  clearTimeout(lightningQuietTimer);
+  lightningQuietTimer = null;
+  lightningFeedQuiet = false;
   if(lightningWs){
     try{
       lightningWs.onopen = lightningWs.onmessage = lightningWs.onerror = lightningWs.onclose = null;
@@ -858,14 +867,28 @@ function connectLightningWs(){
   ws.onopen = () => {
     if(lightningWs === ws){
       lightningReconnects = 0;
+      lightningMsgCount = 0;
+      lightningFeedQuiet = false;
       lightningWsState = 'live';
       updateLightningStatus();
       // Blitzortung subscribe key — still {"a":111} (verified live Aug 2026; was 418 historically).
-      ws.send(JSON.stringify({ a: 111 }));
+      try{ ws.send(JSON.stringify({ a: 111 })); }catch(e){}
+      clearTimeout(lightningQuietTimer);
+      lightningQuietTimer = setTimeout(() => {
+        if(lightningWs === ws && lightningWsState === 'live' && lightningMsgCount === 0){
+          lightningFeedQuiet = true;
+          updateLightningStatus();
+        }
+      }, 75000);
     }
   };
   ws.onmessage = (ev) => {
     try{
+      lightningMsgCount++;
+      if(lightningFeedQuiet){
+        lightningFeedQuiet = false;
+        updateLightningStatus();
+      }
       const s = JSON.parse(decodeBlitzortung(blitzortungPayload(ev.data)));
       if(s && typeof s.lat === 'number' && typeof s.lon === 'number') addLightningStrike(s.lat, s.lon);
     }catch(e){}

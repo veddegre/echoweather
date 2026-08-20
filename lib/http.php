@@ -36,26 +36,29 @@ function curl_request(string $url, array $opts, int $timeout): array
     }
 }
 
-function http_get(string $url, int $timeout = 25): string
+/**
+ * @param list<string> $headers Extra header lines (e.g. 'X-RapidAPI-Key: …')
+ * @return array{body: string, code: int}
+ */
+function http_request(string $url, int $timeout = 25, array $headers = []): array
 {
+    $headerLines = array_merge(['Accept: */*'], $headers);
     if (function_exists('curl_init')) {
         $res = curl_request($url, [
-            CURLOPT_HTTPHEADER => ['Accept: */*'],
+            CURLOPT_HTTPHEADER => $headerLines,
         ], $timeout);
         if ($res['body'] === false) {
             throw new RuntimeException($res['err'] !== '' ? $res['err'] : 'request failed');
         }
-        if ($res['code'] >= 400) {
-            throw new RuntimeException('HTTP ' . $res['code']);
-        }
-        return (string) $res['body'];
+        return ['body' => (string) $res['body'], 'code' => (int) $res['code']];
     }
 
     $ctx = stream_context_create([
         'http' => [
             'method' => 'GET',
             'timeout' => $timeout,
-            'header' => "User-Agent: " . ECHO_USER_AGENT . "\r\nAccept: */*\r\n",
+            'header' => "User-Agent: " . ECHO_USER_AGENT . "\r\n" . implode("\r\n", $headerLines) . "\r\n",
+            'ignore_errors' => true,
         ],
     ]);
     $body = @file_get_contents($url, false, $ctx);
@@ -63,15 +66,21 @@ function http_get(string $url, int $timeout = 25): string
         throw new RuntimeException('request failed');
     }
     if (function_exists('http_get_last_response_headers')) {
-        $headers = http_get_last_response_headers();
+        $respHeaders = http_get_last_response_headers();
     } else {
-        $headers = $http_response_header ?? [];
+        $respHeaders = $http_response_header ?? [];
     }
-    $code = isset($headers[0]) ? http_status_from_header_line($headers[0]) : null;
-    if ($code !== null && $code >= 400) {
-        throw new RuntimeException('HTTP ' . $code);
+    $code = isset($respHeaders[0]) ? http_status_from_header_line($respHeaders[0]) : 200;
+    return ['body' => $body, 'code' => $code ?? 200];
+}
+
+function http_get(string $url, int $timeout = 25, array $headers = []): string
+{
+    $res = http_request($url, $timeout, $headers);
+    if ($res['code'] >= 400) {
+        throw new RuntimeException('HTTP ' . $res['code']);
     }
-    return $body;
+    return $res['body'];
 }
 
 function fetch_ndbc_buoy(string $station): string

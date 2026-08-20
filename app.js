@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '286';
+const APP_VERSION = '288';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -1837,7 +1837,7 @@ function renderFireTimeline(d){
     segments.push('<span class="' + cls + '" title="'
       + esc(hourLabel(d.hourly.time[j]))
       + ' · RH ' + (rh != null ? Math.round(rh) : '—') + '% · wind '
-      + Math.round(state.units === 'F' ? wind * 2.237 : wind * 3.6) + ' ' + windUnit()
+      + Math.round(wind) + ' ' + windUnit()
       + '"></span>');
   }
   if(!segments.length){ wrap.hidden = true; return; }
@@ -2778,13 +2778,14 @@ function renderMoon(loc){
     ? Math.round(pos.dist * 0.621371).toLocaleString() + '<small> mi</small>'
     : Math.round(pos.dist).toLocaleString() + '<small> km</small>';
   const daysToFull = ((0.5 - ill.phase + 1) % 1) * 29.53;
+  const fullTonight = pname === 'Full Moon' || daysToFull < 0.5;
   const rows = [
     ['Altitude', pos.alt.toFixed(1) + '<small>\u00B0 ' + (pos.alt > 0 ? 'above' : 'below') + ' horizon</small>'],
     ['Azimuth', Math.round(pos.az) + '<small>\u00B0 ' + compass(pos.az) + '</small>'],
     ['Moonrise', fmt(rs.rise)],
     ['Moonset', fmt(rs.set)],
     ['Distance', dist],
-    ['Next full', daysToFull < 0.5 ? 'Tonight' : Math.round(daysToFull) + '<small> days</small>']
+    ['Next full', fullTonight ? 'Tonight' : Math.round(daysToFull) + '<small> days</small>']
   ];
   $('moonMetrics').innerHTML = rows.map(r =>
     '<div class="metric"><div class="k">' + r[0] + '</div><div class="v">' + r[1] + '</div></div>'
@@ -2833,27 +2834,33 @@ function renderAdvanced(d){
   const i = nowIndex(d);
   const h = om.hourly;
   const ft = m => (Math.round(m * 3.281 / 100) * 100).toLocaleString();
-  const sunToday = (d.daily.sunshine_duration[0] ?? 0) / 3600;
-  const dayLen = (d.daily.daylight_duration[0] ?? 0) / 3600;
-  const snow = h.snow_depth[i] ?? 0; // meters
+  const sunToday = (d.daily?.sunshine_duration?.[0] ?? 0) / 3600;
+  const dayLen = (d.daily?.daylight_duration?.[0] ?? 0) / 3600;
+  const snow = h.snow_depth?.[i] ?? 0; // meters
   const snowVal = state.units === 'F' ? (snow * 39.37).toFixed(1) + '<small> in</small>' : (snow * 100).toFixed(0) + '<small> cm</small>';
-  const blh = h.boundary_layer_height[i] ?? 0;
-  const windAt = lvl => Math.round(h['wind_speed_' + lvl][i]) + '<small> ' + windUnit() + ' ' + compass(h['wind_direction_' + lvl][i]) + '</small>';
+  const blh = h.boundary_layer_height?.[i] ?? 0;
+  const windAt = lvl => {
+    const spd = h['wind_speed_' + lvl]?.[i];
+    const dir = h['wind_direction_' + lvl]?.[i];
+    if(spd == null) return '\u2014';
+    return Math.round(spd) + '<small> ' + windUnit() + (dir != null ? ' ' + compass(dir) : '') + '</small>';
+  };
   const cape = Math.round(h.cape?.[i] ?? 0);
   const frz = h.freezing_level_height?.[i];
   const srh = srhProxyAt(d, i);
   const ptype = precipTypeAt(d, i);
+  const wet = h.wet_bulb_temperature_2m?.[i];
   const rows = [
     ['Precip type (now)', ptype + '<small> (HRRR/model)</small>'],
     ['CAPE (HRRR)', cape + '<small> J/kg</small>'],
     ['Freezing level', frz != null ? (state.units === 'F' ? Math.round(frz * 3.28084).toLocaleString() + '<small> ft</small>' : Math.round(frz).toLocaleString() + '<small> m</small>') : '\u2014'],
-    ['Wet bulb', Math.round(h.wet_bulb_temperature_2m[i]) + '<small>' + degSym() + '</small>'],
+    ['Wet bulb', wet != null ? Math.round(wet) + '<small>' + degSym() + '</small>' : '\u2014'],
     ['SRH proxy', srh ? srh.proxy + '<small> m\u00B2/s\u00B2 \u00B7 ' + srh.cat + '</small>' : '\u2014'],
     ['Boundary layer', (state.units === 'F' ? ft(blh) + '<small> ft (HRRR)</small>' : Math.round(blh).toLocaleString() + '<small> m (HRRR)</small>')],
     ['Sunshine today', sunToday.toFixed(1) + '<small> / ' + dayLen.toFixed(1) + ' h daylight</small>'],
     ['Snow depth', snowVal],
-    ['Soil temp 0cm', Math.round(h.soil_temperature_0cm[i]) + '<small>' + degSym() + '</small>'],
-    ['Soil moisture', (h.soil_moisture_0_to_1cm[i] ?? 0).toFixed(2) + '<small> m\u00B3/m\u00B3</small>'],
+    ['Soil temp 0cm', h.soil_temperature_0cm?.[i] != null ? Math.round(h.soil_temperature_0cm[i]) + '<small>' + degSym() + '</small>' : '\u2014'],
+    ['Soil moisture', (h.soil_moisture_0_to_1cm?.[i] ?? 0).toFixed(2) + '<small> m\u00B3/m\u00B3</small>'],
     ['Wind 80 m', windAt('80m')],
     ['Wind 120 m', windAt('120m')],
     ['Wind 180 m', windAt('180m')]

@@ -333,7 +333,6 @@ function resetPingPongSlots(){
 }
 function clearDualPaneOverlays(){
   removePingPongLayers(iemOverlayLayersB, mapB);
-  removePingPongLayers(iemOverlayLayersB, map);
 }
 function clearRadarLayers(){
   removePingPongLayers(radarOverlayLayers, map);

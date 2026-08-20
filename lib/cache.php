@@ -55,9 +55,9 @@ function read_pollen_cache_entry(string $gridKey): ?array
     return $entry;
 }
 
-function pollen_quota_path(): string
+function pollen_quota_path(string $basename = '_quota.json'): string
 {
-    return pollen_cache_dir() . '/_quota.json';
+    return pollen_cache_dir() . '/' . $basename;
 }
 
 function pollen_quota_today(): string
@@ -71,9 +71,9 @@ function pollen_daily_limit(array $cfg): int
     return max(0, $limit);
 }
 
-function pollen_read_quota(): array
+function pollen_read_quota(string $basename = '_quota.json'): array
 {
-    $path = pollen_quota_path();
+    $path = pollen_quota_path($basename);
     $today = pollen_quota_today();
     if (!is_file($path)) {
         return ['date' => $today, 'count' => 0];
@@ -86,23 +86,23 @@ function pollen_read_quota(): array
     return ['date' => $today, 'count' => max(0, (int) ($data['count'] ?? 0))];
 }
 
-function pollen_quota_reached(array $cfg): bool
+function pollen_quota_reached(array $cfg, string $basename = '_quota.json', ?int $limit = null): bool
 {
-    $limit = pollen_daily_limit($cfg);
+    $limit = $limit ?? pollen_daily_limit($cfg);
     if ($limit === 0) {
         return false;
     }
-    $quota = pollen_read_quota();
+    $quota = pollen_read_quota($basename);
     return $quota['count'] >= $limit;
 }
 
-function pollen_increment_quota(): int
+function pollen_increment_quota(string $basename = '_quota.json'): int
 {
     $dir = pollen_cache_dir();
     if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
         throw new RuntimeException('failed to create cache directory');
     }
-    $path = pollen_quota_path();
+    $path = pollen_quota_path($basename);
     $fp = fopen($path, 'c+');
     if ($fp === false) {
         throw new RuntimeException('failed to open quota file');

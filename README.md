@@ -2,8 +2,8 @@
 
 Personal weather PWA built for enthusiasts — forecasts, radar, storm tracking,
 outdoor planning, marine, aviation, and more. No API keys required for core
-features; optional server-side proxies add AirNow, Google Pollen, NDBC buoys,
-and aviation TAF.
+features; optional server-side proxies add AirNow, Google Pollen (with a local
+NWS + USA-NPN layer), NDBC buoys, and aviation TAF.
 
 **Home:** [echoweather.com](https://echoweather.com) · **Source:** [github.com/veddegre/echoweather](https://github.com/veddegre/echoweather) · **Contact:** [contact@echoweather.com](mailto:contact@echoweather.com)
 
@@ -36,6 +36,7 @@ split across `app.js` (core), `tabs.js`, `nav.js`, `impact.js`, `marine.js`, `ai
 - Proxies **AirNow** (keeps your API key off the browser)
 - Proxies **NDBC buoys** (NDBC has no browser CORS)
 - Proxies **Google Pollen** (3-day tree/grass/weed forecast in the app; server-side cache)
+- Adjusts Google with **NWS** weather (rain / humidity / wind) and soft **USA-NPN** phenology confidence when nearby pollen-release reports exist
 - Proxies **Aviation TAF** (AviationWeather.gov blocks browser CORS)
 - Exposes `/api/status` so the app knows what's configured
 
@@ -84,7 +85,7 @@ split across `app.js` (core), `tabs.js`, `nav.js`, `impact.js`, `marine.js`, `ai
 - **Production:** Apache 2.4 + PHP 8.1+ with `curl` (recommended) or `allow_url_fopen`
 - **Local dev:** PHP 8.1+ CLI (`php -S`)
 - **Production deploy:** `git` on the server (repo cloned into the Apache document root)
-- Outbound HTTPS from the server to AirNow, Google Pollen, and NDBC when using integrations
+- Outbound HTTPS from the server to AirNow, Google Pollen, NWS, USA-NPN, and NDBC when using integrations
 
 ---
 
@@ -326,9 +327,13 @@ Every key is optional.
 |---|---|---|
 | `airnow_api_key` | `""` | EPA AirNow API key. Enables `/api/airnow` for US monitor observations. |
 | `google_pollen_api_key` | `""` | Google Maps Pollen API key. Enables `/api/pollen`. Falls back to env `GOOGLE_POLLEN_API_KEY` when empty. |
-| `pollen_cache_ttl` | `10800` | Seconds to cache pollen per grid cell (3h). Min 300, max 86400. |
+| `pollen_cache_ttl` | `10800` | Seconds to cache Google pollen per grid cell (3h). Min 300, max 86400. |
 | `pollen_cache_grid` | `1` | Decimal places for lat/lon rounding: `0` ≈ 70 mi, `1` ≈ 10 mi, `2` ≈ 1 mi. |
 | `pollen_daily_limit` | `7500` | Max Google Pollen API calls per day. `0` = unlimited. Serves stale cache when hit. |
+| `pollen_nws_cache_ttl` | `3600` | Seconds to cache NWS hourly used for local pollen weather modifiers. |
+| `pollen_npn_cache_ttl` | `43200` | Seconds to cache USA-NPN pollen-release soft signals. |
+| `pollen_npn_enabled` | `true` | When true, soft-boost confidence if nearby NPN “pollen release” YES reports exist. |
+| `pollen_npn_radius_mi` | `75` | Search radius (miles) for USA-NPN observations. |
 | `rate_limit_airnow` | `120` | Max `/api/airnow` requests per IP per hour. `0` = disabled. |
 | `rate_limit_pollen` | `60` | Max `/api/pollen` requests per IP per hour. `0` = disabled. |
 | `rate_limit_buoy` | `120` | Max `/api/buoy` requests per IP per hour. `0` = disabled. |
@@ -348,6 +353,7 @@ Every key is optional.
 - [Pollen API overview](https://developers.google.com/maps/documentation/pollen/overview)
 - Enables 5-day **tree / grass / weed** pollen from Google (app displays 3 days)
 - Proxied at `/api/pollen`
+- Server adds a **local layer**: NWS hourly weather modifiers plus soft USA-NPN phenology confidence (YES pollen-release nearby only; missing observations stay “unknown”)
 - Enable in [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Library → "Pollen API"
 
 Key placement — either in `config.local.php` or via environment variable:
@@ -364,8 +370,10 @@ Responses are cached on disk under `cache/pollen/`:
 | Setting | Default | Effect |
 |---|---|---|
 | `pollen_cache_grid` | `1` | Round lat/lon to 1 decimal → **~10 mi grid cells** |
-| `pollen_cache_ttl` | `10800` | Cache lifetime in seconds (**3 hours**) |
+| `pollen_cache_ttl` | `10800` | Google cache lifetime in seconds (**3 hours**) |
 | `pollen_daily_limit` | `7500` | Max Google API calls per calendar day |
+| `pollen_nws_cache_ttl` | `3600` | NWS hourly cache for weather modifiers (**1 hour**) |
+| `pollen_npn_cache_ttl` | `43200` | USA-NPN soft-signal cache (**12 hours**) |
 
 The `cache/` directory must be writable by the web server:
 
@@ -379,7 +387,7 @@ sudo chown -R www-data:www-data /var/www/echoweather/cache
 `/api/*` endpoints are **public** — anyone who can reach your server can call
 them with `curl`, not just browsers on allowed CORS origins. Billable keys stay
 server-side, but abuse can burn AirNow or Google quota. Defaults include
-per-IP rate limits and `pollen_daily_limit`; tune both for public traffic.
+per-IP rate limits and `pollen_daily_limit`; tune for public traffic.
 
 ### API endpoints
 
@@ -387,7 +395,7 @@ per-IP rate limits and `pollen_daily_limit`; tune both for public traffic.
 |---|---|---|
 | `GET /api/status` | none | Reports which integrations are configured (`airnow`, `pollen`, `buoy`, `taf`) |
 | `GET /api/airnow?latitude=&longitude=&distance=` | none | AirNow lat/long proxy (distance 1–100 mi, default 50) |
-| `GET /api/pollen?latitude=&longitude=&days=` | none | Google Pollen forecast (days 1–5, default 3; server-cached) |
+| `GET /api/pollen?latitude=&longitude=&days=` | none | Google Pollen forecast (days 1–5, default 3; server-cached) plus local NWS/NPN layer. |
 | `GET /api/buoy/{id}` | none | NDBC buoy text proxy |
 | `GET /api/taf?ids=KGRR` | none | AviationWeather.gov TAF JSON proxy (no browser CORS) |
 
@@ -447,7 +455,7 @@ Verify `curl -H "Host: example.com" http://127.0.0.1/api/status` shows `"airnow"
 
 **Pollen panel completely empty.** Check browser console for JS errors; confirm location is set. If Google is configured but quota is exhausted, the app may show a paused notice or fall back to modeled data.
 
-**503 on `/api/pollen`.** Key not set — configure `google_pollen_api_key`.
+**503 on `/api/pollen`.** No Google pollen key set — configure `google_pollen_api_key`.
 
 **502 on `/api/pollen` after heavy use.** Daily limit (`pollen_daily_limit`) may
 be reached with no stale cache for that grid cell. Check Apache error log and
@@ -615,7 +623,8 @@ panels appear in one scrollable page with a compacting sticky header.
   pollen forecast (Google via proxy when configured, otherwise modeled/off-season
   messaging) with MSN-style gauge, category pills, tips, and expandable
   **Pollen types & plants** (tree / grass / weed species when Google data is
-  available).
+  available). The hero gauge uses Google’s baseline adjusted by NWS weather
+  (and soft USA-NPN confidence when nearby pollen-release reports exist).
 - **UV & Exposure** — Current UV index and category; humidity, dew point,
   visibility, wet bulb; **outdoor rest-of-today** hourly strip (UV, RH, comfort
   notes).
@@ -672,4 +681,4 @@ panels appear in one scrollable page with a compacting sticky header.
 
 ## Data sources
 
-NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (outlooks, fire weather, mesoscale discussions, storm reports CSV), WPC (excessive rainfall ArcGIS), NOAA CPC (extended outlook point queries), NOAA MRMS (WMS), AviationWeather.gov (TAF via `/api/taf` proxy), NOAA SWPC (Kp), NOAA CO-OPS (tides), USDM (drought point query), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.
+NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (outlooks, fire weather, mesoscale discussions, storm reports CSV), WPC (excessive rainfall ArcGIS), NOAA CPC (extended outlook point queries), NOAA MRMS (WMS), AviationWeather.gov (TAF via `/api/taf` proxy), NOAA SWPC (Kp), NOAA CO-OPS (tides), USDM (drought point query), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy; local NWS + USA-NPN layer), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/http.php';
 require_once __DIR__ . '/cache.php';
+require_once __DIR__ . '/pollen_local.php';
 
 function google_pollen_api_key(array $cfg): string
 {
@@ -115,14 +116,17 @@ function trim_pollen_days(array $data, int $days): array
     return $data;
 }
 
-function pollen_with_cache(float $lat, float $lon, array $cfg, int $days = 3): array
+function pollen_configured(array $cfg): bool
+{
+    return google_pollen_api_key($cfg) !== '';
+}
+
+function google_pollen_with_cache(float $lat, float $lon, array $cfg, int $days = 3): array
 {
     $apiKey = google_pollen_api_key($cfg);
     if ($apiKey === '') {
-        throw new RuntimeException('google_pollen_api_key not configured');
+        throw new RuntimeException('Google Pollen API key not configured');
     }
-
-    $days = max(1, min($days, 5));
 
     $ttl = (int) ($cfg['pollen_cache_ttl'] ?? 10800);
     $ttl = max(300, min($ttl, 86400));
@@ -150,6 +154,23 @@ function pollen_with_cache(float $lat, float $lon, array $cfg, int $days = 3): a
     $quota['count'] = pollen_increment_quota();
 
     return pollen_payload($data, time(), $gridKey, false, false, $quota, $limit);
+}
+
+function pollen_with_cache(float $lat, float $lon, array $cfg, int $days = 3): array
+{
+    $days = max(1, min($days, 5));
+    $payload = google_pollen_with_cache($lat, $lon, $cfg, $days);
+    $payload['sources'] = !empty($payload['days']) ? ['google'] : [];
+    try {
+        $payload = apply_local_pollen_model($payload, $lat, $lon, $cfg);
+        $localSrc = $payload['local']['sources'] ?? [];
+        if (is_array($localSrc) && $localSrc) {
+            $payload['sources'] = $localSrc;
+        }
+    } catch (Throwable $e) {
+        log_api_error('pollen/local', $e);
+    }
+    return $payload;
 }
 
 function pollen_payload(

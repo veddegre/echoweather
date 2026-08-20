@@ -35,6 +35,18 @@ return [
     'google_pollen_api_key' => '',
 
     // -------------------------------------------------------------------------
+    // Local pollen layer — Google baseline + NWS weather + soft USA-NPN
+    // -------------------------------------------------------------------------
+    // Google remains the modeled forecast. NWS hourly conditions nudge airborne
+    // risk (rain / humidity / wind). USA-NPN “pollen release” observations only
+    // boost confidence when nearby YES reports exist — never treat missing
+    // citizen-science coverage as “no pollen.”
+    'pollen_nws_cache_ttl' => 3600,
+    'pollen_npn_cache_ttl' => 43200,
+    'pollen_npn_enabled' => true,
+    'pollen_npn_radius_mi' => 75,
+
+    // -------------------------------------------------------------------------
     // Pollen cache — reduces Google API usage
     // -------------------------------------------------------------------------
     // Cached on disk in cache/pollen/ (one file per grid cell).
