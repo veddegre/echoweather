@@ -860,6 +860,7 @@ function connectLightningWs(){
       lightningReconnects = 0;
       lightningWsState = 'live';
       updateLightningStatus();
+      // Blitzortung subscribe key — still {"a":111} (verified live Aug 2026; was 418 historically).
       ws.send(JSON.stringify({ a: 111 }));
     }
   };

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 
-function cache_dir(): string
+function pollen_cache_dir(): string
 {
     return dirname(__DIR__) . '/cache/pollen';
 }
@@ -18,7 +18,7 @@ function pollen_grid_key(float $lat, float $lon, int $decimals): string
 
 function pollen_cache_path(string $gridKey): string
 {
-    return cache_dir() . '/' . str_replace(['.', '-'], ['p', 'm'], $gridKey) . '.json';
+    return pollen_cache_dir() . '/' . str_replace(['.', '-'], ['p', 'm'], $gridKey) . '.json';
 }
 
 function read_pollen_cache(string $gridKey, int $ttl): ?array
@@ -57,7 +57,7 @@ function read_pollen_cache_entry(string $gridKey): ?array
 
 function pollen_quota_path(): string
 {
-    return cache_dir() . '/_quota.json';
+    return pollen_cache_dir() . '/_quota.json';
 }
 
 function pollen_quota_today(): string
@@ -98,7 +98,7 @@ function pollen_quota_reached(array $cfg): bool
 
 function pollen_increment_quota(): int
 {
-    $dir = cache_dir();
+    $dir = pollen_cache_dir();
     if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
         throw new RuntimeException('failed to create cache directory');
     }
@@ -132,7 +132,7 @@ function pollen_increment_quota(): int
 
 function write_pollen_cache(string $gridKey, float $lat, float $lon, array $data): void
 {
-    $dir = cache_dir();
+    $dir = pollen_cache_dir();
     if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
         throw new RuntimeException('failed to create cache directory');
     }

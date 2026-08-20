@@ -17,14 +17,6 @@ function compareFmtWind(v){
   if(v == null || Number.isNaN(v)) return '';
   return Math.round(v) + ' ' + windUnit();
 }
-function compareCToDisp(c){
-  if(c == null || Number.isNaN(c)) return null;
-  return state.units === 'F' ? Math.round(c * 9 / 5 + 32) : Math.round(c);
-}
-function compareMsToDisp(ms){
-  if(ms == null || Number.isNaN(ms)) return null;
-  return state.units === 'F' ? Math.round(ms * 2.237) : Math.round(ms * 3.6);
-}
 
 function compareFromOmDaily(daily, days){
   if(!daily?.time?.length) return [];
@@ -108,10 +100,10 @@ function compareFrom7Timer(json, days, tz){
   });
   return [...byDay.values()].slice(0, days).map(r => ({
     date: r.date,
-    hi: Number.isFinite(r.hiC) ? compareCToDisp(r.hiC) : null,
-    lo: Number.isFinite(r.loC) ? compareCToDisp(r.loC) : null,
+    hi: Number.isFinite(r.hiC) ? nwsTempToDisp(r.hiC, 'C') : null,
+    lo: Number.isFinite(r.loC) ? nwsTempToDisp(r.loC, 'C') : null,
     pop: null,
-    wind: compareMsToDisp(r.windMs)
+    wind: msToDisp(r.windMs)
   }));
 }
 

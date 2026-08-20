@@ -136,6 +136,8 @@ function setAppTab(tab, opts){
     bar.querySelectorAll('button[data-tab]').forEach(btn => {
       const on = btn.dataset.tab === tab;
       btn.classList.toggle('on', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      btn.tabIndex = on ? 0 : -1;
       if(on) btn.setAttribute('aria-current', 'page');
       else btn.removeAttribute('aria-current');
     });
@@ -180,6 +182,20 @@ function initPageNav(){
   if(tabBar){
     tabBar.querySelectorAll('button[data-tab]').forEach(btn => {
       btn.addEventListener('click', () => setAppTab(btn.dataset.tab));
+    });
+    tabBar.addEventListener('keydown', e => {
+      const tabs = [...tabBar.querySelectorAll('button[data-tab]')];
+      const i = tabs.indexOf(document.activeElement);
+      if(i < 0) return;
+      let next = -1;
+      if(e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % tabs.length;
+      else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + tabs.length) % tabs.length;
+      else if(e.key === 'Home') next = 0;
+      else if(e.key === 'End') next = tabs.length - 1;
+      if(next < 0) return;
+      e.preventDefault();
+      tabs[next].focus();
+      setAppTab(tabs[next].dataset.tab);
     });
   }
 
