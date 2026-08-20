@@ -19,6 +19,17 @@ const THREAT_LAYER_LABELS = {
   nhc: 'NHC storms', wpcEro: 'WPC excessive rain', fireWx: 'SPC fire weather', hmsSmoke: 'NOAA HMS smoke'
 };
 const THREAT_GEO_TTL = 5 * 60 * 1000;
+const SPC_GEO_TTL = 10 * 60 * 1000;
+const spcGeoCache = {};
+async function fetchSpcGeoCached(url){
+  const hit = spcGeoCache[url];
+  if(hit && Date.now() - hit.t < SPC_GEO_TTL) return hit.g;
+  const r = await fetch(url);
+  if(!r.ok) return null;
+  const g = await r.json();
+  spcGeoCache[url] = { g, t: Date.now() };
+  return g;
+}
 const WPC_ERO_URL = '/api/wpc-ero';
 const NHC_STORMS_URL = '/api/nhc-storms';
 const HMS_SMOKE_URL = '/api/hms-smoke';
@@ -348,17 +359,37 @@ function stormReportIcon(type){
     iconSize: [12, 12], iconAnchor: [6, 6]
   });
 }
+function stormReportKey(r){
+  return [r.lat, r.lon, r.type, r.time, r.place].join('|');
+}
+function stormReportSig(reports){
+  return (reports || []).map(stormReportKey).sort().join(';');
+}
+let stormReportMarkerSig = '';
 function syncStormReportMarkers(){
   if(!map || !isRadarTabVisible() || !threatLayerOpts.stormReports){
-    if(stormReportGroup && map.hasLayer(stormReportGroup)) map.removeLayer(stormReportGroup);
+    if(stormReportGroup && map && map.hasLayer(stormReportGroup)) map.removeLayer(stormReportGroup);
     stormReportGroup = null;
+    stormReportMarkerSig = '';
     return;
   }
+  const visible = (stormState.reports || []).filter(r =>
+    r.lat != null && r.lon != null && reportMatchesFilter(r.type)
+  );
+  const sig = stormReportSig(visible) + '|' + (stormReportFilter || 'all');
+  if(stormReportGroup && map.hasLayer(stormReportGroup) && sig === stormReportMarkerSig){
+    bringStormMapLayersFront();
+    return;
+  }
+  stormReportMarkerSig = sig;
   if(stormReportGroup && map.hasLayer(stormReportGroup)) map.removeLayer(stormReportGroup);
   stormReportGroup = L.layerGroup();
-  (stormState.reports || []).forEach(r => {
-    if(r.lat == null || r.lon == null || !reportMatchesFilter(r.type)) return;
-    const m = L.marker([r.lat, r.lon], { icon: stormReportIcon(r.type) });
+  visible.forEach(r => {
+    const m = L.marker([r.lat, r.lon], {
+      icon: stormReportIcon(r.type),
+      title: (r.type || 'Storm report') + (r.place ? ' — ' + r.place : ''),
+      alt: (r.type || 'Storm report') + (r.place ? ' near ' + r.place : '')
+    });
     m.bindPopup('<strong>' + esc(r.type) + '</strong><br>' + esc(r.place)
       + (r.county ? ', ' + esc(r.county) : '') + (r.st ? ' ' + esc(r.st) : '')
       + '<br><span style="font-size:.75rem;color:#666">' + esc(r.time || '')
@@ -606,7 +637,7 @@ function renderAlertsBox(feats){
     const cls = /warning/i.test(ev) ? '' : /watch/i.test(ev) ? ' watch' : ' adv';
     const until = formatAlertSummaryTiming(p);
     const desc = ((p.description || '') + (p.instruction ? '\n\nPRECAUTIONARY ACTIONS:\n' + p.instruction : ''))
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;');
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return '<details class="alert' + cls + '"><summary>'
       + '<div class="ev">\u26A0 ' + esc(ev) + until + '</div>'
       + '<div class="hl">' + esc(p.headline || '') + '</div>'
@@ -773,10 +804,21 @@ function ensureLightningCanvas(){
     map.getContainer().appendChild(lightningCanvas);
     lightningCtx = lightningCanvas.getContext('2d');
     map.on('move zoom resize', sizeLightningCanvas);
+    if(!lightningCanvas._echoWinResize){
+      lightningCanvas._echoWinResize = () => {
+        if(map){ try{ map.invalidateSize({ pan: false }); }catch(e){} }
+        sizeLightningCanvas();
+      };
+      window.addEventListener('resize', lightningCanvas._echoWinResize);
+    }
   }
   sizeLightningCanvas();
 }
 function removeLightningCanvas(){
+  if(lightningCanvas && lightningCanvas._echoWinResize){
+    window.removeEventListener('resize', lightningCanvas._echoWinResize);
+    lightningCanvas._echoWinResize = null;
+  }
   if(lightningCanvas && lightningCanvas.parentNode) lightningCanvas.parentNode.removeChild(lightningCanvas);
   lightningCanvas = null;
   lightningCtx = null;
@@ -1373,9 +1415,8 @@ function spcRiskAtPoint(lon, lat, geojson){
   return best;
 }
 async function fetchSpcOutlookDay(loc, dayKey){
-  const r = await fetch('https://www.spc.noaa.gov/products/outlook/' + dayKey + 'otlk_cat.lyr.geojson');
-  if(!r.ok) return null;
-  const geo = await r.json();
+  const geo = await fetchSpcGeoCached('https://www.spc.noaa.gov/products/outlook/' + dayKey + 'otlk_cat.lyr.geojson');
+  if(!geo) return null;
   const risk = spcRiskAtPoint(loc.lon, loc.lat, geo);
   return risk ? { day: dayKey, ...risk } : { day: dayKey, dn: 0, label: 'NONE', label2: 'No thunderstorm risk', fill: '#E8E8E8', stroke: '#999' };
 }
@@ -1604,18 +1645,18 @@ function renderOutlookDiscussionHtml(disc, dayLabel, open){
     + '</summary><div class="storm-disc-body">' + body + '</div></details>';
 }
 async function fetchSpcProbLayer(loc, layer){
-  const r = await fetch('https://www.spc.noaa.gov/products/outlook/day1otlk_' + layer + '.lyr.geojson');
-  if(!r.ok) return null;
-  const geo = await r.json();
+  const geo = await fetchSpcGeoCached('https://www.spc.noaa.gov/products/outlook/day1otlk_' + layer + '.lyr.geojson');
+  if(!geo) return null;
   return spcRiskAtPoint(loc.lon, loc.lat, geo);
 }
 async function fetchSpcProbRisks(loc){
-  const [torn, hail, wind] = await Promise.all([
+  const settled = await Promise.allSettled([
     fetchSpcProbLayer(loc, 'torn'),
     fetchSpcProbLayer(loc, 'hail'),
     fetchSpcProbLayer(loc, 'wind')
   ]);
-  return { torn, hail, wind };
+  const v = i => settled[i].status === 'fulfilled' ? settled[i].value : null;
+  return { torn: v(0), hail: v(1), wind: v(2) };
 }
 async function fetchNearbyStormReports(loc, maxMi){
   try{
@@ -2109,7 +2150,7 @@ async function refreshStormTracking(loc, d){
   stormState.severeWindow = computeSevereWindow(d);
   updateRadarStormMark();
   try{
-    const [day1, day2, day3, products, prob, reports, lakeEffect, alertFeats] = await Promise.all([
+    const settled = await Promise.allSettled([
       fetchSpcOutlookDay(loc, 'day1'),
       fetchSpcOutlookDay(loc, 'day2'),
       fetchSpcOutlookDay(loc, 'day3'),
@@ -2120,6 +2161,20 @@ async function refreshStormTracking(loc, d){
       fetchAllActiveAlerts(loc)
     ]);
     if(gen !== stormTrackGen) return;
+    const val = (i, fallback) => settled[i].status === 'fulfilled' ? settled[i].value : fallback;
+    const day1 = val(0, null);
+    const day2 = val(1, null);
+    const day3 = val(2, null);
+    const products = val(3, []) || [];
+    const prob = val(4, null);
+    const reports = val(5, []) || [];
+    const lakeEffect = val(6, null);
+    const alertFeats = val(7, []) || [];
+    const gotOutlook = !!(day1 || day2 || day3);
+    const gotAlerts = settled[7].status === 'fulfilled';
+    if(!gotOutlook && !gotAlerts && settled.every(s => s.status === 'rejected')){
+      throw new Error('storm_all_failed');
+    }
     stormState.risks = [day1, day2, day3].filter(Boolean);
     stormState.maxDn = Math.max(...stormState.risks.map(r => r.dn || 0), 0);
     stormState.prob = prob;

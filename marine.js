@@ -1189,7 +1189,8 @@ async function loadCoastal(loc){
       }
       if(nwsMarine && nwsBox){
         nwsBox.hidden = false;
-        nwsBox.innerHTML = '<strong>' + esc(nwsMarine.source) + '</strong>\n' + esc(nwsMarine.text);
+        nwsBox.innerHTML = '<strong>' + esc(nwsMarine.source) + '</strong><br>'
+          + esc(nwsMarine.text).replace(/\n/g, '<br>');
         note += ' \u00B7 ' + nwsMarine.source;
       }else if(nwsBox){
         nwsBox.hidden = true;

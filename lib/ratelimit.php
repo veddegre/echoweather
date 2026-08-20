@@ -12,9 +12,47 @@ function rate_limit_dir(): string
     return dirname(__DIR__) . '/cache/ratelimit';
 }
 
+function is_private_or_local_ip(string $ip): bool
+{
+    if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+        return false;
+    }
+    return !filter_var(
+        $ip,
+        FILTER_VALIDATE_IP,
+        FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+    );
+}
+
 function client_ip(): string
 {
-    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    // Cloudflare Tunnel / CDN sets the real client IP here.
+    $cf = trim((string) ($_SERVER['HTTP_CF_CONNECTING_IP'] ?? ''));
+    if ($cf !== '' && filter_var($cf, FILTER_VALIDATE_IP)) {
+        return $cf;
+    }
+
+    $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+
+    // Only trust X-Forwarded-For when the direct peer is a private/local proxy.
+    if (is_private_or_local_ip($remote)) {
+        $xff = (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '');
+        if ($xff !== '') {
+            $parts = array_map('trim', explode(',', $xff));
+            foreach ($parts as $ip) {
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                    return $ip;
+                }
+            }
+            foreach ($parts as $ip) {
+                if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                    return $ip;
+                }
+            }
+        }
+    }
+
+    return $remote !== '' ? $remote : '0.0.0.0';
 }
 
 function rate_limit_path(string $bucket): string

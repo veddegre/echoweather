@@ -1937,25 +1937,32 @@ async function renderAuroraHint(loc, d){
   if(!box || !panel || !loc || !d){ hide(); return; }
   if(loc.lat < 40){ hide(); return; }
   try{
-    const [kpRes, ovationRes] = await Promise.all([
+    const [kpSettled, ovationSettled] = await Promise.allSettled([
       fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json'),
       fetch('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json')
     ]);
-    if(!kpRes.ok) throw new Error('kp');
-    const rows = await kpRes.json();
-    const last = rows[rows.length - 1];
-    const kp = parseFloat(last && last[1]);
+    const kpRes = kpSettled.status === 'fulfilled' ? kpSettled.value : null;
+    const ovationRes = ovationSettled.status === 'fulfilled' ? ovationSettled.value : null;
+    let kp = NaN;
+    if(kpRes?.ok){
+      const rows = await kpRes.json();
+      const last = rows[rows.length - 1];
+      kp = parseFloat(last && last[1]);
+    }
     let ovationScore = 0;
     let ovationCoords = null;
-    if(ovationRes.ok){
-      const ov = await ovationRes.json();
-      ovationCoords = ov.coordinates || ov;
-      if(Array.isArray(ovationCoords)){
-        const near = ovationCoords.filter(c => Array.isArray(c) && c.length >= 3
-          && Math.abs(c[1] - loc.lat) < 4 && Math.abs(c[0] - loc.lon) < 8);
-        if(near.length) ovationScore = Math.max(...near.map(c => c[2] || 0));
-      }
+    if(ovationRes?.ok){
+      try{
+        const ov = await ovationRes.json();
+        ovationCoords = ov.coordinates || ov;
+        if(Array.isArray(ovationCoords)){
+          const near = ovationCoords.filter(c => Array.isArray(c) && c.length >= 3
+            && Math.abs(c[1] - loc.lat) < 4 && Math.abs(c[0] - loc.lon) < 8);
+          if(near.length) ovationScore = Math.max(...near.map(c => c[2] || 0));
+        }
+      }catch(e){ /* OVATION optional when Kp is available */ }
     }
+    if(!kpRes?.ok && !ovationCoords) throw new Error('aurora');
     if((isNaN(kp) || kp < 4) && ovationScore < 25){ hide(); return; }
     const i0 = nowIndex(d);
     let nightCloud = 100;
