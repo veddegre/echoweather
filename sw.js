@@ -1,5 +1,5 @@
-const CACHE = 'echo-weather-v291';
-const ICON_Q = '?v=291';
+const CACHE = 'echo-weather-v292';
+const ICON_Q = '?v=292';
 const ASSETS = [
   './app.css',
   './app.js',

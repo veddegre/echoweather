@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '291';
+const APP_VERSION = '292';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -388,7 +388,7 @@ function sunPosition(date, lat, lon){
   const decl = (l, b) => Math.asin(Math.sin(b) * Math.cos(EOBL) + Math.cos(b) * Math.sin(EOBL) * Math.sin(l));
   const sidereal = (d, lw) => RAD * (280.16 + 360.9856235 * d) - lw;
   const d = toD(date);
-  const M = RAD * (357.5291 + 0.98560028 * d);
+  const M = RAD * (357.5292 + 0.98560028 * d);
   const C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
   const L = M + C + RAD * 102.9372 + Math.PI;
   const sc = { ra: rasc(L, 0), dec: decl(L, 0) };
@@ -2631,13 +2631,13 @@ function moonCoords(d){
   const L = RAD * (218.316 + 13.176396 * d),
         M = RAD * (134.963 + 13.064993 * d),
         F = RAD * (93.272 + 13.229350 * d);
-  const l = L + RAD * 6.291 * Math.sin(M),
+  const l = L + RAD * 6.292 * Math.sin(M),
         b = RAD * 5.128 * Math.sin(F),
         dist = 385001 - 20905 * Math.cos(M); // km
   return { ra: rasc(l, b), dec: decl(l, b), dist };
 }
 function sunCoords(d){
-  const M = RAD * (357.5291 + 0.98560028 * d);
+  const M = RAD * (357.5292 + 0.98560028 * d);
   const C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
   const L = M + C + RAD * 102.9372 + Math.PI;
   return { ra: rasc(L, 0), dec: decl(L, 0) };

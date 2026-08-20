@@ -358,20 +358,17 @@ function pollenTipsHtml(tier){
 function pollenArcSvg(pct, strokeCls){
   const p = Math.min(1, Math.max(0, pct / 100));
   const r = 42, cx = 54, cy = 50;
-  // Upper semicircle: SVG Y-down, clockwise from left (π) through top to right (2π).
-  const start = Math.PI;
-  const end = Math.PI + p * Math.PI;
-  const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
-  const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
-  const large = p > 0.5 ? 1 : 0;
-  const track = 'M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + (cx + r) + ' ' + cy;
-  const fill = p > 0
-    ? 'M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2
-    : '';
+  // Same upper semicircle for track + fill; pathLength + dasharray = reliable % fill.
+  const d = 'M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + (cx + r) + ' ' + cy;
   const color = strokeCls === 'pl-mid' ? 'var(--warm)' : (strokeCls === 'pl-high' || strokeCls === 'pl-very-high' ? 'var(--warn)' : 'var(--good)');
+  const shown = (p * 100).toFixed(1);
+  const hidden = (100 - p * 100 + 0.1).toFixed(1);
   return '<svg viewBox="0 0 108 56" aria-hidden="true">'
-    + '<path d="' + track + '" fill="none" stroke="var(--pollen-track)" stroke-width="7" stroke-linecap="round"/>'
-    + (fill ? '<path d="' + fill + '" fill="none" stroke="' + color + '" stroke-width="7" stroke-linecap="round"/>' : '')
+    + '<path d="' + d + '" fill="none" stroke="var(--pollen-track)" stroke-width="7" stroke-linecap="round"/>'
+    + (p > 0
+      ? '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="7" stroke-linecap="round"'
+        + ' pathLength="100" stroke-dasharray="' + shown + ' ' + hidden + '"/>'
+      : '')
     + '</svg>';
 }
 function pollenRingSvg(pct, strokeCls){
