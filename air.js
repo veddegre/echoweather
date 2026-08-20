@@ -491,9 +491,15 @@ function pollenLocalNote(pollen){
   if(!local?.days?.length) return '';
   const today = local.days[0];
   const parts = [];
-  const conf = pollenConfidenceLabel(today.confidence);
-  if(conf){
-    parts.push(conf + (today.confidence != null ? ' (' + today.confidence + '%)' : ''));
+  const ph = today.phenology;
+  const npnActive = ph?.status === 'active' && (ph.nearbyYes || 0) > 0;
+  // Confidence only when USA-NPN contributes — unknown coverage is silence, not a fake %.
+  if(npnActive){
+    const conf = pollenConfidenceLabel(today.confidence);
+    if(conf){
+      parts.push(conf + (today.confidence != null ? ' (' + today.confidence + '%)' : ''));
+    }
+    parts.push('Nearby plant reports: pollen release');
   }
   const trend = local.trend;
   if(trend === 'rising') parts.push('Trend rising');
@@ -503,12 +509,6 @@ function pollenLocalNote(pollen){
     parts.push(wx.modifier > 0
       ? 'Weather favors airborne pollen'
       : 'Weather likely suppressing airborne pollen');
-  }
-  const ph = today.phenology;
-  if(ph?.status === 'active' && ph.nearbyYes > 0){
-    parts.push('Nearby plant reports: pollen release');
-  } else if(ph?.status === 'unknown'){
-    parts.push('Local plant reports: unknown');
   }
   return parts.join(' \u00B7 ');
 }
