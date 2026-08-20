@@ -302,7 +302,8 @@ function renderAirMetricSections(sections){
       ).join('') + '</div></div>';
   }).join('');
 }
-/** Google Universal Pollen Index (UPI) is already 0–5 — display that scale directly. */
+/** Google Universal Pollen Index (UPI) is already 0–5 — display that scale directly.
+ *  Labels match Google’s six categories. Very Low and Low share pl-low (both “good”). */
 function pollenUpiTier(upi){
   if(upi == null || !Number.isFinite(Number(upi)) || Number(upi) <= 0){
     return { label: 'None', cls: 'pl-none', score: 0 };
@@ -521,13 +522,16 @@ function pollenLocalNote(pollen){
   }
   return parts.join(' \u00B7 ');
 }
+/** Map Open-Meteo grains/m³ onto fractional UPI 0–5 for smoother gauge fill. */
 function meteoPollenUpi(v){
   if(v == null || v <= 0) return 0;
-  if(v < 10) return 1;
-  if(v < 30) return 2;
-  if(v < 50) return 3;
-  if(v < 100) return 4;
-  return 5;
+  let upi;
+  if(v < 10) upi = v / 10;
+  else if(v < 30) upi = 1 + (v - 10) / 20;
+  else if(v < 50) upi = 2 + (v - 30) / 20;
+  else if(v < 100) upi = 3 + (v - 50) / 50;
+  else upi = 4 + Math.min(1, (v - 100) / 100);
+  return Math.round(Math.min(5, upi) * 10) / 10;
 }
 function pollenOverallFromMeteo(daily, i){
   const grass = meteoPollenUpi(daily.grass_pollen?.[i]);
