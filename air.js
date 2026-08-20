@@ -263,11 +263,13 @@ function renderPollenRows(pollen, rows){
   if(!today || !Array.isArray(today.types)) return;
   today.types.forEach(t => {
     if(!t.inSeason && !t.index) return;
-    rows.push([t.name + ' pollen', t.index + '<small> \u2014 ' + t.category + '</small>']);
+    const tier = pollenTierFromGoogle(t.index);
+    rows.push([t.name + ' pollen', tier.score + '<small> \u2014 ' + tier.label + '</small>']);
   });
-  today.plants.slice(0, 4).forEach(p => {
+  (today.plants || []).slice(0, 4).forEach(p => {
     if(p.index < 1) return;
-    rows.push([p.name, p.index + '<small> UPI \u00B7 ' + p.category + '</small>']);
+    const tier = pollenTierFromGoogle(p.index);
+    rows.push([p.name, tier.score + '<small> \u2014 ' + tier.label + '</small>']);
   });
 }
 function polShortName(name){
@@ -300,42 +302,28 @@ function renderAirMetricSections(sections){
       ).join('') + '</div></div>';
   }).join('');
 }
-function pollenCatLabel(cat){
-  const c = (cat || '').toLowerCase();
-  if(c.includes('very high')) return 'Very High';
-  if(c === 'high') return 'High';
-  if(c.includes('moderate')) return 'Moderate';
-  if(c.includes('very low')) return 'Very Low';
-  if(c.includes('low')) return 'Low';
-  if(c.includes('none')) return 'None';
-  return 'Low';
-}
+/** Soft 0–100 display for Google UPI (0–5). Not ×10 — keeps label and gauge aligned. */
+const GOOGLE_UPI_DISPLAY = [0, 15, 30, 50, 70, 90];
 function googleUpiToDisplay(upi){
   if(upi == null || upi <= 0) return 0;
-  return Math.min(100, Math.round(upi) * 10);
-}
-function pollenCatCls(cat){
-  const c = (cat || '').toLowerCase();
-  if(c.includes('very high')) return 'pl-very-high';
-  if(c === 'high') return 'pl-high';
-  if(c.includes('moderate')) return 'pl-mid';
-  if(c.includes('low')) return 'pl-low';
-  return 'pl-none';
+  const x = Math.min(5, Math.max(0, Number(upi)));
+  if(!Number.isFinite(x)) return 0;
+  const lo = Math.floor(x);
+  const hi = Math.min(5, Math.ceil(x));
+  if(lo === hi) return GOOGLE_UPI_DISPLAY[lo];
+  const t = x - lo;
+  return Math.round(GOOGLE_UPI_DISPLAY[lo] + t * (GOOGLE_UPI_DISPLAY[hi] - GOOGLE_UPI_DISPLAY[lo]));
 }
 function pollenIndexTier(index){
   const n = index == null || index <= 0 ? 0 : Math.round(index);
+  if(n <= 0) return { label: 'None', cls: 'pl-none', score: 0 };
   if(n <= 24) return { label: 'Low', cls: 'pl-low', score: n };
   if(n <= 49) return { label: 'Moderate', cls: 'pl-mid', score: n };
   if(n <= 74) return { label: 'High', cls: 'pl-high', score: n };
   return { label: 'Very High', cls: 'pl-very-high', score: n };
 }
-function pollenTierFromGoogle(upi, category){
-  const score = googleUpiToDisplay(upi);
-  if(category){
-    const cls = pollenCatCls(category);
-    if(cls !== 'pl-none') return { label: pollenCatLabel(category), cls, score };
-  }
-  return pollenIndexTier(score);
+function pollenTierFromGoogle(upi){
+  return pollenIndexTier(googleUpiToDisplay(upi));
 }
 function pollenRiskMessage(tier){
   if(tier.cls === 'pl-mid') return 'May cause symptoms in sensitive individuals.';
@@ -438,23 +426,22 @@ function pollenTypeFromGoogle(types, code, plants){
   if(!hasData || (upi <= 0 && (!category || isPollenNoneCategory(category)))){
     return { label: 'Low', cls: 'pl-low', score: 0, name, hasData: false };
   }
-  return Object.assign({ name, hasData: true }, pollenTierFromGoogle(upi, category));
+  return Object.assign({ name, hasData: true }, pollenTierFromGoogle(upi));
 }
 function pollenOverallFromGoogle(day){
   if(!day) return { index: 0, label: 'Low', cls: 'pl-low', main: '' };
   const types = day.types || [];
   const plants = day.plants || [];
-  let maxUpi = 0, main = '', maxCategory = '';
+  let maxUpi = 0, main = '';
   ['GRASS', 'TREE', 'WEED'].forEach(code => {
-    const { upi, category } = pollenGoogleTypeUpi(types, code, plants);
+    const { upi } = pollenGoogleTypeUpi(types, code, plants);
     if(upi >= maxUpi){
       maxUpi = upi;
-      maxCategory = category;
       main = code === 'GRASS' ? 'Grass' : code === 'TREE' ? 'Tree' : 'Weed';
     }
   });
-  const tier = pollenTierFromGoogle(maxUpi, maxCategory);
-  return { index: tier.score, label: tier.label, cls: tier.cls, main, hasData: maxUpi > 0 || !!maxCategory };
+  const tier = pollenTierFromGoogle(maxUpi);
+  return { index: tier.score, label: tier.label, cls: tier.cls, main, hasData: maxUpi > 0 };
 }
 function localDayForDate(local, dateStr){
   if(!local?.days || !dateStr) return null;
@@ -471,28 +458,27 @@ function pollenTypeFromLocal(localDay, code, googleDay){
     if(upi <= 0 && (!category || isPollenNoneCategory(category))){
       return { name, label: 'Low', cls: 'pl-low', score: 0, hasData: false };
     }
-    return Object.assign({ name, hasData: true }, pollenTierFromGoogle(upi, category));
+    return Object.assign({ name, hasData: true }, pollenTierFromGoogle(upi));
   }
   return pollenTypeFromGoogle(googleDay?.types, code, googleDay?.plants);
 }
 function pollenOverallFromLocal(localDay, googleDay){
   if(localDay && Array.isArray(localDay.types) && localDay.types.length){
-    let maxUpi = 0, main = '', maxCategory = '';
+    let maxUpi = 0, main = '';
     ['GRASS', 'TREE', 'WEED'].forEach(code => {
       const t = localDay.types.find(x => (x.code || '').toUpperCase() === code);
       if(!t) return;
       const upi = Number(t.index) || 0;
       if(upi >= maxUpi){
         maxUpi = upi;
-        maxCategory = t.category || '';
         main = code === 'GRASS' ? 'Grass' : code === 'TREE' ? 'Tree' : 'Weed';
       }
     });
     if(localDay.localIndex != null && Number(localDay.localIndex) > maxUpi){
       maxUpi = Number(localDay.localIndex);
     }
-    const tier = pollenTierFromGoogle(maxUpi, maxCategory);
-    return { index: tier.score, label: tier.label, cls: tier.cls, main, hasData: maxUpi > 0 || !!maxCategory };
+    const tier = pollenTierFromGoogle(maxUpi);
+    return { index: tier.score, label: tier.label, cls: tier.cls, main, hasData: maxUpi > 0 };
   }
   return pollenOverallFromGoogle(googleDay);
 }
@@ -591,11 +577,12 @@ function pollenPlantRowHtml(row){
 function googlePollenTypeRow(types, code){
   const t = Array.isArray(types) ? types.find(x => (x.code || '').toUpperCase() === code) : null;
   if(!t || (!t.inSeason && !(t.index || 0))) return null;
+  const tier = pollenTierFromGoogle(t.index || 0);
   return {
     name: (t.name || POLLEN_TYPE_META[code].label) + ' pollen',
-    category: pollenCatLabel(t.category),
-    cls: pollenCatCls(t.category),
-    score: googleUpiToDisplay(t.index || 0),
+    category: tier.label,
+    cls: tier.cls,
+    score: tier.score,
     isType: true
   };
 }
@@ -605,11 +592,12 @@ function buildGooglePlantGroups(day){
     const key = pollenPlantTypeKey(p.type) || pollenPlantTypeKey(p.code);
     if(!byType[key]) return;
     if((p.index || 0) < 1 && (!p.category || isPollenNoneCategory(p.category))) return;
+    const tier = pollenTierFromGoogle(p.index || 0);
     byType[key].push({
       name: p.name || p.code || POLLEN_TYPE_META[key].label,
-      category: pollenCatLabel(p.category),
-      cls: pollenCatCls(p.category),
-      score: googleUpiToDisplay(p.index || 0),
+      category: tier.label,
+      cls: tier.cls,
+      score: tier.score,
       isPlant: true
     });
   });
