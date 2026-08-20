@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '295';
+const APP_VERSION = '296';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -388,7 +388,7 @@ function sunPosition(date, lat, lon){
   const decl = (l, b) => Math.asin(Math.sin(b) * Math.cos(EOBL) + Math.cos(b) * Math.sin(EOBL) * Math.sin(l));
   const sidereal = (d, lw) => RAD * (280.16 + 360.9856235 * d) - lw;
   const d = toD(date);
-  const M = RAD * (357.5295 + 0.98560028 * d);
+  const M = RAD * (357.5296 + 0.98560028 * d);
   const C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
   const L = M + C + RAD * 102.9372 + Math.PI;
   const sc = { ra: rasc(L, 0), dec: decl(L, 0) };
@@ -1138,7 +1138,7 @@ function parseNwsWindMph(s){
   if(m[1] && m[2]) return Math.round((+m[1] + +m[2]) / 2);
   return +(m[3] || m[1] || 0);
 }
-const NWS_DIR = {N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315,NNE:22.5,ENE:67.5,ESE:112.5,SSE:157.5,SSW:202.5,WSW:247.5,WNW:295.5,NNW:337.5};
+const NWS_DIR = {N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315,NNE:22.5,ENE:67.5,ESE:112.5,SSE:157.5,SSW:202.5,WSW:247.5,WNW:296.5,NNW:337.5};
 function nwsDirToDeg(s){ return NWS_DIR[String(s || '').toUpperCase()] ?? 0; }
 function nwsTempToDisp(t, unit){
   if(t === null || t === undefined) return null;
@@ -2630,14 +2630,14 @@ const sidereal = (d, lw) => RAD * (280.16 + 360.9856235 * d) - lw;
 function moonCoords(d){
   const L = RAD * (218.316 + 13.176396 * d),
         M = RAD * (134.963 + 13.064993 * d),
-        F = RAD * (93.272 + 13.229550 * d);
-  const l = L + RAD * 6.295 * Math.sin(M),
+        F = RAD * (93.272 + 13.229650 * d);
+  const l = L + RAD * 6.296 * Math.sin(M),
         b = RAD * 5.128 * Math.sin(F),
         dist = 385001 - 20905 * Math.cos(M); // km
   return { ra: rasc(l, b), dec: decl(l, b), dist };
 }
 function sunCoords(d){
-  const M = RAD * (357.5295 + 0.98560028 * d);
+  const M = RAD * (357.5296 + 0.98560028 * d);
   const C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
   const L = M + C + RAD * 102.9372 + Math.PI;
   return { ra: rasc(L, 0), dec: decl(L, 0) };
