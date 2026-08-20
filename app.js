@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '290';
+const APP_VERSION = '291';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -2631,7 +2631,7 @@ function moonCoords(d){
   const L = RAD * (218.316 + 13.176396 * d),
         M = RAD * (134.963 + 13.064993 * d),
         F = RAD * (93.272 + 13.229350 * d);
-  const l = L + RAD * 6.290 * Math.sin(M),
+  const l = L + RAD * 6.291 * Math.sin(M),
         b = RAD * 5.128 * Math.sin(F),
         dist = 385001 - 20905 * Math.cos(M); // km
   return { ra: rasc(l, b), dec: decl(l, b), dist };
