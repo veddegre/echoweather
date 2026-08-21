@@ -716,6 +716,13 @@ body.level-5 .day-story-footnote {
     color: var(--paper);
 }
 .log-shanty-credit { margin-top: 0.35rem; }
+.log-shanty-credit a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    text-underline-offset: 0.15em;
+}
+.log-shanty-credit a:hover { text-decoration-color: currentColor; }
 
 .log-guide-nudge {
     max-width: 720px;

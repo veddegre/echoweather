@@ -82,7 +82,7 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
 <div class="wave-layer" aria-hidden="true"></div>
 
 <?php if ($echoFrom): ?>
-<audio id="logShanty" src="assets/audio/mind-the-bar.mp3" preload="auto" loop playsinline></audio>
+<audio id="logShanty" src="assets/audio/mind-the-bar.mp3?v=<?= logAssetVersion('assets/audio/mind-the-bar.mp3') ?>" preload="auto" loop playsinline></audio>
 <?php endif; ?>
 
 <header class="site-header">
@@ -311,7 +311,7 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
     <p>A Great Lakes reading of the same official weather Echo uses. Not affiliated with NOAA or the National Weather Service.</p>
     <p class="attribution">Original illustrations for the Lakes Log — one plate for each mark on the glass.</p>
     <?php if ($echoFrom): ?>
-    <p class="attribution log-shanty-credit">Mind the Bar and Mind the Lake — ship&rsquo;s music for the Echo passage.</p>
+    <p class="attribution log-shanty-credit"><a href="slides.php<?= $echoQs ?>#ship-song">Mind the Bar and Mind the Lake</a> — ship&rsquo;s music for the Echo passage. Lyrics in the standing orders.</p>
     <?php endif; ?>
     <p class="footer-links">
         <a href="slides.php<?= $echoQs ?>">Standing orders</a>

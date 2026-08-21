@@ -373,6 +373,63 @@ h3 {
     background: rgba(255, 252, 247, 0.95);
 }
 
+/* Ship's song (Echo passage only) */
+.ship-song-kicker {
+    margin: 0 0 0.35rem;
+    font-family: var(--display);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+.ship-song-verses {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.25rem 0 0;
+}
+.ship-song-block {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    background: var(--paper);
+    border: 1px solid var(--paper-dark);
+    border-radius: 3px;
+}
+.ship-song-block p {
+    margin: 0 0 0.35rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+.ship-song-block p:last-child { margin-bottom: 0; }
+.ship-song-voice {
+    display: inline-block;
+    min-width: 3.25rem;
+    margin-right: 0.45rem;
+    font-family: var(--display);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+.ship-song-chorus {
+    border-left: 4px solid var(--honey);
+}
+.ship-song-label {
+    margin: 0 0 0.4rem !important;
+    font-family: var(--display);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+}
+.ship-song-chorus p:last-child {
+    font-style: italic;
+    color: var(--ink);
+}
+
 /* Character grid */
 .character-grid {
     display: grid;

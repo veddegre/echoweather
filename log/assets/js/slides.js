@@ -20,7 +20,8 @@
         prevBtn.disabled = current === 0;
         nextBtn.disabled = current === total - 1;
 
-        history.replaceState(null, '', '#slide-' + (current + 1));
+        const anchor = slides[current].id || ('slide-' + (current + 1));
+        history.replaceState(null, '', '#' + anchor);
     }
 
     prevBtn.addEventListener('click', function () {
@@ -58,17 +59,25 @@
         }
     }, { passive: true });
 
-    // Deep link support
-    const hash = window.location.hash.match(/slide-(\d+)/);
-    if (hash) {
-        const idx = parseInt(hash[1], 10) - 1;
-        if (idx >= 0 && idx < total) {
-            current = idx;
-            slides.forEach(function (s, i) {
-                s.classList.toggle('active', i === current);
-            });
+    // Deep link support (#ship-song or #slide-N)
+    const hashRaw = (window.location.hash || '').replace(/^#/, '');
+    if (hashRaw === 'ship-song') {
+        const song = document.getElementById('ship-song');
+        if (song) {
+            const idx = Array.prototype.indexOf.call(slides, song);
+            if (idx >= 0) current = idx;
+        }
+    } else {
+        const hash = hashRaw.match(/^slide-(\d+)$/);
+        if (hash) {
+            const idx = parseInt(hash[1], 10) - 1;
+            if (idx >= 0 && idx < total) current = idx;
         }
     }
+
+    slides.forEach(function (s, i) {
+        s.classList.toggle('active', i === current);
+    });
 
     showSlide(current);
 })();

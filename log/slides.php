@@ -40,14 +40,15 @@ $sampleDaily = [
     ['day' => 'Sun', 'desc' => 'Small craft weather', 'high' => '50°', 'low' => '39°'],
     ['day' => 'Mon', 'desc' => 'Gale easing', 'high' => '48°', 'low' => '37°'],
 ];
-$slideCount = 15;
+$slideCount = $echoFrom ? 16 : 15;
+$closeSlide = $echoFrom ? 16 : 15;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <?= renderLogHead([
         'title'       => 'The Lakes Log — Standing Orders',
-        'description' => 'A fifteen-page guide to the Lakes Log: six marks on the glass, who keeps the book, and the talk of the lakes.',
+        'description' => 'A guide to the Lakes Log: six marks on the glass, who keeps the book, and the talk of the lakes.',
         'css'         => 'assets/css/slides.css',
     ]) ?>
 </head>
@@ -276,7 +277,59 @@ $slideCount = 15;
         </div>
     </section>
 
-    <section class="slide" data-slide="15">
+    <?php if ($echoFrom): ?>
+    <section class="slide slide-ship-song" data-slide="15" id="ship-song">
+        <div class="slide-inner">
+            <p class="ship-song-kicker">Entered in the log</p>
+            <h2>Mind the Bar and Mind the Lake</h2>
+            <p class="intro">Ship&rsquo;s song for the Echo passage — the music that plays when this book opens from Echo Weather.</p>
+            <div class="ship-song-verses" aria-label="Lyrics">
+                <div class="ship-song-block">
+                    <p><span class="ship-song-voice">Call</span> The glass is falling, boys, look west —</p>
+                    <p><span class="ship-song-voice">Crew</span> Haul away, haul away</p>
+                    <p><span class="ship-song-voice">Call</span> A dirty sky will try our rest —</p>
+                    <p><span class="ship-song-voice">Crew</span> Haul away, haul away</p>
+                </div>
+                <div class="ship-song-block ship-song-chorus">
+                    <p class="ship-song-label">Chorus</p>
+                    <p>Mind the bar and mind the lake<br>
+                    Write it plain for those who wake<br>
+                    If the wind turns foul and cold<br>
+                    Keep a weather eye, and hold</p>
+                </div>
+                <div class="ship-song-block">
+                    <p><span class="ship-song-voice">Call</span> Superior&rsquo;s deep and Huron wide —</p>
+                    <p><span class="ship-song-voice">Crew</span> Haul away, haul away</p>
+                    <p><span class="ship-song-voice">Call</span> Michigan&rsquo;s temper, Erie tide —</p>
+                    <p><span class="ship-song-voice">Crew</span> Haul away, haul away</p>
+                </div>
+                <div class="ship-song-block ship-song-chorus">
+                    <p class="ship-song-label">Chorus</p>
+                    <p>Mind the bar and mind the lake<br>
+                    Write it plain for those who wake<br>
+                    If the wind turns foul and cold<br>
+                    Keep a weather eye, and hold</p>
+                </div>
+                <div class="ship-song-block">
+                    <p><span class="ship-song-voice">Call</span> No sugar and tea for the wellerman&rsquo;s run —</p>
+                    <p><span class="ship-song-voice">Crew</span> Haul away, haul away</p>
+                    <p><span class="ship-song-voice">Call</span> Just fog and the fetch till the morning sun —</p>
+                    <p><span class="ship-song-voice">Crew</span> Haul away, haul away</p>
+                </div>
+                <div class="ship-song-block ship-song-chorus">
+                    <p class="ship-song-label">Final chorus</p>
+                    <p>Mind the bar and mind the lake<br>
+                    Log the squall for those who wake<br>
+                    When the glass climbs back and gold<br>
+                    Ship the oars — the tale is told</p>
+                </div>
+            </div>
+            <p class="slide-note">Original words for the Echo passage. Not a substitute for a GLF.</p>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <section class="slide" data-slide="<?= (int) $closeSlide ?>">
         <div class="slide-inner">
             <h2>When the book is not enough</h2>
             <ul class="slide-list resources">
