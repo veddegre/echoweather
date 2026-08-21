@@ -1307,19 +1307,29 @@ function konamiNormalizeKey(ev){
   if(k === 'a' || k === 'A') return 'a';
   return null;
 }
-function konamiPush(step){
+function konamiPush(step, fromTouch){
   if(!step) return;
   const egg = document.getElementById('wxArcadeEgg');
   if(egg && !egg.hidden) return;
   const next = KONAMI_SEQ[konamiProgress.length];
   if(step === next){
     konamiProgress.push(step);
+    if(fromTouch && konamiProgress.length > 0 && konamiProgress.length < 8 && typeof showLocToast === 'function'){
+      showLocToast('Konami ' + konamiProgress.length + '/8');
+    }
   }else if(step === KONAMI_SEQ[0]){
     konamiProgress = ['up'];
     hideKonamiBaPrompt();
   }else{
     konamiProgress = [];
     hideKonamiBaPrompt();
+  }
+  // Phone: eight swipes is enough. Desktop still needs B then A.
+  if(fromTouch && konamiProgress.length === 8){
+    konamiProgress = [];
+    hideKonamiBaPrompt();
+    openWxArcade();
+    return;
   }
   if(konamiProgress.length === 8){
     showKonamiBaPrompt();
@@ -1334,7 +1344,7 @@ function showKonamiBaPrompt(){
   const ba = document.getElementById('wxArcadeBa');
   if(!ba) return;
   ba.hidden = false;
-  if(typeof showLocToast === 'function') showLocToast('Almost — tap B, then A');
+  if(typeof showLocToast === 'function') showLocToast('Almost — press B, then A');
 }
 function hideKonamiBaPrompt(){
   const ba = document.getElementById('wxArcadeBa');
@@ -1348,28 +1358,35 @@ function clearWxArcadeStage(){
   wxArcadeSpawner = 0;
   wxArcadeTimer = 0;
 }
-function setWxArcadeMenu(visible){
-  const actions = document.getElementById('wxArcadeActions');
-  const hud = document.getElementById('wxArcadeHud');
-  const lede = document.getElementById('wxArcadeLede');
-  const foot = document.getElementById('wxArcadeFoot');
-  if(actions) actions.hidden = !visible;
-  if(hud) hud.hidden = visible;
-  if(lede) lede.hidden = !visible;
-  if(foot) foot.hidden = !visible;
+function setWxArcadeChrome(mode){
+  const egg = document.getElementById('wxArcadeEgg');
+  const panel = document.getElementById('wxArcadePanel');
+  const playbar = document.getElementById('wxArcadePlaybar');
+  if(!egg) return;
+  egg.classList.toggle('playing', mode === 'play');
+  egg.classList.toggle('dancing', mode === 'dance' || mode === 'menu');
+  if(panel) panel.hidden = mode === 'play';
+  if(playbar) playbar.hidden = mode !== 'play';
 }
 function spawnDanceFlakes(){
   const stage = document.getElementById('wxArcadeStage');
   if(!stage) return;
   stage.innerHTML = '';
-  const count = Math.min(18, Math.max(10, Math.floor(window.innerWidth / 40)));
+  const count = Math.min(22, Math.max(12, Math.floor(window.innerWidth / 36)));
   for(let i = 0; i < count; i++){
     const el = document.createElement('span');
     el.className = 'wx-arcade-flake dance';
     el.textContent = WX_ARCADE_DANCE[i % WX_ARCADE_DANCE.length];
-    el.style.left = (4 + Math.random() * 88) + '%';
-    el.style.top = (6 + Math.random() * 78) + '%';
-    el.style.fontSize = (1.4 + Math.random() * 1.4) + 'rem';
+    // Bias toward edges so symbols stay visible around the menu panel.
+    const edge = Math.random();
+    let left, top;
+    if(edge < 0.28){ left = 2 + Math.random() * 18; top = 4 + Math.random() * 90; }
+    else if(edge < 0.56){ left = 78 + Math.random() * 18; top = 4 + Math.random() * 90; }
+    else if(edge < 0.78){ left = 8 + Math.random() * 84; top = 3 + Math.random() * 16; }
+    else { left = 8 + Math.random() * 84; top = 72 + Math.random() * 22; }
+    el.style.left = left + '%';
+    el.style.top = top + '%';
+    el.style.fontSize = (1.5 + Math.random() * 1.6) + 'rem';
     el.style.setProperty('--dur', (3.2 + Math.random() * 3.5) + 's');
     el.style.setProperty('--delay', (-Math.random() * 4) + 's');
     stage.appendChild(el);
@@ -1390,24 +1407,21 @@ function spawnFallFlake(){
   const startX = 8 + Math.random() * 84;
   el.style.left = startX + '%';
   el.style.top = '-8%';
-  el.style.fontSize = (1.6 + Math.random() * 0.9) + 'rem';
+  el.style.fontSize = (1.7 + Math.random() * 1.1) + 'rem';
   stage.appendChild(el);
-  const dur = 2200 + Math.random() * 1800;
+  const dur = 2400 + Math.random() * 2000;
   const start = performance.now();
-  const drift = (Math.random() - 0.5) * 24;
+  const drift = (Math.random() - 0.5) * 28;
   function frame(now){
     if(!el.isConnected || wxArcadeMode !== 'play') return;
     const t = Math.min(1, (now - start) / dur);
-    el.style.top = (-8 + t * 110) + '%';
+    el.style.top = (-8 + t * 112) + '%';
     el.style.left = (startX + drift * t) + '%';
-    if(t < 1){
-      requestAnimationFrame(frame);
-    }else{
-      el.remove();
-    }
+    if(t < 1) requestAnimationFrame(frame);
+    else el.remove();
   }
   requestAnimationFrame(frame);
-  el.addEventListener('click', ev => {
+  el.addEventListener('pointerdown', ev => {
     ev.preventDefault();
     ev.stopPropagation();
     if(wxArcadeMode !== 'play') return;
@@ -1430,41 +1444,29 @@ function endWxArcadePlay(){
   clearInterval(wxArcadeTimer);
   wxArcadeSpawner = 0;
   wxArcadeTimer = 0;
-  wxArcadeMode = null;
-  const egg = document.getElementById('wxArcadeEgg');
-  if(egg) egg.classList.remove('playing');
+  wxArcadeMode = 'menu';
   const stage = document.getElementById('wxArcadeStage');
-  if(stage){
-    stage.querySelectorAll('.fall').forEach(el => el.remove());
-  }
+  if(stage) stage.querySelectorAll('.fall').forEach(el => el.remove());
+  setWxArcadeChrome('menu');
   spawnDanceFlakes();
-  setWxArcadeMenu(true);
   const lede = document.getElementById('wxArcadeLede');
   if(lede){
-    lede.hidden = false;
     lede.textContent = wxArcadeScore >= 8
-      ? ('High pressure win — score ' + wxArcadeScore + '. The symbols keep dancing.')
+      ? ('High pressure win — score ' + wxArcadeScore + '. Dance break unlocked.')
       : wxArcadeScore > 0
-        ? ('Not bad — score ' + wxArcadeScore + '. Fair weather was out there.')
-        : ('Score ' + wxArcadeScore + '. Lightning had the upper hand.');
+        ? ('Round over — score ' + wxArcadeScore + '. Tap Just dance or play again.')
+        : ('Score ' + wxArcadeScore + '. Lightning had the upper hand. Try again?');
   }
-  const hud = document.getElementById('wxArcadeHud');
-  if(hud) hud.hidden = false;
-  updateWxArcadeHud();
 }
 function startWxArcadePlay(){
   clearWxArcadeStage();
   wxArcadeMode = 'play';
   wxArcadeScore = 0;
   wxArcadeEndsAt = Date.now() + 30000;
-  const egg = document.getElementById('wxArcadeEgg');
-  if(egg) egg.classList.add('playing');
-  setWxArcadeMenu(false);
-  const hud = document.getElementById('wxArcadeHud');
-  if(hud) hud.hidden = false;
+  setWxArcadeChrome('play');
   updateWxArcadeHud();
   spawnFallFlake();
-  wxArcadeSpawner = setInterval(spawnFallFlake, 520);
+  wxArcadeSpawner = setInterval(spawnFallFlake, 480);
   wxArcadeTimer = setInterval(() => {
     updateWxArcadeHud();
     if(Date.now() >= wxArcadeEndsAt) endWxArcadePlay();
@@ -1473,16 +1475,11 @@ function startWxArcadePlay(){
 function startWxArcadeDance(){
   clearWxArcadeStage();
   wxArcadeMode = 'dance';
-  const egg = document.getElementById('wxArcadeEgg');
-  if(egg) egg.classList.remove('playing');
-  setWxArcadeMenu(true);
+  setWxArcadeChrome('dance');
   const lede = document.getElementById('wxArcadeLede');
   if(lede){
-    lede.hidden = false;
-    lede.textContent = 'No skill required. The sky is just showing off.';
+    lede.textContent = 'Symbols are dancing around the edges — close anytime, or start a catch round.';
   }
-  const hud = document.getElementById('wxArcadeHud');
-  if(hud) hud.hidden = true;
   spawnDanceFlakes();
 }
 function closeWxArcade(){
@@ -1492,8 +1489,12 @@ function closeWxArcade(){
   hideKonamiBaPrompt();
   if(egg){
     egg.hidden = true;
-    egg.classList.remove('playing');
+    egg.classList.remove('playing', 'dancing');
   }
+  const playbar = document.getElementById('wxArcadePlaybar');
+  const panel = document.getElementById('wxArcadePanel');
+  if(playbar) playbar.hidden = true;
+  if(panel) panel.hidden = false;
   document.body.classList.remove('wx-arcade-open');
 }
 function openWxArcade(){
@@ -1505,8 +1506,8 @@ function openWxArcade(){
   document.body.classList.add('wx-arcade-open');
   if(typeof showLocToast === 'function') showLocToast('Konami clearance granted');
   startWxArcadeDance();
-  const close = document.getElementById('wxArcadeClose');
-  if(close) close.focus();
+  const play = document.getElementById('wxArcadePlay');
+  if(play) play.focus();
 }
 function initWxArcadeEgg(){
   const egg = document.getElementById('wxArcadeEgg');
@@ -1515,7 +1516,8 @@ function initWxArcadeEgg(){
   document.addEventListener('keydown', ev => {
     if(ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
     if(ev.key === 'Escape' && !egg.hidden){
-      closeWxArcade();
+      if(wxArcadeMode === 'play') endWxArcadePlay();
+      else closeWxArcade();
       return;
     }
     const step = konamiNormalizeKey(ev);
@@ -1523,30 +1525,32 @@ function initWxArcadeEgg(){
     if(step === 'up' || step === 'down' || step === 'left' || step === 'right'){
       ev.preventDefault();
     }
-    konamiPush(step);
+    konamiPush(step, false);
   });
 
   document.addEventListener('touchstart', ev => {
     if(ev.touches.length !== 1) return;
-    if(ev.target && ev.target.closest && ev.target.closest('input,textarea,select,button,a')) return;
+    if(egg && !egg.hidden) return;
+    if(ev.target && ev.target.closest && ev.target.closest('input,textarea,select,button,a,.leaflet-container')) return;
     const t = ev.touches[0];
     konamiTouchStart = { x: t.clientX, y: t.clientY, at: Date.now() };
   }, { passive: true });
 
   document.addEventListener('touchend', ev => {
     if(!konamiTouchStart || ev.changedTouches.length !== 1) return;
+    if(egg && !egg.hidden){ konamiTouchStart = null; return; }
     const t = ev.changedTouches[0];
     const dx = t.clientX - konamiTouchStart.x;
     const dy = t.clientY - konamiTouchStart.y;
     const dt = Date.now() - konamiTouchStart.at;
     konamiTouchStart = null;
-    if(dt > 700) return;
+    if(dt > 900) return;
     const ax = Math.abs(dx), ay = Math.abs(dy);
-    if(Math.max(ax, ay) < 40) return;
+    if(Math.max(ax, ay) < 36) return;
     let step = null;
-    if(ay > ax) step = dy < 0 ? 'up' : 'down';
+    if(ay > ax * 0.85) step = dy < 0 ? 'up' : 'down';
     else step = dx < 0 ? 'left' : 'right';
-    konamiPush(step);
+    konamiPush(step, true);
   }, { passive: true });
 
   const ba = document.getElementById('wxArcadeBa');
@@ -1554,16 +1558,18 @@ function initWxArcadeEgg(){
     ba.addEventListener('click', ev => {
       const btn = ev.target.closest('[data-konami]');
       if(!btn) return;
-      konamiPush(btn.getAttribute('data-konami'));
+      konamiPush(btn.getAttribute('data-konami'), false);
     });
   }
 
   const close = document.getElementById('wxArcadeClose');
   const play = document.getElementById('wxArcadePlay');
   const dance = document.getElementById('wxArcadeDance');
+  const quit = document.getElementById('wxArcadeQuitPlay');
   if(close) close.addEventListener('click', closeWxArcade);
   if(play) play.addEventListener('click', startWxArcadePlay);
   if(dance) dance.addEventListener('click', startWxArcadeDance);
+  if(quit) quit.addEventListener('click', endWxArcadePlay);
 }
 
 function initEasterEgg(){
