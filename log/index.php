@@ -77,9 +77,14 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
         'description' => $pageDescription,
     ]) ?>
 </head>
-<body class="<?= htmlspecialchars($info['css_class']) ?> log-page" data-location-source="<?= htmlspecialchars($locationSource) ?>">
+<body class="<?= htmlspecialchars($info['css_class']) ?> log-page" data-location-source="<?= htmlspecialchars($locationSource) ?>"<?= $echoFrom ? ' data-from-echo="1"' : '' ?>>
 
 <div class="wave-layer" aria-hidden="true"></div>
+
+<?php if ($echoFrom): ?>
+<button type="button" class="log-shanty-btn" id="logShantyBtn" aria-pressed="false" aria-label="Toggle sea shanty">Sound</button>
+<audio id="logShanty" src="assets/audio/mind-the-bar.mp3" preload="auto" loop playsinline></audio>
+<?php endif; ?>
 
 <header class="site-header">
     <div class="header-inner">
@@ -303,6 +308,9 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
 <footer class="site-footer">
     <p>A Great Lakes reading of the same official weather Echo uses. Not affiliated with NOAA or the National Weather Service.</p>
     <p class="attribution">Original illustrations for the Lakes Log — one plate for each mark on the glass.</p>
+    <?php if ($echoFrom): ?>
+    <p class="attribution log-shanty-credit">Mind the Bar and Mind the Lake — ship&rsquo;s music for the Echo passage.</p>
+    <?php endif; ?>
     <p class="footer-links">
         <a href="slides.php<?= $echoQs ?>">Standing orders</a>
         &middot; <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Use this place in Echo Weather</a>

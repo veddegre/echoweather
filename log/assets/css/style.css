@@ -584,6 +584,31 @@ h3 {
 
 .footer-links a { color: inherit; }
 
+.log-shanty-btn {
+    position: fixed;
+    top: max(0.75rem, env(safe-area-inset-top));
+    right: max(0.75rem, env(safe-area-inset-right));
+    z-index: 40;
+    border: 1px solid color-mix(in srgb, var(--ink) 35%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--paper, #f4efe6) 92%, transparent);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.45rem 0.85rem;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.log-shanty-btn[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+.log-shanty-credit { margin-top: 0.35rem; }
+
 .log-guide-nudge {
     max-width: 720px;
     margin: 0 auto;
