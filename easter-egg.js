@@ -1313,10 +1313,6 @@ function konamiPush(step, fromTouch){
   const next = KONAMI_SEQ[konamiProgress.length];
   if(step === next){
     konamiProgress.push(step);
-    // Wait until a few correct swipes before toasting — early ↑↑ is too easy to hit by scrolling.
-    if(fromTouch && konamiProgress.length >= 4 && konamiProgress.length < 8 && typeof showLocToast === 'function'){
-      showLocToast('Konami ' + konamiProgress.length + '/8');
-    }
   }else if(step === KONAMI_SEQ[0]){
     konamiProgress = ['up'];
     hideKonamiBaPrompt();

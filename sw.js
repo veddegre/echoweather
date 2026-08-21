@@ -1,5 +1,5 @@
-const CACHE = 'echo-weather-v301';
-const ICON_Q = '?v=301';
+const CACHE = 'echo-weather-v302';
+const ICON_Q = '?v=302';
 const ASSETS = [
   './app.css',
   './app.js',
@@ -29,6 +29,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
+  self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
 });
 
