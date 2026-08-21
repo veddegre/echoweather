@@ -153,6 +153,14 @@ function initMarineLogEgg(){
       taps = 0;
       e.preventDefault();
       logToast();
+      // Same-origin gesture helps the Log page unlock media sooner after navigation.
+      try{
+        const prime = new Audio(LOG_BASE + 'assets/audio/mind-the-bar.mp3');
+        prime.volume = 0.01;
+        prime.playsInline = true;
+        prime.muted = true;
+        prime.play().then(() => { try{ prime.pause(); }catch(err){} }).catch(() => {});
+      }catch(err){}
       setTimeout(openShipLog, 450);
       return;
     }

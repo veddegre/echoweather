@@ -60,6 +60,10 @@
 
         audio.volume = SHANTY_VOLUME;
         audio.loop = true;
+        audio.setAttribute('playsinline', '');
+        audio.playsInline = true;
+
+        var unlockBound = false;
 
         function start() {
             return audio.play().then(function () {
@@ -72,6 +76,38 @@
         function stop() {
             audio.pause();
             syncShantyBtn(btn, false);
+        }
+
+        function disarmUnlock(unlock) {
+            document.removeEventListener('pointerdown', unlock, true);
+            document.removeEventListener('touchstart', unlock, true);
+            document.removeEventListener('keydown', unlock, true);
+        }
+
+        function armUnlock() {
+            if (unlockBound || shantyMuted()) return;
+            unlockBound = true;
+            var unlock = function () {
+                if (shantyMuted()) {
+                    disarmUnlock(unlock);
+                    return;
+                }
+                if (!audio.paused) {
+                    disarmUnlock(unlock);
+                    return;
+                }
+                start().then(function () {
+                    if (!audio.paused) disarmUnlock(unlock);
+                });
+            };
+            document.addEventListener('pointerdown', unlock, true);
+            document.addEventListener('touchstart', unlock, true);
+            document.addEventListener('keydown', unlock, true);
+        }
+
+        function tryStart() {
+            if (shantyMuted() || !audio.paused) return;
+            start();
         }
 
         btn.addEventListener('click', function () {
@@ -89,15 +125,13 @@
             return;
         }
 
-        start().then(function () {
-            if (audio.paused) {
-                var unlock = function () {
-                    document.removeEventListener('pointerdown', unlock, true);
-                    if (!shantyMuted() && audio.paused) start();
-                };
-                document.addEventListener('pointerdown', unlock, true);
-            }
-        });
+        // Arm gesture unlock immediately — do not wait for play() to fail.
+        // A large MP3 can leave play() pending through the first taps.
+        armUnlock();
+        tryStart();
+        audio.addEventListener('canplay', tryStart);
+        audio.addEventListener('canplaythrough', tryStart);
+        if (audio.readyState >= 2) tryStart();
     }
 
     function init() {
