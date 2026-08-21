@@ -1509,6 +1509,20 @@ function openWxArcade(){
   const play = document.getElementById('wxArcadePlay');
   if(play) play.focus();
 }
+function konamiTouchIgnored(target){
+  if(!target || !target.closest) return true;
+  if(target.closest('input,textarea,select,button,a,.leaflet-container,.wx-arcade,.wx-arcade-ba')) return true;
+  // Don't steal gestures from sideways-scrolling rows (hourly, compare, etc.).
+  if(target.closest('.hourly-strip,.compare-table,.forecast-nbm-hours,.mesonet-hours,.impact-section-nav,.uv-day-ticks,.locbar-chips')) return true;
+  let el = target.nodeType === 1 ? target : target.parentElement;
+  while(el && el !== document.body){
+    const style = window.getComputedStyle(el);
+    const ox = style.overflowX;
+    if((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 4) return true;
+    el = el.parentElement;
+  }
+  return false;
+}
 function initWxArcadeEgg(){
   const egg = document.getElementById('wxArcadeEgg');
   if(!egg) return;
@@ -1531,7 +1545,7 @@ function initWxArcadeEgg(){
   document.addEventListener('touchstart', ev => {
     if(ev.touches.length !== 1) return;
     if(egg && !egg.hidden) return;
-    if(ev.target && ev.target.closest && ev.target.closest('input,textarea,select,button,a,.leaflet-container')) return;
+    if(konamiTouchIgnored(ev.target)) return;
     const t = ev.touches[0];
     konamiTouchStart = { x: t.clientX, y: t.clientY, at: Date.now() };
   }, { passive: true });
