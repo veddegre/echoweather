@@ -1285,6 +1285,287 @@ function initSkyToldEgg(){
   });
 }
 
+const KONAMI_SEQ = ['up','up','down','down','left','right','left','right','b','a'];
+const WX_ARCADE_GOOD = ['\u2600\uFE0F','\uD83C\uDF24\uFE0F','\u26C5','\uD83C\uDF1F'];
+const WX_ARCADE_BAD = ['\u26A1','\u26C8\uFE0F','\uD83C\uDF2A\uFE0F','\uD83C\uDF2B\uFE0F'];
+const WX_ARCADE_DANCE = WX_ARCADE_GOOD.concat(['\u2601\uFE0F','\uD83C\uDF27\uFE0F','\u2744\uFE0F','\uD83C\uDF19','\uD83C\uDF21\uFE0F']);
+let konamiProgress = [];
+let konamiTouchStart = null;
+let wxArcadeMode = null;
+let wxArcadeScore = 0;
+let wxArcadeEndsAt = 0;
+let wxArcadeTimer = 0;
+let wxArcadeSpawner = 0;
+
+function konamiNormalizeKey(ev){
+  const k = ev.key;
+  if(k === 'ArrowUp' || k === 'Up') return 'up';
+  if(k === 'ArrowDown' || k === 'Down') return 'down';
+  if(k === 'ArrowLeft' || k === 'Left') return 'left';
+  if(k === 'ArrowRight' || k === 'Right') return 'right';
+  if(k === 'b' || k === 'B') return 'b';
+  if(k === 'a' || k === 'A') return 'a';
+  return null;
+}
+function konamiPush(step){
+  if(!step) return;
+  const egg = document.getElementById('wxArcadeEgg');
+  if(egg && !egg.hidden) return;
+  const next = KONAMI_SEQ[konamiProgress.length];
+  if(step === next){
+    konamiProgress.push(step);
+  }else if(step === KONAMI_SEQ[0]){
+    konamiProgress = ['up'];
+    hideKonamiBaPrompt();
+  }else{
+    konamiProgress = [];
+    hideKonamiBaPrompt();
+  }
+  if(konamiProgress.length === 8){
+    showKonamiBaPrompt();
+  }
+  if(konamiProgress.length >= KONAMI_SEQ.length){
+    konamiProgress = [];
+    hideKonamiBaPrompt();
+    openWxArcade();
+  }
+}
+function showKonamiBaPrompt(){
+  const ba = document.getElementById('wxArcadeBa');
+  if(!ba) return;
+  ba.hidden = false;
+  if(typeof showLocToast === 'function') showLocToast('Almost — tap B, then A');
+}
+function hideKonamiBaPrompt(){
+  const ba = document.getElementById('wxArcadeBa');
+  if(ba) ba.hidden = true;
+}
+function clearWxArcadeStage(){
+  const stage = document.getElementById('wxArcadeStage');
+  if(stage) stage.innerHTML = '';
+  clearInterval(wxArcadeSpawner);
+  clearInterval(wxArcadeTimer);
+  wxArcadeSpawner = 0;
+  wxArcadeTimer = 0;
+}
+function setWxArcadeMenu(visible){
+  const actions = document.getElementById('wxArcadeActions');
+  const hud = document.getElementById('wxArcadeHud');
+  const lede = document.getElementById('wxArcadeLede');
+  const foot = document.getElementById('wxArcadeFoot');
+  if(actions) actions.hidden = !visible;
+  if(hud) hud.hidden = visible;
+  if(lede) lede.hidden = !visible;
+  if(foot) foot.hidden = !visible;
+}
+function spawnDanceFlakes(){
+  const stage = document.getElementById('wxArcadeStage');
+  if(!stage) return;
+  stage.innerHTML = '';
+  const count = Math.min(18, Math.max(10, Math.floor(window.innerWidth / 40)));
+  for(let i = 0; i < count; i++){
+    const el = document.createElement('span');
+    el.className = 'wx-arcade-flake dance';
+    el.textContent = WX_ARCADE_DANCE[i % WX_ARCADE_DANCE.length];
+    el.style.left = (4 + Math.random() * 88) + '%';
+    el.style.top = (6 + Math.random() * 78) + '%';
+    el.style.fontSize = (1.4 + Math.random() * 1.4) + 'rem';
+    el.style.setProperty('--dur', (3.2 + Math.random() * 3.5) + 's');
+    el.style.setProperty('--delay', (-Math.random() * 4) + 's');
+    stage.appendChild(el);
+  }
+}
+function spawnFallFlake(){
+  const stage = document.getElementById('wxArcadeStage');
+  if(!stage || wxArcadeMode !== 'play') return;
+  const good = Math.random() > 0.38;
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = 'wx-arcade-flake fall';
+  el.textContent = good
+    ? WX_ARCADE_GOOD[Math.floor(Math.random() * WX_ARCADE_GOOD.length)]
+    : WX_ARCADE_BAD[Math.floor(Math.random() * WX_ARCADE_BAD.length)];
+  el.dataset.good = good ? '1' : '0';
+  el.setAttribute('aria-label', good ? 'Fair weather' : 'Hazard');
+  const startX = 8 + Math.random() * 84;
+  el.style.left = startX + '%';
+  el.style.top = '-8%';
+  el.style.fontSize = (1.6 + Math.random() * 0.9) + 'rem';
+  stage.appendChild(el);
+  const dur = 2200 + Math.random() * 1800;
+  const start = performance.now();
+  const drift = (Math.random() - 0.5) * 24;
+  function frame(now){
+    if(!el.isConnected || wxArcadeMode !== 'play') return;
+    const t = Math.min(1, (now - start) / dur);
+    el.style.top = (-8 + t * 110) + '%';
+    el.style.left = (startX + drift * t) + '%';
+    if(t < 1){
+      requestAnimationFrame(frame);
+    }else{
+      el.remove();
+    }
+  }
+  requestAnimationFrame(frame);
+  el.addEventListener('click', ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if(wxArcadeMode !== 'play') return;
+    const hitGood = el.dataset.good === '1';
+    wxArcadeScore += hitGood ? 1 : -1;
+    updateWxArcadeHud();
+    el.classList.add('pop');
+    setTimeout(() => el.remove(), 120);
+  });
+}
+function updateWxArcadeHud(){
+  const score = document.getElementById('wxArcadeScore');
+  const time = document.getElementById('wxArcadeTime');
+  const left = Math.max(0, (wxArcadeEndsAt - Date.now()) / 1000);
+  if(score) score.textContent = 'Score ' + wxArcadeScore;
+  if(time) time.textContent = left.toFixed(1) + 's';
+}
+function endWxArcadePlay(){
+  clearInterval(wxArcadeSpawner);
+  clearInterval(wxArcadeTimer);
+  wxArcadeSpawner = 0;
+  wxArcadeTimer = 0;
+  wxArcadeMode = null;
+  const egg = document.getElementById('wxArcadeEgg');
+  if(egg) egg.classList.remove('playing');
+  const stage = document.getElementById('wxArcadeStage');
+  if(stage){
+    stage.querySelectorAll('.fall').forEach(el => el.remove());
+  }
+  spawnDanceFlakes();
+  setWxArcadeMenu(true);
+  const lede = document.getElementById('wxArcadeLede');
+  if(lede){
+    lede.hidden = false;
+    lede.textContent = wxArcadeScore >= 8
+      ? ('High pressure win — score ' + wxArcadeScore + '. The symbols keep dancing.')
+      : wxArcadeScore > 0
+        ? ('Not bad — score ' + wxArcadeScore + '. Fair weather was out there.')
+        : ('Score ' + wxArcadeScore + '. Lightning had the upper hand.');
+  }
+  const hud = document.getElementById('wxArcadeHud');
+  if(hud) hud.hidden = false;
+  updateWxArcadeHud();
+}
+function startWxArcadePlay(){
+  clearWxArcadeStage();
+  wxArcadeMode = 'play';
+  wxArcadeScore = 0;
+  wxArcadeEndsAt = Date.now() + 30000;
+  const egg = document.getElementById('wxArcadeEgg');
+  if(egg) egg.classList.add('playing');
+  setWxArcadeMenu(false);
+  const hud = document.getElementById('wxArcadeHud');
+  if(hud) hud.hidden = false;
+  updateWxArcadeHud();
+  spawnFallFlake();
+  wxArcadeSpawner = setInterval(spawnFallFlake, 520);
+  wxArcadeTimer = setInterval(() => {
+    updateWxArcadeHud();
+    if(Date.now() >= wxArcadeEndsAt) endWxArcadePlay();
+  }, 100);
+}
+function startWxArcadeDance(){
+  clearWxArcadeStage();
+  wxArcadeMode = 'dance';
+  const egg = document.getElementById('wxArcadeEgg');
+  if(egg) egg.classList.remove('playing');
+  setWxArcadeMenu(true);
+  const lede = document.getElementById('wxArcadeLede');
+  if(lede){
+    lede.hidden = false;
+    lede.textContent = 'No skill required. The sky is just showing off.';
+  }
+  const hud = document.getElementById('wxArcadeHud');
+  if(hud) hud.hidden = true;
+  spawnDanceFlakes();
+}
+function closeWxArcade(){
+  const egg = document.getElementById('wxArcadeEgg');
+  clearWxArcadeStage();
+  wxArcadeMode = null;
+  hideKonamiBaPrompt();
+  if(egg){
+    egg.hidden = true;
+    egg.classList.remove('playing');
+  }
+  document.body.classList.remove('wx-arcade-open');
+}
+function openWxArcade(){
+  const egg = document.getElementById('wxArcadeEgg');
+  if(!egg) return;
+  const sky = document.getElementById('skyToldEgg');
+  if(sky && !sky.hidden) closeSkyToldEgg();
+  egg.hidden = false;
+  document.body.classList.add('wx-arcade-open');
+  if(typeof showLocToast === 'function') showLocToast('Konami clearance granted');
+  startWxArcadeDance();
+  const close = document.getElementById('wxArcadeClose');
+  if(close) close.focus();
+}
+function initWxArcadeEgg(){
+  const egg = document.getElementById('wxArcadeEgg');
+  if(!egg) return;
+
+  document.addEventListener('keydown', ev => {
+    if(ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+    if(ev.key === 'Escape' && !egg.hidden){
+      closeWxArcade();
+      return;
+    }
+    const step = konamiNormalizeKey(ev);
+    if(!step) return;
+    if(step === 'up' || step === 'down' || step === 'left' || step === 'right'){
+      ev.preventDefault();
+    }
+    konamiPush(step);
+  });
+
+  document.addEventListener('touchstart', ev => {
+    if(ev.touches.length !== 1) return;
+    if(ev.target && ev.target.closest && ev.target.closest('input,textarea,select,button,a')) return;
+    const t = ev.touches[0];
+    konamiTouchStart = { x: t.clientX, y: t.clientY, at: Date.now() };
+  }, { passive: true });
+
+  document.addEventListener('touchend', ev => {
+    if(!konamiTouchStart || ev.changedTouches.length !== 1) return;
+    const t = ev.changedTouches[0];
+    const dx = t.clientX - konamiTouchStart.x;
+    const dy = t.clientY - konamiTouchStart.y;
+    const dt = Date.now() - konamiTouchStart.at;
+    konamiTouchStart = null;
+    if(dt > 700) return;
+    const ax = Math.abs(dx), ay = Math.abs(dy);
+    if(Math.max(ax, ay) < 40) return;
+    let step = null;
+    if(ay > ax) step = dy < 0 ? 'up' : 'down';
+    else step = dx < 0 ? 'left' : 'right';
+    konamiPush(step);
+  }, { passive: true });
+
+  const ba = document.getElementById('wxArcadeBa');
+  if(ba){
+    ba.addEventListener('click', ev => {
+      const btn = ev.target.closest('[data-konami]');
+      if(!btn) return;
+      konamiPush(btn.getAttribute('data-konami'));
+    });
+  }
+
+  const close = document.getElementById('wxArcadeClose');
+  const play = document.getElementById('wxArcadePlay');
+  const dance = document.getElementById('wxArcadeDance');
+  if(close) close.addEventListener('click', closeWxArcade);
+  if(play) play.addEventListener('click', startWxArcadePlay);
+  if(dance) dance.addEventListener('click', startWxArcadeDance);
+}
+
 function initEasterEgg(){
   if(logTriggerFromUrl() || woodsTriggerFromUrl()) return;
 
@@ -1299,4 +1580,5 @@ function initEasterEgg(){
   initWoodsBrandEgg();
   initMarineLogEgg();
   initSkyToldEgg();
+  initWxArcadeEgg();
 }
