@@ -1288,7 +1288,6 @@ function initSkyToldEgg(){
 const KONAMI_SEQ = ['up','up','down','down','left','right','left','right','b','a'];
 const WX_ARCADE_GOOD = ['\u2600\uFE0F','\uD83C\uDF24\uFE0F','\u26C5','\uD83C\uDF1F'];
 const WX_ARCADE_BAD = ['\u26A1','\u26C8\uFE0F','\uD83C\uDF2A\uFE0F','\uD83C\uDF2B\uFE0F'];
-const WX_ARCADE_DANCE = WX_ARCADE_GOOD.concat(['\u2601\uFE0F','\uD83C\uDF27\uFE0F','\u2744\uFE0F','\uD83C\uDF19','\uD83C\uDF21\uFE0F']);
 let konamiProgress = [];
 let konamiTouchStart = null;
 let wxArcadeMode = null;
@@ -1314,7 +1313,8 @@ function konamiPush(step, fromTouch){
   const next = KONAMI_SEQ[konamiProgress.length];
   if(step === next){
     konamiProgress.push(step);
-    if(fromTouch && konamiProgress.length > 0 && konamiProgress.length < 8 && typeof showLocToast === 'function'){
+    // Wait until a few correct swipes before toasting — early ↑↑ is too easy to hit by scrolling.
+    if(fromTouch && konamiProgress.length >= 4 && konamiProgress.length < 8 && typeof showLocToast === 'function'){
       showLocToast('Konami ' + konamiProgress.length + '/8');
     }
   }else if(step === KONAMI_SEQ[0]){
@@ -1364,33 +1364,8 @@ function setWxArcadeChrome(mode){
   const playbar = document.getElementById('wxArcadePlaybar');
   if(!egg) return;
   egg.classList.toggle('playing', mode === 'play');
-  egg.classList.toggle('dancing', mode === 'dance' || mode === 'menu');
   if(panel) panel.hidden = mode === 'play';
   if(playbar) playbar.hidden = mode !== 'play';
-}
-function spawnDanceFlakes(){
-  const stage = document.getElementById('wxArcadeStage');
-  if(!stage) return;
-  stage.innerHTML = '';
-  const count = Math.min(22, Math.max(12, Math.floor(window.innerWidth / 36)));
-  for(let i = 0; i < count; i++){
-    const el = document.createElement('span');
-    el.className = 'wx-arcade-flake dance';
-    el.textContent = WX_ARCADE_DANCE[i % WX_ARCADE_DANCE.length];
-    // Bias toward edges so symbols stay visible around the menu panel.
-    const edge = Math.random();
-    let left, top;
-    if(edge < 0.28){ left = 2 + Math.random() * 18; top = 4 + Math.random() * 90; }
-    else if(edge < 0.56){ left = 78 + Math.random() * 18; top = 4 + Math.random() * 90; }
-    else if(edge < 0.78){ left = 8 + Math.random() * 84; top = 3 + Math.random() * 16; }
-    else { left = 8 + Math.random() * 84; top = 72 + Math.random() * 22; }
-    el.style.left = left + '%';
-    el.style.top = top + '%';
-    el.style.fontSize = (1.5 + Math.random() * 1.6) + 'rem';
-    el.style.setProperty('--dur', (3.2 + Math.random() * 3.5) + 's');
-    el.style.setProperty('--delay', (-Math.random() * 4) + 's');
-    stage.appendChild(el);
-  }
 }
 function spawnFallFlake(){
   const stage = document.getElementById('wxArcadeStage');
@@ -1409,9 +1384,9 @@ function spawnFallFlake(){
   el.style.top = '-8%';
   el.style.fontSize = (1.7 + Math.random() * 1.1) + 'rem';
   stage.appendChild(el);
-  const dur = 2400 + Math.random() * 2000;
+  const dur = 3800 + Math.random() * 2200;
   const start = performance.now();
-  const drift = (Math.random() - 0.5) * 28;
+  const drift = (Math.random() - 0.5) * 22;
   function frame(now){
     if(!el.isConnected || wxArcadeMode !== 'play') return;
     const t = Math.min(1, (now - start) / dur);
@@ -1439,24 +1414,26 @@ function updateWxArcadeHud(){
   if(score) score.textContent = 'Score ' + wxArcadeScore;
   if(time) time.textContent = left.toFixed(1) + 's';
 }
+function showWxArcadeMenu(message){
+  clearWxArcadeStage();
+  wxArcadeMode = 'menu';
+  setWxArcadeChrome('menu');
+  const lede = document.getElementById('wxArcadeLede');
+  if(lede && message) lede.textContent = message;
+}
 function endWxArcadePlay(){
   clearInterval(wxArcadeSpawner);
   clearInterval(wxArcadeTimer);
   wxArcadeSpawner = 0;
   wxArcadeTimer = 0;
-  wxArcadeMode = 'menu';
   const stage = document.getElementById('wxArcadeStage');
   if(stage) stage.querySelectorAll('.fall').forEach(el => el.remove());
-  setWxArcadeChrome('menu');
-  spawnDanceFlakes();
-  const lede = document.getElementById('wxArcadeLede');
-  if(lede){
-    lede.textContent = wxArcadeScore >= 8
-      ? ('High pressure win — score ' + wxArcadeScore + '. Dance break unlocked.')
-      : wxArcadeScore > 0
-        ? ('Round over — score ' + wxArcadeScore + '. Tap Just dance or play again.')
-        : ('Score ' + wxArcadeScore + '. Lightning had the upper hand. Try again?');
-  }
+  const msg = wxArcadeScore >= 8
+    ? ('High pressure win — score ' + wxArcadeScore + '. Play again?')
+    : wxArcadeScore > 0
+      ? ('Round over — score ' + wxArcadeScore + '. Catch another round?')
+      : ('Score ' + wxArcadeScore + '. Lightning had the upper hand. Try again?');
+  showWxArcadeMenu(msg);
 }
 function startWxArcadePlay(){
   clearWxArcadeStage();
@@ -1466,21 +1443,11 @@ function startWxArcadePlay(){
   setWxArcadeChrome('play');
   updateWxArcadeHud();
   spawnFallFlake();
-  wxArcadeSpawner = setInterval(spawnFallFlake, 480);
+  wxArcadeSpawner = setInterval(spawnFallFlake, 720);
   wxArcadeTimer = setInterval(() => {
     updateWxArcadeHud();
     if(Date.now() >= wxArcadeEndsAt) endWxArcadePlay();
   }, 100);
-}
-function startWxArcadeDance(){
-  clearWxArcadeStage();
-  wxArcadeMode = 'dance';
-  setWxArcadeChrome('dance');
-  const lede = document.getElementById('wxArcadeLede');
-  if(lede){
-    lede.textContent = 'Symbols are dancing around the edges — close anytime, or start a catch round.';
-  }
-  spawnDanceFlakes();
 }
 function closeWxArcade(){
   const egg = document.getElementById('wxArcadeEgg');
@@ -1489,7 +1456,7 @@ function closeWxArcade(){
   hideKonamiBaPrompt();
   if(egg){
     egg.hidden = true;
-    egg.classList.remove('playing', 'dancing');
+    egg.classList.remove('playing');
   }
   const playbar = document.getElementById('wxArcadePlaybar');
   const panel = document.getElementById('wxArcadePanel');
@@ -1505,7 +1472,7 @@ function openWxArcade(){
   egg.hidden = false;
   document.body.classList.add('wx-arcade-open');
   if(typeof showLocToast === 'function') showLocToast('Konami clearance granted');
-  startWxArcadeDance();
+  showWxArcadeMenu('The models are off duty. Catch fair weather — sun and stars score; lightning and storms cost you.');
   const play = document.getElementById('wxArcadePlay');
   if(play) play.focus();
 }
@@ -1578,11 +1545,9 @@ function initWxArcadeEgg(){
 
   const close = document.getElementById('wxArcadeClose');
   const play = document.getElementById('wxArcadePlay');
-  const dance = document.getElementById('wxArcadeDance');
   const quit = document.getElementById('wxArcadeQuitPlay');
   if(close) close.addEventListener('click', closeWxArcade);
   if(play) play.addEventListener('click', startWxArcadePlay);
-  if(dance) dance.addEventListener('click', startWxArcadeDance);
   if(quit) quit.addEventListener('click', endWxArcadePlay);
 }
 
