@@ -82,7 +82,6 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
 <div class="wave-layer" aria-hidden="true"></div>
 
 <?php if ($echoFrom): ?>
-<button type="button" class="log-shanty-btn" id="logShantyBtn" aria-pressed="false" aria-label="Toggle sea shanty">Sound</button>
 <audio id="logShanty" src="assets/audio/mind-the-bar.mp3" preload="auto" loop playsinline></audio>
 <?php endif; ?>
 
@@ -92,7 +91,10 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
         <nav>
             <a href="index.php<?= $echoQs ?>">Log</a>
             <a href="slides.php<?= $echoQs ?>">Standing orders</a>
-            <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>" class="echo-back">← Echo Weather</a>
+            <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>" class="echo-back">← Echo</a>
+            <?php if ($echoFrom): ?>
+            <button type="button" class="log-shanty-btn" id="logShantyBtn" aria-pressed="false" aria-label="Toggle sea shanty">Sound</button>
+            <?php endif; ?>
         </nav>
     </div>
 </header>
@@ -313,9 +315,11 @@ $pageDescription = htmlspecialchars($info['message'] ?? 'A Great Lakes reading o
     <?php endif; ?>
     <p class="footer-links">
         <a href="slides.php<?= $echoQs ?>">Standing orders</a>
-        &middot; <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Use this place in Echo Weather</a>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a href="<?= htmlspecialchars($echoSyncUrl, ENT_QUOTES, 'UTF-8') ?>">Use this place in Echo Weather</a>
         <?php if ($echoFrom): ?>
-        &middot; <a href="../" class="echo-back">← Back to Echo Weather</a>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a href="../" class="echo-back">← Back to Echo Weather</a>
         <?php endif; ?>
     </p>
 </footer>
