@@ -3,7 +3,7 @@
    Sources: NWS/METAR (US), HRRR convective fields, Open-Meteo, IEM/RainViewer radar
    ============================================================ */
 
-const APP_VERSION = '303';
+const APP_VERSION = '304';
 const HOURLY_HOURS = 24;
 const DAILY_DAYS = 5;
 const LOC_SYNC_MIN_MI = 12;
@@ -75,25 +75,51 @@ function updateThemeColorMeta(){
 let basemapLayer = null;
 function selectedBasemap(){
   const pref = store.get('st_basemap') || 'auto';
-  if(pref === 'light') return { kind: 'carto', path: 'light_all' };
-  if(pref === 'dark') return { kind: 'carto', path: 'dark_all' };
-  if(pref === 'terrain') return { kind: 'carto', path: 'rastertiles/voyager' };
+  if(pref === 'light') return { kind: 'light' };
+  if(pref === 'dark') return { kind: 'dark' };
+  if(pref === 'terrain') return { kind: 'terrain' };
   if(pref === 'topo') return { kind: 'topo' };
-  return { kind: 'carto', path: cssVar('--map-tiles') || (isDarkTheme() ? 'dark_all' : 'light_all') };
+  const autoPath = cssVar('--map-tiles') || (isDarkTheme() ? 'dark_all' : 'light_all');
+  return { kind: autoPath.indexOf('dark') >= 0 ? 'dark' : 'light' };
+}
+function cartoBasemapKey(){
+  return (serverIntegrations && serverIntegrations.cartoBasemapKey) || '';
 }
 function createBasemapLayer(maxZoom){
   const sel = selectedBasemap();
+  const zMax = maxZoom || RADAR_ZOOM.rainviewer;
   if(sel.kind === 'topo'){
     return L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
       attribution: '\u00A9 OpenStreetMap \u00A9 OpenTopoMap (CC-BY-SA)',
       subdomains: 'abc',
       minZoom: RADAR_ZOOM.min,
-      maxZoom: Math.min(17, maxZoom || 17)
+      maxZoom: Math.min(17, zMax)
     });
   }
-  return L.tileLayer('https://{s}.basemaps.cartocdn.com/' + sel.path + '/{z}/{x}/{y}{r}.png', {
-    attribution: '\u00A9 OpenStreetMap \u00A9 CARTO', subdomains: 'abcd',
-    minZoom: RADAR_ZOOM.min, maxZoom: maxZoom || RADAR_ZOOM.rainviewer
+
+  const cartoKey = cartoBasemapKey();
+  if(cartoKey){
+    const path = sel.kind === 'dark' ? 'dark_all'
+      : sel.kind === 'terrain' ? 'rastertiles/voyager'
+      : 'light_all';
+    return L.tileLayer('https://{s}.basemaps.cartocdn.com/' + path + '/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(cartoKey), {
+      attribution: '\u00A9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> \u00A9 <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      minZoom: RADAR_ZOOM.min,
+      maxZoom: zMax
+    });
+  }
+
+  // CARTO watermarks without a key — Esri World layers stay usable without one.
+  const esriService = sel.kind === 'dark'
+    ? 'Canvas/World_Dark_Gray_Base'
+    : sel.kind === 'terrain'
+      ? 'World_Topo_Map'
+      : 'Canvas/World_Light_Gray_Base';
+  return L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/' + esriService + '/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles \u00A9 Esri',
+    minZoom: RADAR_ZOOM.min,
+    maxZoom: Math.min(16, zMax)
   });
 }
 function syncMapBasemap(){
@@ -175,7 +201,7 @@ async function fetchTimeout(url, opts, ms){
     clearTimeout(timer);
   }
 }
-let serverIntegrations = { airnow: false, buoy: false, pollen: false, taf: false, reachable: false };
+let serverIntegrations = { airnow: false, buoy: false, pollen: false, taf: false, cartoBasemapKey: '', reachable: false };
 async function probeServerIntegrations(){
   try{
     const r = await fetchTimeout('/api/status', {}, 3000);
@@ -186,6 +212,10 @@ async function probeServerIntegrations(){
       serverIntegrations.buoy = !!j.buoy;
       serverIntegrations.pollen = !!j.pollen;
       serverIntegrations.taf = !!j.taf;
+      serverIntegrations.cartoBasemapKey = typeof j.cartoBasemapKey === 'string' ? j.cartoBasemapKey.trim() : '';
+      if(typeof syncMapBasemap === 'function') syncMapBasemap();
+      if(typeof syncMapBBasemap === 'function') syncMapBBasemap();
+      if(typeof syncSatBasemap === 'function') syncSatBasemap();
     }
   }catch(e){ /* static hosting or PHP not wired */ }
 }

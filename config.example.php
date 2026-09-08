@@ -25,6 +25,15 @@ return [
     'airnow_api_key' => '',
 
     // -------------------------------------------------------------------------
+    // CARTO basemaps (radar / satellite map background)
+    // -------------------------------------------------------------------------
+    // Free key (no CARTO account): https://carto.com/basemaps/apikey/
+    // Raster tiles now watermark "API KEY REQUIRED" without this. The key is
+    // exposed to the browser via /api/status (tiles load client-side). Without
+    // a key, Echo falls back to Esri World Street / Gray Canvas tiles.
+    'carto_basemap_api_key' => '',
+
+    // -------------------------------------------------------------------------
     // Google Pollen API (tree / grass / weed forecast)
     // -------------------------------------------------------------------------
     // Google Maps Platform → Pollen API (billing required).

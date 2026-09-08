@@ -8,6 +8,7 @@ function default_config(): array
     return [
         'airnow_api_key' => '',
         'google_pollen_api_key' => '',
+        'carto_basemap_api_key' => '',
         'pollen_cache_ttl' => 10800,
         'pollen_cache_grid' => 1,
         'pollen_daily_limit' => 7500,

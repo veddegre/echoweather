@@ -13,6 +13,8 @@ try {
         'buoy' => true,
         'pollen' => pollen_configured($cfg),
         'taf' => true,
+        // CARTO basemap tiles load in the browser; key is public-by-design.
+        'cartoBasemapKey' => trim((string) ($cfg['carto_basemap_api_key'] ?? '')),
     ], cors: true);
 } catch (Throwable $e) {
     send_api_error(500, 'Service unavailable', $e, 'status', cors: true);

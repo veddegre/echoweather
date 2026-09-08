@@ -326,6 +326,7 @@ Every key is optional.
 | Key | Default | Meaning |
 |---|---|---|
 | `airnow_api_key` | `""` | EPA AirNow API key. Enables `/api/airnow` for US monitor observations. |
+| `carto_basemap_api_key` | `""` | Free CARTO basemap key ([request](https://carto.com/basemaps/apikey/)). Exposed to the browser via `/api/status` for radar tiles. Without it, maps fall back to Esri World Street / Gray Canvas. |
 | `google_pollen_api_key` | `""` | Google Maps Pollen API key. Enables `/api/pollen`. Falls back to env `GOOGLE_POLLEN_API_KEY` when empty. |
 | `pollen_cache_ttl` | `10800` | Seconds to cache Google pollen per grid cell (3h). Min 300, max 86400. |
 | `pollen_cache_grid` | `1` | Decimal places for lat/lon rounding: `0` ≈ 70 mi, `1` ≈ 10 mi, `2` ≈ 1 mi. |
@@ -347,6 +348,13 @@ Every key is optional.
 - Free key: [docs.airnow.gov](https://docs.airnow.gov/)
 - Enables real EPA monitor observations for US locations
 - Proxied at `/api/airnow`
+
+#### CARTO basemaps (optional)
+
+- Free key (no CARTO account): [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey/)
+- CARTO raster tiles now show an “API KEY REQUIRED” watermark without a key
+- Set `carto_basemap_api_key` in `config.local.php` — Echo appends it to tile URLs in the browser
+- Without a key, radar/satellite basemaps use Esri World layers (no watermark); Topo still uses OpenTopoMap
 
 #### Google Pollen API (optional)
 
@@ -681,4 +689,4 @@ panels appear in one scrollable page with a compacting sticky header.
 
 ## Data sources
 
-NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (outlooks, fire weather, mesoscale discussions, storm reports CSV), WPC (excessive rainfall ArcGIS), NOAA CPC (extended outlook point queries), NOAA MRMS (WMS), AviationWeather.gov (TAF via `/api/taf` proxy), NOAA SWPC (Kp), NOAA CO-OPS (tides), USDM (drought point query), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy; local NWS + USA-NPN layer), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap.
+NWS (forecasts, alerts, AFD, GLF marine), METAR, SPC (outlooks, fire weather, mesoscale discussions, storm reports CSV), WPC (excessive rainfall ArcGIS), NOAA CPC (extended outlook point queries), NOAA MRMS (WMS), AviationWeather.gov (TAF via `/api/taf` proxy), NOAA SWPC (Kp), NOAA CO-OPS (tides), USDM (drought point query), Open-Meteo / HRRR, RainViewer, IEM (NEXRAD tiles, GOES IR), Blitzortung (live lightning), AirNow (optional, via PHP proxy), Google Pollen API (optional, via PHP proxy; local NWS + USA-NPN layer), NDBC buoys (via PHP proxy), Open-Meteo geocoding, CARTO basemap (optional key) or Esri World / OpenTopoMap fallback.
